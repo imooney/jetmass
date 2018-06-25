@@ -1,4 +1,7 @@
 This project (located in /wsu/home/fs/fs33/fs3383/jetmass on the WSU grid) is the starting point for an eventual jet mass analysis in AuAu collisions at the STAR experiment. pythia6jetmass/ is a self-contained analysis of jet mass in pp collisions at 200 GeV in both truth simulation (Pythia6 [undecayed]) and measured simulation (Pythia6+Geant). ppjetmass/ is the same but for STAR data (pp run6 200 GeV - HT trigger).
+
+In each directory, 'mkdir src/obj bin plots out log' and in the top-level directory, 'mkdir massplots'
+
 The project is run on our nodes of the WSU grid using the csh file in submit/ ('csh path/to/file.csh') (the qwrap.sh file is necessary for it to run). Running produces log & err files in the log/ directory, and an analysis output in the out/ directory. The resulting .root files should be combined with e.g.: 'hadd -f full.root pico*'.
 After examining full.root, one can go to the macros/ directory to make some nice plots of the basic quantities (pT, eta, phi) by running initial_checks.C. They are saved to the plots/ directory. Once ppjetmass and pythia6jetmass have produced 'full.root' files in the out/ directory, one can run mass_plots_data_sim.C for some plots of jet mass comparing simulation and data.
 
