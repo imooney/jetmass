@@ -11,8 +11,8 @@ void initial_checks () {
   TH1::SetDefaultSumw2();
   gStyle->SetOptStat(0);
 
-  string input = "~/jetmass/ppjetmass/out/stock/full.root";
-  string out_path = "~/jetmass/ppjetmass/plots/initial_checks/";
+  string input = "~/jetmass/out/data/full.root";
+  string out_path = "~/jetmass/plots/data/initial_checks/";
   string filetype = ".pdf";
 
   TFile *f = new TFile(input.c_str(), "READ");

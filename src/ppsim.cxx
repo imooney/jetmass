@@ -4,8 +4,8 @@
 //  Parameters in src/parameters.cxx
 //  Adapted by Isaac Mooney June, 2018 for jet mass analysis
 
-#include "parameters.hh"
-#include "functions.hh"
+#include "params.hh"
+#include "funcs.hh"
 
 using namespace fastjet;
 using namespace std;
@@ -75,12 +75,9 @@ int main (int argc, const char ** argv) {
   else { __ERR("data file is not recognized type: .root or .txt only.") return -1; }
 
 
-  /*P6Chain->Add("AddedGeantPythia/picoDst_11_15_0.root");*/ InitReaderPythia(P6Reader, P6Chain, numEvents);
-  /*GEANTChain->Add("AddedGeantPythia/picoDst_11_15_0.root");*/ InitReaderGeant(GEANTReader, GEANTChain, numEvents);
-  
-  //P6Chain->Add( "AddedGeantPythia/picoDst*" );          InitReaderPythia( P6Reader, P6Chain, numEvents );
-  //GEANTChain->Add( "AddedGeantPythia/picoDst*" );   InitReaderGeant( GEANTReader, GEANTChain, numEvents );
-  
+  InitReader(P6Reader, P6Chain, nEvents, sim_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, sim_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, truth_badTowers);
+  InitReader(GEANTReader, GEANTChain, nEvents, sim_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, sim_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, det_badTowers);
+
   TStarJetPicoEventHeader* p_header;  TStarJetPicoEvent* p_event;  TStarJetPicoEventHeader* g_header;  TStarJetPicoEvent* g_event;
   TStarJetVectorContainer<TStarJetVector> * p_container;         TStarJetVector* p_sv;
   TStarJetVectorContainer<TStarJetVector> * g_container;        TStarJetVector* g_sv;
@@ -118,52 +115,52 @@ int main (int argc, const char ** argv) {
 
   TTree *p_inclTree = new TTree("py_inclTree","py_inclTree");
   TTree *g_inclTree = new TTree("ge_inclTree","ge_inclTree");
-   TTree *p_leadTree = new TTree("py_leadTree","py_leadTree");
+  TTree *p_leadTree = new TTree("py_leadTree","py_leadTree");
   TTree *g_leadTree = new TTree("ge_leadTree","ge_leadTree");
-   TTree *p_cons_inclTree = new TTree("py_cons_inclTree","py_cons_inclTree");
+  TTree *p_cons_inclTree = new TTree("py_cons_inclTree","py_cons_inclTree");
   TTree *g_cons_inclTree = new TTree("ge_cons_inclTree","ge_cons_inclTree");
-   TTree *p_cons_leadTree = new TTree("py_cons_leadTree","py_cons_leadTree");
+  TTree *p_cons_leadTree = new TTree("py_cons_leadTree","py_cons_leadTree");
   TTree *g_cons_leadTree = new TTree("ge_cons_leadTree","ge_cons_leadTree");
   
   TBranch *pythiaPt_lead;  TBranch *pythiaEta_lead;  TBranch *pythiaPhi_lead; TBranch * pythiaM_lead; TBranch *pythiaE_lead; TBranch *pythiaNCons_lead; TBranch *pythiaWeight;
-  pythiaPt_lead = p_leadTree->Branch("jetPt", &jetPt_lead);  pythiaEta_lead = p_leadTree->Branch("jetEta", &jetEta_lead);  pythiaPhi_lead = p_leadTree->Branch("jetPhi", &jetPhi_lead);
-  pythiaM_lead = p_leadTree->Branch("jetM", &jetM_lead); pythiaE_lead = p_leadTree->Branch("jetE", &jetE_lead); pythiaNCons_lead = p_leadTree->Branch("nCons", &nCons_lead);
-  pythiaWeight = p_leadTree->Branch("pythia_wt", &pythia_wt);
+  pythiaPt_lead = p_leadTree->Branch("Pt", &jetPt_lead);  pythiaEta_lead = p_leadTree->Branch("Eta", &jetEta_lead);  pythiaPhi_lead = p_leadTree->Branch("Phi", &jetPhi_lead);
+  pythiaM_lead = p_leadTree->Branch("M", &jetM_lead); pythiaE_lead = p_leadTree->Branch("E", &jetE_lead); pythiaNCons_lead = p_leadTree->Branch("nCons", &nCons_lead);
+  pythiaWeight = p_leadTree->Branch("weight", &pythia_wt);
 
   TBranch *geantPt_lead;  TBranch *geantEta_lead;  TBranch *geantPhi_lead; TBranch *geantM_lead; TBranch *geantE_lead; TBranch *geantNCons_lead; TBranch *geantWeight;
-  geantPt_lead = g_leadTree->Branch("jetPt", &jetPt_lead);  geantEta_lead = g_leadTree->Branch("jetEta", &jetEta_lead);  geantPhi_lead = g_leadTree->Branch("jetPhi", &jetPhi_lead);
-  geantM_lead = g_leadTree->Branch("jetM", &jetM_lead); geantE_lead = g_leadTree->Branch("jetE", &jetE_lead); geantNCons_lead = g_leadTree->Branch("nCons", &nCons_lead);
-  geantWeight = g_leadTree->Branch("geant_wt", &geant_wt);
+  geantPt_lead = g_leadTree->Branch("Pt", &jetPt_lead);  geantEta_lead = g_leadTree->Branch("Eta", &jetEta_lead);  geantPhi_lead = g_leadTree->Branch("Phi", &jetPhi_lead);
+  geantM_lead = g_leadTree->Branch("M", &jetM_lead); geantE_lead = g_leadTree->Branch("E", &jetE_lead); geantNCons_lead = g_leadTree->Branch("nCons", &nCons_lead);
+  geantWeight = g_leadTree->Branch("weight", &geant_wt);
 
   TBranch *c_pythiaPt_lead;  TBranch *c_pythiaEta_lead;  TBranch *c_pythiaPhi_lead; TBranch * c_pythiaM_lead; TBranch *c_pythiaE_lead;
-  c_pythiaPt_lead = p_cons_leadTree->Branch("consPt", &consPt_lead);  c_pythiaEta_lead = p_cons_leadTree->Branch("consEta", &consEta_lead);  c_pythiaPhi_lead = p_cons_leadTree->Branch("consPhi", &consPhi_lead);
-  c_pythiaM_lead = p_cons_leadTree->Branch("consM", &consM_lead); c_pythiaE_lead = p_cons_leadTree->Branch("consE", &consE_lead);
-  pythiaWeight = p_cons_leadTree->Branch("pythia_wt", &pythia_wt);
+  c_pythiaPt_lead = p_cons_leadTree->Branch("Pt", &consPt_lead);  c_pythiaEta_lead = p_cons_leadTree->Branch("Eta", &consEta_lead);  c_pythiaPhi_lead = p_cons_leadTree->Branch("Phi", &consPhi_lead);
+  c_pythiaM_lead = p_cons_leadTree->Branch("M", &consM_lead); c_pythiaE_lead = p_cons_leadTree->Branch("E", &consE_lead);
+  pythiaWeight = p_cons_leadTree->Branch("weight", &pythia_wt);
 
   TBranch *c_geantPt_lead;  TBranch *c_geantEta_lead;  TBranch *c_geantPhi_lead; TBranch *c_geantM_lead; TBranch *c_geantE_lead;
-  c_geantPt_lead = g_cons_leadTree->Branch("consPt", &consPt_lead);  c_geantEta_lead = g_cons_leadTree->Branch("consEta", &consEta_lead);  c_geantPhi_lead = g_cons_leadTree->Branch("consPhi", &consPhi_lead);
-  c_geantM_lead = g_cons_leadTree->Branch("consM", &consM_lead); c_geantE_lead = g_cons_leadTree->Branch("consE", &consE_lead);
-  geantWeight = g_cons_leadTree->Branch("geant_wt", &geant_wt);
+  c_geantPt_lead = g_cons_leadTree->Branch("Pt", &consPt_lead);  c_geantEta_lead = g_cons_leadTree->Branch("Eta", &consEta_lead);  c_geantPhi_lead = g_cons_leadTree->Branch("Phi", &consPhi_lead);
+  c_geantM_lead = g_cons_leadTree->Branch("M", &consM_lead); c_geantE_lead = g_cons_leadTree->Branch("E", &consE_lead);
+  geantWeight = g_cons_leadTree->Branch("weight", &geant_wt);
  
    TBranch *pythiaPt_incl;  TBranch *pythiaEta_incl;  TBranch *pythiaPhi_incl; TBranch * pythiaM_incl; TBranch *pythiaE_incl; TBranch *pythiaNCons_incl;
-  pythiaPt_incl = p_inclTree->Branch("jetPt", &jetPt_incl);  pythiaEta_incl = p_inclTree->Branch("jetEta", &jetEta_incl);  pythiaPhi_incl = p_inclTree->Branch("jetPhi", &jetPhi_incl);
-  pythiaM_incl = p_inclTree->Branch("jetM", &jetM_incl); pythiaE_incl = p_inclTree->Branch("jetE", &jetE_incl); pythiaNCons_lead = p_inclTree->Branch("nCons", &nCons_incl);
-  pythiaWeight = p_inclTree->Branch("pythia_wt", &pythia_wt);
+  pythiaPt_incl = p_inclTree->Branch("Pt", &jetPt_incl);  pythiaEta_incl = p_inclTree->Branch("Eta", &jetEta_incl);  pythiaPhi_incl = p_inclTree->Branch("Phi", &jetPhi_incl);
+  pythiaM_incl = p_inclTree->Branch("M", &jetM_incl); pythiaE_incl = p_inclTree->Branch("E", &jetE_incl); pythiaNCons_lead = p_inclTree->Branch("nCons", &nCons_incl);
+  pythiaWeight = p_inclTree->Branch("weight", &pythia_wt);
 
   TBranch *geantPt_incl;  TBranch *geantEta_incl;  TBranch *geantPhi_incl; TBranch *geantM_incl; TBranch *geantE_incl; TBranch *geantNCons_incl;
-  geantPt_incl = g_inclTree->Branch("jetPt", &jetPt_incl);  geantEta_incl = g_inclTree->Branch("jetEta", &jetEta_incl);  geantPhi_incl = g_inclTree->Branch("jetPhi", &jetPhi_incl);
-  geantM_incl = g_inclTree->Branch("jetM", &jetM_incl); geantE_incl = g_inclTree->Branch("jetE", &jetE_incl); geantNCons_incl = g_inclTree->Branch("nCons", &nCons_incl);
-  geantWeight = g_inclTree->Branch("geant_wt", &geant_wt);
+  geantPt_incl = g_inclTree->Branch("Pt", &jetPt_incl);  geantEta_incl = g_inclTree->Branch("Eta", &jetEta_incl);  geantPhi_incl = g_inclTree->Branch("Phi", &jetPhi_incl);
+  geantM_incl = g_inclTree->Branch("M", &jetM_incl); geantE_incl = g_inclTree->Branch("E", &jetE_incl); geantNCons_incl = g_inclTree->Branch("nCons", &nCons_incl);
+  geantWeight = g_inclTree->Branch("weight", &geant_wt);
 
   TBranch *c_pythiaPt_incl;  TBranch *c_pythiaEta_incl;  TBranch *c_pythiaPhi_incl; TBranch * c_pythiaM_incl; TBranch *c_pythiaE_incl;
-  c_pythiaPt_incl = p_cons_inclTree->Branch("consPt", &consPt_incl);  c_pythiaEta_incl = p_cons_inclTree->Branch("consEta", &consEta_incl);  c_pythiaPhi_incl = p_cons_inclTree->Branch("consPhi", &consPhi_incl);
-  c_pythiaM_incl = p_cons_inclTree->Branch("consM", &consM_incl); c_pythiaE_incl = p_cons_inclTree->Branch("consE", &consE_incl);
-  pythiaWeight = p_cons_inclTree->Branch("pythia_wt", &pythia_wt);
+  c_pythiaPt_incl = p_cons_inclTree->Branch("Pt", &consPt_incl);  c_pythiaEta_incl = p_cons_inclTree->Branch("Eta", &consEta_incl);  c_pythiaPhi_incl = p_cons_inclTree->Branch("Phi", &consPhi_incl);
+  c_pythiaM_incl = p_cons_inclTree->Branch("M", &consM_incl); c_pythiaE_incl = p_cons_inclTree->Branch("E", &consE_incl);
+  pythiaWeight = p_cons_inclTree->Branch("weight", &pythia_wt);
 
   TBranch *c_geantPt_incl;  TBranch *c_geantEta_incl;  TBranch *c_geantPhi_incl; TBranch *c_geantM_incl; TBranch *c_geantE_incl;
-  c_geantPt_incl = g_cons_inclTree->Branch("consPt", &consPt_incl);  c_geantEta_incl = g_cons_inclTree->Branch("consEta", &consEta_incl);  c_geantPhi_incl = g_cons_inclTree->Branch("consPhi", &consPhi_incl);
-  c_geantM_incl = g_cons_inclTree->Branch("consM", &consM_incl); c_geantE_incl = g_cons_inclTree->Branch("consE", &consE_incl);
-  geantWeight = g_cons_inclTree->Branch("geant_wt", &geant_wt);
+  c_geantPt_incl = g_cons_inclTree->Branch("Pt", &consPt_incl);  c_geantEta_incl = g_cons_inclTree->Branch("Eta", &consEta_incl);  c_geantPhi_incl = g_cons_inclTree->Branch("Phi", &consPhi_incl);
+  c_geantM_incl = g_cons_inclTree->Branch("M", &consM_incl); c_geantE_incl = g_cons_inclTree->Branch("E", &consE_incl);
+  geantWeight = g_cons_inclTree->Branch("weight", &geant_wt);
   
 
   JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
@@ -197,10 +194,6 @@ int main (int argc, const char ** argv) {
     p_container = P6Reader.GetOutputContainer();      // Pythia container
     g_container = GEANTReader.GetOutputContainer();      // GEANT container
 
-    //  APPLY VERTEX-Z CUT
-    if ( Vz_candidate( g_header, absMaxVz ) == false ) { continue; }
-    // if ( Vz_candidate( p_header, absMaxVz ) == false || Vz_candidate( g_header, absMaxVz ) == false ) { continue; }
-
     pythiaFilename =  P6Reader.GetInputChain()->GetCurrentFile()->GetName();	
     geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();	
     
@@ -208,11 +201,11 @@ int main (int argc, const char ** argv) {
     g_wt = LookupXsec( geantFilename );
 
     //  GATHER PARTICLES
-    GatherParticles ( p_container, etaCut, partMinPt, p_Particles);    //  Pythia particles
-    GatherParticles ( g_container, etaCut, partMinPt, g_Particles);    //  GEANT particles
+    GatherParticles ( p_container, max_track_rap, partMinPt, p_Particles);    //  Pythia particles
+    GatherParticles ( g_container, max_track_rap, partMinPt, g_Particles);    //  GEANT particles
 
     //  CREATE JET SELECTOR
-    Selector etaSelector = SelectorAbsEtaMax( 1.0-R );    Selector ptSelector = SelectorPtMin(jetMinPt);    Selector etaPtSelector = etaSelector && ptSelector;
+    Selector etaSelector = SelectorAbsEtaMax( 1.0-R );    Selector ptSelector = SelectorPtMin(jet_ptmin);    Selector etaPtSelector = etaSelector && ptSelector;
     
     ClusterSequence p_Cluster(p_Particles, jet_def); ClusterSequence g_Cluster(g_Particles, jet_def);           //  CLUSTER BOTH
     p_Jets = sorted_by_pt(etaPtSelector(p_Cluster.inclusive_jets())); g_Jets = sorted_by_pt(etaPtSelector(g_Cluster.inclusive_jets()));    // EXTRACT JETS
@@ -302,7 +295,7 @@ int main (int argc, const char ** argv) {
   std::cout << g_NJets << " jets have been found for the Pythia6 + GEANT data" << std::endl << std::endl;
   std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
 
-  std::cout << "TESTING: number of leading jets = " << counter_debug2 << " and number of inclusive jets = " << counter_debug1 << std::endl;
+  std::cout << "TESTING: number of failed vZ candidates = " << counter_debug1 << std::endl;
   p_leadTree->Write("py_leadTree");
   g_leadTree->Write("ge_leadTree");
   p_cons_leadTree->Write("py_cons_leadTree");
@@ -313,7 +306,7 @@ int main (int argc, const char ** argv) {
   g_cons_inclTree->Write("ge_cons_inclTree");
 
   
-  //once there are hists: hist1->Write(); hist2->Write(); etc, goes here
+  //hist1->Write(); hist2->Write(); etc, goes here
   p_PtEtaPhi_lead->Write(); p_cons_PtEtaPhi_lead->Write(); p_PtEtaPhi_incl->Write(); p_cons_PtEtaPhi_incl->Write();
   g_PtEtaPhi_lead->Write(); g_cons_PtEtaPhi_lead->Write(); g_PtEtaPhi_incl->Write(); g_cons_PtEtaPhi_incl->Write(); 
   p_m_incl->Write(); p_m_lead->Write(); g_m_incl->Write(); g_m_lead->Write();

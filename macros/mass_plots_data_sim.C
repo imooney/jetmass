@@ -10,13 +10,13 @@ void mass_plots_data_sim () {
   TH1::SetDefaultSumw2();
   gStyle->SetOptStat(0);
 
-  string sim_dir = "pythia6jetmass/";
-  string data_dir = "ppjetmass/";
-  string sim_in = "out/stock/";
-  string data_in = "out/stock/";
+  string sim_dir = "~/jetmass/";
+  string data_dir = "~/jetmass/";
+  string sim_in = "out/sim/";
+  string data_in = "out/data/";
   string sim_file = "full.root";
   string data_file = "full.root";
-  string out = "massplots/";
+  string out = "~/jetmass/plots/massplots/";
   string filetype = ".pdf";
     
     TCanvas *cfull = new TCanvas("cfull","cfull",800,800);    //1D full range

@@ -151,51 +151,8 @@ int main ( int argc, const char** argv ) {
 	// Build the event structure w/ cuts
 	// ---------------------------------
 	TStarJetPicoReader reader;
-	reader.SetInputChain (chain);
-	reader.SetApplyFractionHadronicCorrection( true );
-	reader.SetFractionHadronicCorrection( 0.9999 );
-	reader.SetRejectTowerElectrons( kFALSE );
+	InitReader(reader, chain, nEvents, dat_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, dat_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, det_badTowers);
 
-	// Event and track selection
-	// -------------------------
-	//ref mult cut and trigger selection
-	int refMultCut = 0;
-	TString triggerString = "All";
- 
-	TStarJetPicoEventCuts* evCuts = reader.GetEventCuts();
-	evCuts->SetTriggerSelection( triggerString ); //All, MB, HT, pp, ppHT, ppJP
-	// Additional cuts
-	evCuts->SetVertexZCut ( absMaxVz );
-	evCuts->SetRefMultCut ( refMultCut );
-	evCuts->SetVertexZDiffCut( 1000 );
-	evCuts->SetMaxEventPtCut( 30 );
-	evCuts->SetMaxEventEtCut( 30 );
- 
-	// Tracks cuts
-	TStarJetPicoTrackCuts* trackCuts = reader.GetTrackCuts();
-	trackCuts->SetDCACut( DCA );
-	trackCuts->SetMinNFitPointsCut( NFitPts ); //AjParameters::NMinFit
-	trackCuts->SetFitOverMaxPointsCut( FitOverMaxPts ); //AjParameters::FitOverMaxPointsCut
-	trackCuts->SetMaxPtCut ( MaxPt );
- 
-	std::cout << "Using these track cuts:" << std::endl;
-	std::cout << " dca : " << trackCuts->GetDCACut(  ) << std::endl;
-	std::cout << " nfit : " <<   trackCuts->GetMinNFitPointsCut( ) << std::endl;
-	std::cout << " nfitratio : " <<   trackCuts->GetFitOverMaxPointsCut( ) << std::endl;
-	std::cout << " maxpt : " << trackCuts->GetMaxPtCut (  ) << std::endl;
- 
-	// Towers
-	TStarJetPicoTowerCuts* towerCuts = reader.GetTowerCuts();
-	towerCuts->SetMaxEtCut( 100 );
-	towerCuts->AddBadTowers( badTowerList );
- 
-	std::cout << "Using these tower cuts:" << std::endl;
-	std::cout << "  GetMaxEtCut = " << towerCuts->GetMaxEtCut() << std::endl;
-	std::cout << "  Gety8PythiaCut = " << towerCuts->Gety8PythiaCut() << std::endl;
- 
-	// V0s: Turn off
-	reader.SetProcessV0s(false);
-	
 	// Data classes
 	// ------------
 	TStarJetVectorContainer<TStarJetVector>* container;
@@ -226,29 +183,29 @@ int main ( int argc, const char** argv ) {
   double cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E;
   double incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E;
   double cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E;
-
-
+  int nCons_incl, nCons_lead, dummy_int;
+  double dummy_double;
 
   TTree *leadTree = new TTree("lead","lead");
   TTree *cons_leadTree = new TTree("cons_lead","cons_lead");
   TTree *inclTree = new TTree("incl","incl");
   TTree *cons_inclTree = new TTree("cons_incl","cons_incl");
 
-  TBranch *leadPt;  TBranch *leadEta;  TBranch *leadPhi; TBranch *leadM; TBranch *leadE;
-  leadPt = leadTree->Branch("lead_Pt", &lead_Pt);  leadEta = leadTree->Branch("lead_Eta", &lead_Eta);  leadPhi = leadTree->Branch("lead_Phi", &lead_Phi);
-  leadM = leadTree->Branch("lead_M", &lead_M); leadE = leadTree->Branch("lead_E", &lead_E);
+  TBranch *leadPt;  TBranch *leadEta;  TBranch *leadPhi; TBranch *leadM; TBranch *leadE; TBranch *NCons_lead;
+  leadPt = leadTree->Branch("Pt", &lead_Pt);  leadEta = leadTree->Branch("Eta", &lead_Eta);  leadPhi = leadTree->Branch("Phi", &lead_Phi);
+  leadM = leadTree->Branch("M", &lead_M); leadE = leadTree->Branch("E", &lead_E); NCons_lead = leadTree->Branch("nCons", &nCons_lead);
 
   TBranch *cons_leadPt;  TBranch *cons_leadEta;  TBranch *cons_leadPhi; TBranch *cons_leadM; TBranch *cons_leadE;
-  cons_leadPt = cons_leadTree->Branch("cons_lead_Pt", &cons_lead_Pt); cons_leadEta = cons_leadTree->Branch("cons_lead_Eta", &cons_lead_Eta); cons_leadPhi = cons_leadTree->Branch("cons_lead_Phi", &cons_lead_Phi);
-  cons_leadM = cons_leadTree->Branch("cons_lead_M", &cons_lead_M); cons_leadE = cons_leadTree->Branch("cons_lead_E", &cons_lead_E);
+  cons_leadPt = cons_leadTree->Branch("Pt", &cons_lead_Pt); cons_leadEta = cons_leadTree->Branch("Eta", &cons_lead_Eta); cons_leadPhi = cons_leadTree->Branch("Phi", &cons_lead_Phi);
+  cons_leadM = cons_leadTree->Branch("M", &cons_lead_M); cons_leadE = cons_leadTree->Branch("E", &cons_lead_E);
 
-  TBranch *inclPt;  TBranch *inclEta;  TBranch *inclPhi; TBranch *inclM; TBranch *inclE;
-  inclPt = inclTree->Branch("incl_Pt", &incl_Pt);  inclEta = inclTree->Branch("incl_Eta", &incl_Eta);  inclPhi = inclTree->Branch("incl_Phi", &incl_Phi);
-  inclM = inclTree->Branch("incl_M", &incl_M);  inclE = inclTree->Branch("incl_E", &incl_E);
+  TBranch *inclPt;  TBranch *inclEta;  TBranch *inclPhi; TBranch *inclM; TBranch *inclE; TBranch *NCons_incl;
+  inclPt = inclTree->Branch("Pt", &incl_Pt);  inclEta = inclTree->Branch("Eta", &incl_Eta);  inclPhi = inclTree->Branch("Phi", &incl_Phi);
+  inclM = inclTree->Branch("M", &incl_M);  inclE = inclTree->Branch("E", &incl_E); NCons_incl = inclTree->Branch("nCons", &nCons_incl);
 
   TBranch *cons_inclPt;  TBranch *cons_inclEta;  TBranch *cons_inclPhi; TBranch *cons_inclM; TBranch *cons_inclE;
-  cons_inclPt = cons_inclTree->Branch("cons_incl_Pt", &cons_incl_Pt);  cons_inclEta = cons_inclTree->Branch("cons_incl_Eta", &cons_incl_Eta);  cons_inclPhi = cons_inclTree->Branch("cons_incl_Phi", &cons_incl_Phi);
-  cons_inclM = cons_inclTree->Branch("cons_incl_M", &cons_incl_M); cons_inclE = cons_inclTree->Branch("cons_incl_E", &cons_incl_E);
+  cons_inclPt = cons_inclTree->Branch("Pt", &cons_incl_Pt);  cons_inclEta = cons_inclTree->Branch("Eta", &cons_incl_Eta);  cons_inclPhi = cons_inclTree->Branch("Phi", &cons_incl_Phi);
+  cons_inclM = cons_inclTree->Branch("M", &cons_incl_M); cons_inclE = cons_inclTree->Branch("E", &cons_incl_E);
   
   // Helpers
   // -------
@@ -346,8 +303,8 @@ int main ( int argc, const char** argv ) {
 	  m_v_pt_lead->Fill(LoResult[0].m(), LoResult[0].pt());
 	  PtEtaPhi_lead->Fill(LoResult[0].pt(),LoResult[0].eta(),LoResult[0].phi());
 	  vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); 
-	  FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_E, lead_M);
-	  FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_E, cons_lead_M);
+	  FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
+	  FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
 	  for (int cons = 0; cons < LoResult[0].constituents().size(); ++ cons) {
 	    if (LoResult[0].constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts
 	    cons_PtEtaPhi_lead->Fill(LoResult[0].constituents()[cons].pt(), LoResult[0].constituents()[cons].eta(), LoResult[0].constituents()[cons].phi());
@@ -355,11 +312,11 @@ int main ( int argc, const char** argv ) {
 	  m_lead->Fill(LoResult[0].m());
 	  
 	  //inclusive
-	  FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_E, incl_M);
+	  FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
 	  for (int j = 0; j < LoResult.size(); ++ j) {
 	    m_v_pt_incl->Fill(LoResult[j].m(), LoResult[j].pt());
 	    PtEtaPhi_incl->Fill(LoResult[j].pt(),LoResult[j].eta(),LoResult[j].phi()); 
-	     FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_E, cons_incl_M);
+	    FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
 	    for (int cons = 0; cons < LoResult[j].constituents().size(); ++ cons) {
 	      if (LoResult[j].constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts
 	      cons_PtEtaPhi_incl->Fill(LoResult[j].constituents()[cons].pt(), LoResult[j].constituents()[cons].eta(), LoResult[j].constituents()[cons].phi());

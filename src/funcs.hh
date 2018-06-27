@@ -42,8 +42,8 @@
 #include <iostream>
 #include <sstream>
 
-#ifndef functions_hh
-#define functions_hh
+#ifndef funcs_hh
+#define funcs_hh
 
 namespace Analysis {
 
@@ -53,8 +53,6 @@ namespace Analysis {
   bool HasEnding (std::string const &full_string, std::string const &ending);
   
   void FillTrees ( std::vector<fastjet::PseudoJet> jets, TTree* Tree, double &jPt, double &jEta, double &jPhi, double &jM, double &jE, int &jncons, double &wt, double weight); 
-  
-  bool Vz_candidate( TStarJetPicoEventHeader* header, double VzCut );
 
   void AnalysisSummary( int events, int pJets, int eJets, int gJets, int pgMatchedJets, int epMatchedJets, int egMatchedJets, std::string outName );
   
@@ -62,9 +60,7 @@ namespace Analysis {
 
   double LookupXsec(TString);
   
-  void InitReaderPythia( TStarJetPicoReader & reader, TChain* chain, int nEvents );
-
-  void InitReaderGeant( TStarJetPicoReader & reader, TChain* chain, int nEvents );
+  void InitReader( TStarJetPicoReader & reader, TChain* chain, int nEvents, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const std::string );
 
 }
 
