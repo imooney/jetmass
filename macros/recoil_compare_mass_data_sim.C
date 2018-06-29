@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void mass_plots_data_sim () {
+void recoil_compare_mass_data_sim () {
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~HISTOGRAMS AND CANVASES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
   TH1::SetDefaultSumw2();
   gStyle->SetOptStat(0);
@@ -19,32 +19,32 @@ void mass_plots_data_sim () {
   string out = "~/jetmass/plots/massplots/";
   string filetype = ".pdf";
     
-    TCanvas *cfull = new TCanvas("cfull","cfull",800,800);    //1D full range
-    TCanvas *cpympt = new TCanvas("cpympt","cpympt",800,800); //2D pythia
-    TCanvas *cgempt = new TCanvas("cgempt","cgempt",800,800); //2D geant
-    TCanvas *cdmpt = new TCanvas("cdmpt","cdmpt",800,800);    //2D data
-    TCanvas *cslices = new TCanvas("cslices","cslices",1200,800); //canvas to be partitioned for pt slices
-    TCanvas *cratios = new TCanvas("cratios","cratios",1200,800); //to be partitioned for ratios of the slices
-    TCanvas *cmean = new TCanvas("cmean","cmean",800,800);    //means for each pt slice
-    TCanvas *crms = new TCanvas("crms","crms",800,800);       //rms for each pt slice
-    
-    cfull->SetLogy(); cpympt->SetLogz(); cgempt->SetLogz(); cdmpt->SetLogz();
-    
-    cslices->Divide(3,2,0,0); cratios->Divide(3,2,0,0);
-
+  TCanvas *cfull = new TCanvas("cfull","cfull",800,800);    //1D full range
+  TCanvas *cpympt = new TCanvas("cpympt","cpympt",800,800); //2D pythia
+  TCanvas *cgempt = new TCanvas("cgempt","cgempt",800,800); //2D geant
+  TCanvas *cdmpt = new TCanvas("cdmpt","cdmpt",800,800);    //2D data
+  TCanvas *cslices = new TCanvas("cslices","cslices",1200,800); //canvas to be partitioned for pt slices
+  TCanvas *cratios = new TCanvas("cratios","cratios",1200,800); //to be partitioned for ratios of the slices
+  TCanvas *cmean = new TCanvas("cmean","cmean",800,800);    //means for each pt slice
+  TCanvas *crms = new TCanvas("crms","crms",800,800);       //rms for each pt slice
+  
+  cfull->SetLogy(); cpympt->SetLogz(); cgempt->SetLogz(); cdmpt->SetLogz();
+  
+  cslices->Divide(3,2,0,0); cratios->Divide(3,2,0,0);
+  
   TFile* simFile = new TFile( (sim_dir + sim_in + sim_file).c_str(), "READ");
     //MASS v PT
-  TH2D *py_m_pt = (TH2D*) simFile->Get("p_m_v_pt_incl");
-  TH2D *ge_m_pt = (TH2D*) simFile->Get("g_m_v_pt_incl");
-
+  TH2D *py_m_pt = (TH2D*) simFile->Get("m_v_pt_full_trig_jet_py");
+  TH2D *ge_m_pt = (TH2D*) simFile->Get("m_v_pt_full_rec_jet_ge");
+  
   TFile* dataFile = new TFile( (data_dir + data_in + data_file).c_str(), "READ");
     //MASS v PT
-  TH2D *d_m_pt = (TH2D*) dataFile->Get("m_v_pt_incl");
-
+  TH2D *d_m_pt = (TH2D*) dataFile->Get("m_v_pt_full_rec_jet");
+  
   string pyfull = py_m_pt->GetName(); string gefull = ge_m_pt->GetName(); string dfull = d_m_pt->GetName();
-
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MASS FOR PT SLICES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
+  
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MASS FOR PT SLICES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+  
   //bins go from e.g. 9 to 14 but correspond to values 10 to 15 for pT.
   TH1D* py_10_15 = py_m_pt->ProjectionX((pyfull + "1015").c_str(),9,14);
   TH1D* py_15_20 = py_m_pt->ProjectionX((pyfull + "1520").c_str(),14,19);
@@ -138,7 +138,7 @@ void mass_plots_data_sim () {
     tslices->AddEntry(py_10_15, "PYTHIA6", "p");
     tslices->AddEntry(ge_10_15, "PYTHIA6+GEANT", "p");
     tslices->AddEntry(d_10_15, "STAR pp run6 - 200 GeV", "p");
-    tslices->AddEntry((TObject*)0, "Ch+Ne inclusive jets, |#eta| < 0.6","");
+    tslices->AddEntry((TObject*)0, "Ch+Ne trigger jets, |#eta| < 0.6","");
     tslices->AddEntry((TObject*)0, "anti-kt, R = 0.4", "");
     
     TLegend *t1015 = new TLegend(0.49,0.75,0.9,0.9); t1015->SetBorderSize(0);
@@ -153,7 +153,7 @@ void mass_plots_data_sim () {
     t30plus->AddEntry((TObject*)0, "p_{T} > 30 GeV", "");
     
     TLegend *tratios = new TLegend(0.005,0.35,0.92,0.66); tratios->SetBorderSize(0);
-    tratios->AddEntry((TObject*)0, "Ch+Ne inclusive jets, |#eta| < 0.6","");
+    tratios->AddEntry((TObject*)0, "Ch+Ne trigger jets, |#eta| < 0.6","");
     tratios->AddEntry((TObject*)0, "anti-kt, R = 0.4", "");
     tratios->AddEntry((TObject*)0, "STAR pp run6 200 GeV / PYTHIA6+GEANT", "");
     
@@ -320,16 +320,16 @@ void mass_plots_data_sim () {
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
     
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SAVING~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    
-    cfull->SaveAs((out + "jet_mass_full" + filetype).c_str());
-    cpympt->SaveAs((out + "py_mass_v_pt" + filetype).c_str());
-    cgempt->SaveAs((out + "ge_mass_v_pt" + filetype).c_str());
-    cdmpt->SaveAs((out + "data_mass_v_pt" + filetype).c_str());
-    cmean->SaveAs((out + "mass_means" + filetype).c_str());
-    crms->SaveAs((out + "mass_rms" + filetype).c_str());
-    cslices->SaveAs((out + "mass_slices" + filetype).c_str());
-    cratios->SaveAs((out + "mass_ratios_geant_data" + filetype).c_str());
-    
+    /*    
+    cfull->SaveAs((out + "jet_mass_full_trig" + filetype).c_str());
+    cpympt->SaveAs((out + "py_mass_v_pt_trig" + filetype).c_str());
+    cgempt->SaveAs((out + "ge_mass_v_pt_trig" + filetype).c_str());
+    cdmpt->SaveAs((out + "data_mass_v_pt_trig" + filetype).c_str());
+    cmean->SaveAs((out + "mass_means_trig" + filetype).c_str());
+    crms->SaveAs((out + "mass_rms_trig" + filetype).c_str());
+    cslices->SaveAs((out + "mass_slices_trig" + filetype).c_str());
+    cratios->SaveAs((out + "mass_ratios_geant_data_trig" + filetype).c_str());
+    */
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~// 
     
   return;

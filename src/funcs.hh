@@ -41,9 +41,13 @@
 #include <utility>      // std::pair
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
+#include <memory>
 
 #ifndef funcs_hh
 #define funcs_hh
+
+using std::unordered_map; using std::make_shared; using std::shared_ptr; 
 
 namespace Analysis {
 
@@ -56,11 +60,68 @@ namespace Analysis {
 
   void AnalysisSummary( int events, int pJets, int eJets, int gJets, int pgMatchedJets, int epMatchedJets, int egMatchedJets, std::string outName );
   
-  std::vector<fastjet::PseudoJet> GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container , double etaCutVal, double partMinPtVal, std::vector<fastjet::PseudoJet> & rawParticles );
+  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container , TStarJetVector* sv, std::vector<fastjet::PseudoJet> & Particles, const bool );
 
   double LookupXsec(TString);
   
+  bool GetTriggers(std::vector<fastjet::PseudoJet> &, const std::vector<fastjet::PseudoJet>);
+  
   void InitReader( TStarJetPicoReader & reader, TChain* chain, int nEvents, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const std::string );
+
+  //HISTOGRAMS
+  template<class Key, class H, class hash=std::hash<Key>>
+    class Collection {
+    public:
+      Collection() : collection_() { };
+      ~Collection() { };
+  
+      H* get(Key key) {
+	if (keyExists(key))
+	  return collection_[key].get();
+	return nullptr;
+      }
+  
+      template <typename... Args>
+      void add(Key key, Args... args) {
+	collection_[key] = make_shared<H>(key.c_str(), args...);
+	collection_[key]->SetDirectory(0);
+      }
+  
+      template <typename ...Args>
+      bool fill(Key key, Args... args) {
+	if (!keyExists(key))
+	  return false;
+	collection_[key]->Fill(args...);
+	return true;
+      }
+  
+      bool write(Key key) {
+	if (!keyExists(key))
+	  return false;
+	collection_[key]->Write();
+	return true;
+      }
+
+      void clear() {
+	collection_.clear();
+      }
+  
+    private:
+  
+      unordered_map<Key, shared_ptr<H>, hash> collection_ = {};
+  
+      bool keyExists(std::string key) {
+	for (auto& h : collection_) {
+	  if (h.first == key)
+	    return true;
+	}
+	return false;
+      }
+  
+    };
+  void FillHistsHelper(Collection<std::string, TH1D> &, Collection<std::string, TH2D> &, Collection<std::string, TH3D> &, const std::string, const std::string, const std::string, const fastjet::PseudoJet, const double);
+
+  void FillHists(Collection<std::string, TH1D> &, Collection<std::string, TH2D> &, Collection<std::string, TH3D> &, const std::string, const std::string, const std::vector<fastjet::PseudoJet>, const double);
 
 }
 

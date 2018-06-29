@@ -66,6 +66,7 @@ namespace Analysis {
   const double dat_evEtMin = 5.4;
   const double sim_maxEtTow = 9999;
   const double dat_maxEtTow = 100;
+  const std::string sim_badTowers = "src/dummy_tower_list.txt";
   //truth 
   const double truth_absMaxVz = 1000;           //|Vz|<=30 cm
   const double truth_vZDiff = 1000;
@@ -74,7 +75,7 @@ namespace Analysis {
   const double truth_DCA = 100;
   const double truth_NFitPts = -1;
   const double truth_FitOverMaxPts = -1;
-  const std::string truth_badTowers = "src/dummy_tower_list.txt";
+  // const std::string truth_badTowers = "src/dummy_tower_list.txt";
   //detector
   const double det_absMaxVz = 30.0;           //|Vz|<=30 cm
   const double det_vZDiff = 31.0;             //max diff between selected TPC vertex and most probable VPD vertex (in ppRun6, VPD vz = 0, so vZDiff should be > absMaxVz)

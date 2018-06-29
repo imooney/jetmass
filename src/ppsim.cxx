@@ -74,9 +74,9 @@ int main (int argc, const char ** argv) {
   else if ( inputIsList)  { P6Chain = TStarJetPicoUtils::BuildChainFromFileList(chainList.c_str()); GEANTChain = TStarJetPicoUtils::BuildChainFromFileList(chainList.c_str());}
   else { __ERR("data file is not recognized type: .root or .txt only.") return -1; }
 
-
-  InitReader(P6Reader, P6Chain, nEvents, sim_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, sim_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, truth_badTowers);
-  InitReader(GEANTReader, GEANTChain, nEvents, sim_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, sim_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, det_badTowers);
+  //initialize the readers!
+  InitReader(P6Reader, P6Chain, nEvents, sim_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, sim_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, sim_badTowers);
+  InitReader(GEANTReader, GEANTChain, nEvents, sim_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, sim_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, sim_badTowers);
 
   TStarJetPicoEventHeader* p_header;  TStarJetPicoEvent* p_event;  TStarJetPicoEventHeader* g_header;  TStarJetPicoEvent* g_event;
   TStarJetVectorContainer<TStarJetVector> * p_container;         TStarJetVector* p_sv;
@@ -84,91 +84,101 @@ int main (int argc, const char ** argv) {
 
   // Histograms 
 
-  TH3 * p_PtEtaPhi_incl = new TH3D("p_PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * p_PtEtaPhi_lead = new TH3D("p_PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
+  Collection<string, TH1D> hists1D; Collection<string, TH2D> hists2D; Collection<string, TH3D> hists3D;
 
-  TH3 * p_cons_PtEtaPhi_incl = new TH3D("p_cons_PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * p_cons_PtEtaPhi_lead = new TH3D("p_cons_PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
-
-  TH1 * p_m_incl = new TH1D("p_m_incl","",80,0,80);
-  TH1 * p_m_lead = new TH1D("p_m_lead","",80,0,80);
-
-  TH3 * g_PtEtaPhi_incl = new TH3D("g_PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * g_PtEtaPhi_lead = new TH3D("g_PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
-  
-  TH3 * g_cons_PtEtaPhi_incl = new TH3D("g_cons_PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * g_cons_PtEtaPhi_lead = new TH3D("g_cons_PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
-
-  TH1 * g_m_incl = new TH1D("g_m_incl","",80,0,80);
-  TH1 * g_m_lead = new TH1D("g_m_lead","",80,0,80);
-
-  TH2 * p_m_v_pt_lead = new TH2D("p_m_v_pt_lead","",20,0,20,80,0,80);
-  TH2 * p_m_v_pt_incl = new TH2D("p_m_v_pt_incl","",20,0,20,80,0,80);
-
-  TH2 * g_m_v_pt_lead = new TH2D("g_m_v_pt_lead","",20,0,20,80,0,80);
-  TH2 * g_m_v_pt_incl = new TH2D("g_m_v_pt_incl","",20,0,20,80,0,80);
+  vector<string> flag_i = {"ch", "full"};
+  vector<string> flag_j = {"lead", "sublead", "trig", "rec", "incl"};
+  vector<string> flag_k = {"jet", "cons"};
+  vector<string> flag_l = {"py", "ge"};
+  for (int i = 0; i < flag_i.size(); ++ i) {
+    for (int j = 0; j < flag_j.size(); ++ j) {
+      for (int k = 0; k < flag_k.size(); ++ k) {
+	for (int l = 0; l < flag_l.size(); ++ l) {
+	  hists1D.add(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str(),"",80,0,80); //mass
+	  hists2D.add(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str(),"",20,0,20,80,0,80); //mass vs. pT
+	  hists3D.add(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str(),"",80,0,80,5,-1,1,10,0,2*Pi);
+	}
+      }
+    }
+  }
 
   double jetPt_incl, jetEta_incl, jetPhi_incl, jetM_incl, jetE_incl, consPt_incl, consEta_incl, consPhi_incl, consM_incl, consE_incl, pythia_wt, geant_wt;
   int nCons_incl, cons_dummy;
   double jetPt_lead, jetEta_lead, jetPhi_lead, jetM_lead, jetE_lead, consPt_lead, consEta_lead, consPhi_lead, consM_lead, consE_lead;
-  int nCons_lead;
+  double jetPt_sublead, jetEta_sublead, jetPhi_sublead, jetM_sublead, jetE_sublead;
+  int nCons_lead, nCons_sublead;
 
   TTree *p_inclTree = new TTree("py_inclTree","py_inclTree");
   TTree *g_inclTree = new TTree("ge_inclTree","ge_inclTree");
   TTree *p_leadTree = new TTree("py_leadTree","py_leadTree");
   TTree *g_leadTree = new TTree("ge_leadTree","ge_leadTree");
+  TTree *p_subleadTree = new TTree("py_subleadTree","py_subleadTree");
+  TTree *g_subleadTree = new TTree("ge_subleadTree","ge_subleadTree");
   TTree *p_cons_inclTree = new TTree("py_cons_inclTree","py_cons_inclTree");
   TTree *g_cons_inclTree = new TTree("ge_cons_inclTree","ge_cons_inclTree");
   TTree *p_cons_leadTree = new TTree("py_cons_leadTree","py_cons_leadTree");
   TTree *g_cons_leadTree = new TTree("ge_cons_leadTree","ge_cons_leadTree");
   
-  TBranch *pythiaPt_lead;  TBranch *pythiaEta_lead;  TBranch *pythiaPhi_lead; TBranch * pythiaM_lead; TBranch *pythiaE_lead; TBranch *pythiaNCons_lead; TBranch *pythiaWeight;
-  pythiaPt_lead = p_leadTree->Branch("Pt", &jetPt_lead);  pythiaEta_lead = p_leadTree->Branch("Eta", &jetEta_lead);  pythiaPhi_lead = p_leadTree->Branch("Phi", &jetPhi_lead);
-  pythiaM_lead = p_leadTree->Branch("M", &jetM_lead); pythiaE_lead = p_leadTree->Branch("E", &jetE_lead); pythiaNCons_lead = p_leadTree->Branch("nCons", &nCons_lead);
-  pythiaWeight = p_leadTree->Branch("weight", &pythia_wt);
+  p_leadTree->Branch("Pt", &jetPt_lead); p_leadTree->Branch("Eta", &jetEta_lead); p_leadTree->Branch("Phi", &jetPhi_lead);
+  p_leadTree->Branch("M", &jetM_lead); p_leadTree->Branch("E", &jetE_lead); p_leadTree->Branch("nCons", &nCons_lead);
+  p_leadTree->Branch("weight", &pythia_wt);
 
-  TBranch *geantPt_lead;  TBranch *geantEta_lead;  TBranch *geantPhi_lead; TBranch *geantM_lead; TBranch *geantE_lead; TBranch *geantNCons_lead; TBranch *geantWeight;
-  geantPt_lead = g_leadTree->Branch("Pt", &jetPt_lead);  geantEta_lead = g_leadTree->Branch("Eta", &jetEta_lead);  geantPhi_lead = g_leadTree->Branch("Phi", &jetPhi_lead);
-  geantM_lead = g_leadTree->Branch("M", &jetM_lead); geantE_lead = g_leadTree->Branch("E", &jetE_lead); geantNCons_lead = g_leadTree->Branch("nCons", &nCons_lead);
-  geantWeight = g_leadTree->Branch("weight", &geant_wt);
+  g_leadTree->Branch("Pt", &jetPt_lead); g_leadTree->Branch("Eta", &jetEta_lead); g_leadTree->Branch("Phi", &jetPhi_lead);
+  g_leadTree->Branch("M", &jetM_lead); g_leadTree->Branch("E", &jetE_lead); g_leadTree->Branch("nCons", &nCons_lead);
+  g_leadTree->Branch("weight", &geant_wt);
 
-  TBranch *c_pythiaPt_lead;  TBranch *c_pythiaEta_lead;  TBranch *c_pythiaPhi_lead; TBranch * c_pythiaM_lead; TBranch *c_pythiaE_lead;
-  c_pythiaPt_lead = p_cons_leadTree->Branch("Pt", &consPt_lead);  c_pythiaEta_lead = p_cons_leadTree->Branch("Eta", &consEta_lead);  c_pythiaPhi_lead = p_cons_leadTree->Branch("Phi", &consPhi_lead);
-  c_pythiaM_lead = p_cons_leadTree->Branch("M", &consM_lead); c_pythiaE_lead = p_cons_leadTree->Branch("E", &consE_lead);
-  pythiaWeight = p_cons_leadTree->Branch("weight", &pythia_wt);
+  p_subleadTree->Branch("Pt", &jetPt_sublead); p_subleadTree->Branch("Eta", &jetEta_sublead); p_subleadTree->Branch("Phi", &jetPhi_sublead);
+  p_subleadTree->Branch("M", &jetM_sublead); p_subleadTree->Branch("E", &jetE_sublead); p_subleadTree->Branch("nCons", &nCons_sublead);
+  p_subleadTree->Branch("weight", &pythia_wt);
 
-  TBranch *c_geantPt_lead;  TBranch *c_geantEta_lead;  TBranch *c_geantPhi_lead; TBranch *c_geantM_lead; TBranch *c_geantE_lead;
-  c_geantPt_lead = g_cons_leadTree->Branch("Pt", &consPt_lead);  c_geantEta_lead = g_cons_leadTree->Branch("Eta", &consEta_lead);  c_geantPhi_lead = g_cons_leadTree->Branch("Phi", &consPhi_lead);
-  c_geantM_lead = g_cons_leadTree->Branch("M", &consM_lead); c_geantE_lead = g_cons_leadTree->Branch("E", &consE_lead);
-  geantWeight = g_cons_leadTree->Branch("weight", &geant_wt);
+  g_subleadTree->Branch("Pt", &jetPt_sublead); g_subleadTree->Branch("Eta", &jetEta_sublead); g_subleadTree->Branch("Phi", &jetPhi_sublead);
+  g_subleadTree->Branch("M", &jetM_sublead); g_subleadTree->Branch("E", &jetE_sublead); g_subleadTree->Branch("nCons", &nCons_sublead);
+  g_subleadTree->Branch("weight", &geant_wt);
+
+  p_cons_leadTree->Branch("Pt", &consPt_lead); p_cons_leadTree->Branch("Eta", &consEta_lead); p_cons_leadTree->Branch("Phi", &consPhi_lead);
+  p_cons_leadTree->Branch("M", &consM_lead); p_cons_leadTree->Branch("E", &consE_lead);
+  p_cons_leadTree->Branch("weight", &pythia_wt);
+
+  g_cons_leadTree->Branch("Pt", &consPt_lead); g_cons_leadTree->Branch("Eta", &consEta_lead); g_cons_leadTree->Branch("Phi", &consPhi_lead);
+  g_cons_leadTree->Branch("M", &consM_lead); g_cons_leadTree->Branch("E", &consE_lead);
+  g_cons_leadTree->Branch("weight", &geant_wt);
  
-   TBranch *pythiaPt_incl;  TBranch *pythiaEta_incl;  TBranch *pythiaPhi_incl; TBranch * pythiaM_incl; TBranch *pythiaE_incl; TBranch *pythiaNCons_incl;
-  pythiaPt_incl = p_inclTree->Branch("Pt", &jetPt_incl);  pythiaEta_incl = p_inclTree->Branch("Eta", &jetEta_incl);  pythiaPhi_incl = p_inclTree->Branch("Phi", &jetPhi_incl);
-  pythiaM_incl = p_inclTree->Branch("M", &jetM_incl); pythiaE_incl = p_inclTree->Branch("E", &jetE_incl); pythiaNCons_lead = p_inclTree->Branch("nCons", &nCons_incl);
-  pythiaWeight = p_inclTree->Branch("weight", &pythia_wt);
+  p_inclTree->Branch("Pt", &jetPt_incl); p_inclTree->Branch("Eta", &jetEta_incl); p_inclTree->Branch("Phi", &jetPhi_incl);
+  p_inclTree->Branch("M", &jetM_incl); p_inclTree->Branch("E", &jetE_incl); p_inclTree->Branch("nCons", &nCons_incl);
+  p_inclTree->Branch("weight", &pythia_wt);
 
-  TBranch *geantPt_incl;  TBranch *geantEta_incl;  TBranch *geantPhi_incl; TBranch *geantM_incl; TBranch *geantE_incl; TBranch *geantNCons_incl;
-  geantPt_incl = g_inclTree->Branch("Pt", &jetPt_incl);  geantEta_incl = g_inclTree->Branch("Eta", &jetEta_incl);  geantPhi_incl = g_inclTree->Branch("Phi", &jetPhi_incl);
-  geantM_incl = g_inclTree->Branch("M", &jetM_incl); geantE_incl = g_inclTree->Branch("E", &jetE_incl); geantNCons_incl = g_inclTree->Branch("nCons", &nCons_incl);
-  geantWeight = g_inclTree->Branch("weight", &geant_wt);
+  g_inclTree->Branch("Pt", &jetPt_incl); g_inclTree->Branch("Eta", &jetEta_incl); g_inclTree->Branch("Phi", &jetPhi_incl);
+  g_inclTree->Branch("M", &jetM_incl); g_inclTree->Branch("E", &jetE_incl); g_inclTree->Branch("nCons", &nCons_incl);
+  g_inclTree->Branch("weight", &geant_wt);
 
-  TBranch *c_pythiaPt_incl;  TBranch *c_pythiaEta_incl;  TBranch *c_pythiaPhi_incl; TBranch * c_pythiaM_incl; TBranch *c_pythiaE_incl;
-  c_pythiaPt_incl = p_cons_inclTree->Branch("Pt", &consPt_incl);  c_pythiaEta_incl = p_cons_inclTree->Branch("Eta", &consEta_incl);  c_pythiaPhi_incl = p_cons_inclTree->Branch("Phi", &consPhi_incl);
-  c_pythiaM_incl = p_cons_inclTree->Branch("M", &consM_incl); c_pythiaE_incl = p_cons_inclTree->Branch("E", &consE_incl);
-  pythiaWeight = p_cons_inclTree->Branch("weight", &pythia_wt);
+  p_cons_inclTree->Branch("Pt", &consPt_incl); p_cons_inclTree->Branch("Eta", &consEta_incl); p_cons_inclTree->Branch("Phi", &consPhi_incl);
+  p_cons_inclTree->Branch("M", &consM_incl); p_cons_inclTree->Branch("E", &consE_incl);
+  p_cons_inclTree->Branch("weight", &pythia_wt);
 
-  TBranch *c_geantPt_incl;  TBranch *c_geantEta_incl;  TBranch *c_geantPhi_incl; TBranch *c_geantM_incl; TBranch *c_geantE_incl;
-  c_geantPt_incl = g_cons_inclTree->Branch("Pt", &consPt_incl);  c_geantEta_incl = g_cons_inclTree->Branch("Eta", &consEta_incl);  c_geantPhi_incl = g_cons_inclTree->Branch("Phi", &consPhi_incl);
-  c_geantM_incl = g_cons_inclTree->Branch("M", &consM_incl); c_geantE_incl = g_cons_inclTree->Branch("E", &consE_incl);
-  geantWeight = g_cons_inclTree->Branch("weight", &geant_wt);
+  g_cons_inclTree->Branch("Pt", &consPt_incl); g_cons_inclTree->Branch("Eta", &consEta_incl); g_cons_inclTree->Branch("Phi", &consPhi_incl);
+  g_cons_inclTree->Branch("M", &consM_incl); g_cons_inclTree->Branch("E", &consE_incl);
+  g_cons_inclTree->Branch("weight", &geant_wt);
   
-
+  //SELECTORS
+  // Constituent selectors                                                                                                                                                     
+  // ---------------------                                                                                                                                                        
+  Selector select_track_rap = fastjet::SelectorAbsRapMax(max_track_rap);
+  Selector select_lopt      = fastjet::SelectorPtMin( partMinPt );
+  Selector spart = select_track_rap * select_lopt;
+  
+  // Jet candidate selectors                                                                                                                                                   
+  // -----------------------                                                                                                                                                      
+  Selector select_jet_rap     = fastjet::SelectorAbsRapMax(max_rap);
+  Selector select_jet_pt_min  = fastjet::SelectorPtMin( jet_ptmin );
+  Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
+  Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
+  
   JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
   double p_wt, g_wt;
   TString geantFilename, pythiaFilename;
   
   // Particle containers & counters
-  vector<PseudoJet> p_Particles, g_Particles, p_Jets, g_Jets, p_Cons, g_Cons;
+  vector<PseudoJet> p_Particles, g_Particles, ch_p_Particles, ch_g_Particles, p_Jets, g_Jets, ch_p_Jets, ch_g_Jets;//, p_Cons, g_Cons;
   int nEvents = 0;   int p_NJets = 0;  int g_NJets = 0;  int p_EventID;   int g_EventID;
   //1=inclusive, 2=lead
   int counter_debug1 = 0, counter_debug2 = 0;
@@ -179,9 +189,11 @@ int main (int argc, const char ** argv) {
 
     if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
 
-    p_Particles.clear(), g_Particles.clear(),
-    p_Jets.clear(), g_Jets.clear(), 
-    p_Cons.clear(),  g_Cons.clear();   //  clear all containers
+    p_Particles.clear(); g_Particles.clear();
+    ch_p_Particles.clear(); ch_g_Particles.clear();
+    p_Jets.clear(); g_Jets.clear(); 
+    ch_p_Jets.clear(); ch_g_Jets.clear();
+    //p_Cons.clear(); g_Cons.clear();   //  clear all containers
 
     nEvents++;  P6Reader.PrintStatus(10);  GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
 
@@ -201,14 +213,18 @@ int main (int argc, const char ** argv) {
     g_wt = LookupXsec( geantFilename );
 
     //  GATHER PARTICLES
-    GatherParticles ( p_container, max_track_rap, partMinPt, p_Particles);    //  Pythia particles
-    GatherParticles ( g_container, max_track_rap, partMinPt, g_Particles);    //  GEANT particles
-
-    //  CREATE JET SELECTOR
-    Selector etaSelector = SelectorAbsEtaMax( 1.0-R );    Selector ptSelector = SelectorPtMin(jet_ptmin);    Selector etaPtSelector = etaSelector && ptSelector;
+    GatherParticles ( p_container, p_sv, p_Particles, 1);    //  Pythia particles
+    GatherParticles ( p_container, p_sv, ch_p_Particles, 0); //0 signifies charged-only, 1 signifies ch+ne
+    GatherParticles ( g_container, g_sv, g_Particles, 1);    //  GEANT particles
+    GatherParticles ( g_container, g_sv, ch_g_Particles, 0);
     
-    ClusterSequence p_Cluster(p_Particles, jet_def); ClusterSequence g_Cluster(g_Particles, jet_def);           //  CLUSTER BOTH
-    p_Jets = sorted_by_pt(etaPtSelector(p_Cluster.inclusive_jets())); g_Jets = sorted_by_pt(etaPtSelector(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+    vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
+    vector<PseudoJet> ch_p_cut_Particles = spart(ch_p_Particles); vector<PseudoJet> ch_g_cut_Particles = spart(ch_g_Particles);
+    
+    ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
+    ClusterSequence ch_p_Cluster(ch_p_cut_Particles, jet_def); ClusterSequence ch_g_Cluster(ch_g_cut_Particles, jet_def);
+    p_Jets = sorted_by_pt(sjet(p_Cluster.inclusive_jets())); g_Jets = sorted_by_pt(sjet(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+    ch_p_Jets = sorted_by_pt(sjet(p_Cluster.inclusive_jets())); ch_g_Jets = sorted_by_pt(sjet(ch_g_Cluster.inclusive_jets()));
 
     if (p_Jets.size() != 0) {
       //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TREES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -216,6 +232,11 @@ int main (int argc, const char ** argv) {
       //leading
       vector<PseudoJet> pLead; pLead.push_back(p_Jets[0]);
       FillTrees(pLead, p_leadTree, jetPt_lead, jetEta_lead, jetPhi_lead, jetM_lead, jetE_lead, nCons_lead, pythia_wt, p_wt);
+      //subleading
+      if (p_Jets.size() > 1) {
+	vector<PseudoJet> pSublead; pSublead.push_back(p_Jets[1]);
+	FillTrees(pSublead, p_subleadTree, jetPt_sublead, jetEta_sublead, jetPhi_sublead, jetM_sublead, jetE_sublead, nCons_sublead, pythia_wt, p_wt);
+      }
       //constituents
       FillTrees(pLead[0].constituents(), p_cons_leadTree, consPt_lead, consEta_lead, consPhi_lead, consM_lead, consE_lead, cons_dummy, pythia_wt, p_wt);
       //inclusive
@@ -231,6 +252,11 @@ int main (int argc, const char ** argv) {
       //leading
       vector<PseudoJet> gLead; gLead.push_back(g_Jets[0]);
       FillTrees(gLead, g_leadTree, jetPt_lead, jetEta_lead, jetPhi_lead, jetM_lead, jetE_lead, nCons_lead, geant_wt, g_wt);
+      //subleading
+       if (g_Jets.size() > 1) {
+	vector<PseudoJet> gSublead; gSublead.push_back(g_Jets[1]);
+	FillTrees(gSublead, g_subleadTree, jetPt_sublead, jetEta_sublead, jetPhi_sublead, jetM_sublead, jetE_sublead, nCons_sublead, geant_wt, g_wt);
+      }
       //constituents
       FillTrees(gLead[0].constituents(), g_cons_leadTree, consPt_lead, consEta_lead, consPhi_lead, consM_lead, consE_lead, cons_dummy, geant_wt, g_wt);  
       //inclusive
@@ -244,44 +270,18 @@ int main (int argc, const char ** argv) {
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~HISTOS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    //pythia
-    for (int i = 0; i < p_Jets.size(); ++ i) {
-      if (i == 0) { //lead
-	p_m_lead->Fill(p_Jets[0].m(), p_wt);
-	p_m_v_pt_lead->Fill(p_Jets[0].m(), p_Jets[0].pt(), p_wt);
-	p_PtEtaPhi_lead->Fill(p_Jets[0].pt(), p_Jets[0].eta(), p_Jets[0].phi(), p_wt); //jets
-	vector<PseudoJet> cons_lead = p_Jets[0].constituents();
-	for (int j = 0; j < cons_lead.size(); ++ j) {
-	  p_cons_PtEtaPhi_lead->Fill(cons_lead[j].pt(), cons_lead[j].eta(), cons_lead[j].phi(), p_wt); //constituents
-	}
-      }
-      //inclusive
-      p_m_incl->Fill(p_Jets[i].m(), p_wt);
-      p_m_v_pt_incl->Fill(p_Jets[i].m(), p_Jets[i].pt(), p_wt);
-      p_PtEtaPhi_incl->Fill(p_Jets[i].pt(),p_Jets[i].eta(),p_Jets[i].phi(),p_wt); //jets
-      for (int j = 0; j < p_Jets[i].constituents().size(); ++ j) {
-	p_cons_PtEtaPhi_incl->Fill(p_Jets[i].constituents()[j].pt(), p_Jets[i].constituents()[j].eta(), p_Jets[i].constituents()[j].phi(), p_wt);
-      }
+    
+    if(p_Jets.size() != 0) {
+      FillHists(hists1D, hists2D, hists3D, "full", "_py", p_Jets, p_wt);
     }
-
-    //geant
-    for (int i = 0; i < g_Jets.size(); ++ i) {
-      if (i == 0) { //lead
-	g_m_lead->Fill(g_Jets[0].m(), g_wt);
-	g_m_v_pt_lead->Fill(g_Jets[0].m(), g_Jets[0].pt(), g_wt);
-	g_PtEtaPhi_lead->Fill(g_Jets[0].pt(), g_Jets[0].eta(), g_Jets[0].phi(), g_wt); //jets
-	vector<PseudoJet> cons_lead = g_Jets[0].constituents();
-	for (int j = 0; j < cons_lead.size(); ++ j) {
-	  g_cons_PtEtaPhi_lead->Fill(cons_lead[j].pt(), cons_lead[j].eta(), cons_lead[j].phi(), g_wt); //constituents
-	}
-      }
-      //inclusive
-      g_m_incl->Fill(g_Jets[i].m(), g_wt);
-      g_m_v_pt_incl->Fill(g_Jets[i].m(), g_Jets[i].pt(), g_wt);
-      g_PtEtaPhi_incl->Fill(g_Jets[i].pt(),g_Jets[i].eta(),g_Jets[i].phi(),g_wt); //jets
-      for (int j = 0; j < g_Jets[i].constituents().size(); ++ j) {
-	g_cons_PtEtaPhi_incl->Fill(g_Jets[i].constituents()[j].pt(), g_Jets[i].constituents()[j].eta(), g_Jets[i].constituents()[j].phi(), g_wt);
-      }
+    if(g_Jets.size() != 0) {
+      FillHists(hists1D, hists2D, hists3D, "full", "_ge", g_Jets, g_wt);
+    }
+    if(ch_p_Jets.size() != 0) {
+      FillHists(hists1D, hists2D, hists3D, "ch", "_py", ch_p_Jets, p_wt);
+    }
+    if(ch_g_Jets.size() != 0) {
+      FillHists(hists1D, hists2D, hists3D, "ch", "_ge", ch_g_Jets, g_wt);
     }
     p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total
   }
@@ -295,9 +295,10 @@ int main (int argc, const char ** argv) {
   std::cout << g_NJets << " jets have been found for the Pythia6 + GEANT data" << std::endl << std::endl;
   std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
 
-  std::cout << "TESTING: number of failed vZ candidates = " << counter_debug1 << std::endl;
   p_leadTree->Write("py_leadTree");
   g_leadTree->Write("ge_leadTree");
+  p_subleadTree->Write("py_subleadTree");
+  g_subleadTree->Write("ge_subleadTree");
   p_cons_leadTree->Write("py_cons_leadTree");
   g_cons_leadTree->Write("ge_cons_leadTree");
   p_inclTree->Write("py_inclTree");
@@ -307,11 +308,17 @@ int main (int argc, const char ** argv) {
 
   
   //hist1->Write(); hist2->Write(); etc, goes here
-  p_PtEtaPhi_lead->Write(); p_cons_PtEtaPhi_lead->Write(); p_PtEtaPhi_incl->Write(); p_cons_PtEtaPhi_incl->Write();
-  g_PtEtaPhi_lead->Write(); g_cons_PtEtaPhi_lead->Write(); g_PtEtaPhi_incl->Write(); g_cons_PtEtaPhi_incl->Write(); 
-  p_m_incl->Write(); p_m_lead->Write(); g_m_incl->Write(); g_m_lead->Write();
-  p_m_v_pt_incl->Write(); p_m_v_pt_lead->Write(); g_m_v_pt_incl->Write(); g_m_v_pt_lead->Write();
-  
+  for (int i = 0; i < flag_i.size(); ++ i) {
+    for (int j = 0; j < flag_j.size(); ++ j) {
+      for (int k = 0; k < flag_k.size(); ++ k) {
+	for (int l = 0; l < flag_l.size(); ++ l) {
+	  hists1D.write(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str());
+	  hists2D.write(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str());
+	  hists3D.write(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]+"_"+flag_l[l]).c_str());
+	}
+      }
+    }
+  }
 
   fout->Close();
 

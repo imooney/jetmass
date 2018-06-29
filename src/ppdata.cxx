@@ -98,40 +98,6 @@ int main ( int argc, const char** argv) {
   }
   }
 
-  /*
-int main ( int argc, const char** argv ) {
-  
-	// set of default arguments that will work
-        const char* defaults[5] = {"SimpleJetFinder", "1", "out/tmp.root", "list.txt" };
-	if (argc == 1) {
-		argv = defaults;
-		argc = 4;
-	}
- 
-	std::vector<std::string> arguments(argv+1, argv + argc);
- 
-	// load variables
- 
-	bool    chainFromList = atof( arguments.at(0).c_str() );
-	TString outFileName   = arguments.at(1);
-	TString chainList     = arguments.at(2);
-	TString chainName     = "JetTree";
-	TString badTowerList  = "src/y7_AuAu_HT_hot_list.txt";
-  
-	// Input
-	// -----
-	// create the data handling classes
-	TChain* chain         = new TChain( chainName );
-	if ( chainFromList == false ) {
-		for ( int i = 2; i < arguments.size(); ++i ) {
-			chain->Add( arguments.at(i).data() );
-		}
-	}
-	else if ( chainFromList == true ) {
-		chain = TStarJetPicoUtils::BuildChainFromFileList( chainList );
-	}
-  */
-
   // Build our input now
   // --------------------
   TChain* chain = new TChain( chainName.c_str() );
@@ -148,16 +114,16 @@ int main ( int argc, const char** argv ) {
   else if ( inputIsList)  { chain = TStarJetPicoUtils::BuildChainFromFileList( chainList.c_str() ); }
   else { __ERR("data file is not recognized type: .root or .txt only.") return -1; }
 	
-	// Build the event structure w/ cuts
-	// ---------------------------------
-	TStarJetPicoReader reader;
-	InitReader(reader, chain, nEvents, dat_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, dat_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, det_badTowers);
+  // Build the event structure w/ cuts
+  // ---------------------------------
+  TStarJetPicoReader reader;
+  InitReader(reader, chain, nEvents, dat_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, dat_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, det_badTowers);
 
-	// Data classes
-	// ------------
-	TStarJetVectorContainer<TStarJetVector>* container;
-	TStarJetVector* sv; // TLorentzVector* would be sufficient
-	TStarJetPicoEventHeader* header;
+  // Data classes
+  // ------------
+  TStarJetVectorContainer<TStarJetVector>* container;
+  TStarJetVector* sv; // TLorentzVector* would be sufficient
+  TStarJetPicoEventHeader* header;
 
   // Histograms
   // ----------
@@ -165,51 +131,60 @@ int main ( int argc, const char** argv ) {
   TH2::SetDefaultSumw2();
   TH3::SetDefaultSumw2();
 
-  TH3 * PtEtaPhi_incl = new TH3D("PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * PtEtaPhi_lead = new TH3D("PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
+  Collection<string, TH1D> hists1D; Collection<string, TH2D> hists2D; Collection<string, TH3D> hists3D;
 
-  TH3 * cons_PtEtaPhi_incl = new TH3D("cons_PtEtaPhi_incl","",80,0,80,5,-1,1,10,0,2*Pi);
-  TH3 * cons_PtEtaPhi_lead = new TH3D("cons_PtEtaPhi_lead","",80,0,80,5,-1,1,10,0,2*Pi);
-  
-  TH1 * m_incl = new TH1D("m_inclusive","",80,0,80);
-  TH1 * m_lead = new TH1D("m_leading","",80,0,80);
-
-  TH2 * m_v_pt_lead = new TH2D("m_v_pt_lead","",20,0,20,80,0,80);
-  TH2 * m_v_pt_incl = new TH2D("m_v_pt_incl","",20,0,20,80,0,80);
+  vector<string> flag_i = {"ch", "full"};
+  vector<string> flag_j = {"lead", "sublead", "trig", "rec", "incl"};   
+  vector<string> flag_k = {"jet", "cons"};
+  for (int i = 0; i < flag_i.size(); ++ i) {
+    for (int j = 0; j < flag_j.size(); ++ j) {
+      for (int k = 0; k < flag_k.size(); ++ k) {
+	hists1D.add(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",80,0,80); //mass
+	hists2D.add(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,20,80,0,80); //mass vs. pT
+	hists3D.add(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",80,0,80,5,-1,1,10,0,2*Pi);
+      }
+    }
+  }
 
   // Trees
   // -----
   double lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E;
+  double sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E;
   double cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E;
   double incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E;
   double cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E;
-  int nCons_incl, nCons_lead, dummy_int;
+  int nCons_incl, nCons_lead, nCons_sublead, dummy_int;
   double dummy_double;
 
   TTree *leadTree = new TTree("lead","lead");
+  TTree *subleadTree = new TTree("sublead","sublead");
   TTree *cons_leadTree = new TTree("cons_lead","cons_lead");
   TTree *inclTree = new TTree("incl","incl");
   TTree *cons_inclTree = new TTree("cons_incl","cons_incl");
 
-  TBranch *leadPt;  TBranch *leadEta;  TBranch *leadPhi; TBranch *leadM; TBranch *leadE; TBranch *NCons_lead;
-  leadPt = leadTree->Branch("Pt", &lead_Pt);  leadEta = leadTree->Branch("Eta", &lead_Eta);  leadPhi = leadTree->Branch("Phi", &lead_Phi);
-  leadM = leadTree->Branch("M", &lead_M); leadE = leadTree->Branch("E", &lead_E); NCons_lead = leadTree->Branch("nCons", &nCons_lead);
+  //TBranch *leadPt;  TBranch *leadEta;  TBranch *leadPhi; TBranch *leadM; TBranch *leadE; TBranch *NCons_lead;
+  leadTree->Branch("Pt", &lead_Pt); leadTree->Branch("Eta", &lead_Eta);  leadTree->Branch("Phi", &lead_Phi);
+  leadTree->Branch("M", &lead_M); leadTree->Branch("E", &lead_E); leadTree->Branch("nCons", &nCons_lead);
 
-  TBranch *cons_leadPt;  TBranch *cons_leadEta;  TBranch *cons_leadPhi; TBranch *cons_leadM; TBranch *cons_leadE;
-  cons_leadPt = cons_leadTree->Branch("Pt", &cons_lead_Pt); cons_leadEta = cons_leadTree->Branch("Eta", &cons_lead_Eta); cons_leadPhi = cons_leadTree->Branch("Phi", &cons_lead_Phi);
-  cons_leadM = cons_leadTree->Branch("M", &cons_lead_M); cons_leadE = cons_leadTree->Branch("E", &cons_lead_E);
+  //TBranch *cons_leadPt;  TBranch *cons_leadEta;  TBranch *cons_leadPhi; TBranch *cons_leadM; TBranch *cons_leadE;
+  cons_leadTree->Branch("Pt", &cons_lead_Pt); cons_leadTree->Branch("Eta", &cons_lead_Eta); cons_leadTree->Branch("Phi", &cons_lead_Phi);
+  cons_leadTree->Branch("M", &cons_lead_M); cons_leadTree->Branch("E", &cons_lead_E);
 
-  TBranch *inclPt;  TBranch *inclEta;  TBranch *inclPhi; TBranch *inclM; TBranch *inclE; TBranch *NCons_incl;
-  inclPt = inclTree->Branch("Pt", &incl_Pt);  inclEta = inclTree->Branch("Eta", &incl_Eta);  inclPhi = inclTree->Branch("Phi", &incl_Phi);
-  inclM = inclTree->Branch("M", &incl_M);  inclE = inclTree->Branch("E", &incl_E); NCons_incl = inclTree->Branch("nCons", &nCons_incl);
+  //TBranch *subleadPt;  TBranch *subleadEta;  TBranch *subleadPhi; TBranch *subleadM; TBranch *subleadE; TBranch *NCons_sublead;
+  subleadTree->Branch("Pt", &sublead_Pt); subleadTree->Branch("Eta", &sublead_Eta); subleadTree->Branch("Phi", &sublead_Phi);
+  subleadTree->Branch("M", &sublead_M); subleadTree->Branch("E", &sublead_E); subleadTree->Branch("nCons", &nCons_sublead);
 
-  TBranch *cons_inclPt;  TBranch *cons_inclEta;  TBranch *cons_inclPhi; TBranch *cons_inclM; TBranch *cons_inclE;
-  cons_inclPt = cons_inclTree->Branch("Pt", &cons_incl_Pt);  cons_inclEta = cons_inclTree->Branch("Eta", &cons_incl_Eta);  cons_inclPhi = cons_inclTree->Branch("Phi", &cons_incl_Phi);
-  cons_inclM = cons_inclTree->Branch("M", &cons_incl_M); cons_inclE = cons_inclTree->Branch("E", &cons_incl_E);
+  //TBranch *inclPt;  TBranch *inclEta;  TBranch *inclPhi; TBranch *inclM; TBranch *inclE; TBranch *NCons_incl;
+  inclTree->Branch("Pt", &incl_Pt); inclTree->Branch("Eta", &incl_Eta); inclTree->Branch("Phi", &incl_Phi);
+  inclTree->Branch("M", &incl_M); inclTree->Branch("E", &incl_E); inclTree->Branch("nCons", &nCons_incl);
+
+  //TBranch *cons_inclPt;  TBranch *cons_inclEta;  TBranch *cons_inclPhi; TBranch *cons_inclM; TBranch *cons_inclE;
+  cons_inclTree->Branch("Pt", &cons_incl_Pt); cons_inclTree->Branch("Eta", &cons_incl_Eta); cons_inclTree->Branch("Phi", &cons_incl_Phi);
+  cons_inclTree->Branch("M", &cons_incl_M); cons_inclTree->Branch("E", &cons_incl_E);
   
   // Helpers
   // -------
-  vector<PseudoJet> particles;
+  vector<PseudoJet> particles, ch_particles;
 
   int nJets = 0;
 
@@ -217,7 +192,6 @@ int main ( int argc, const char** argv ) {
   // ---------------------
   Selector select_track_rap = fastjet::SelectorAbsRapMax(max_track_rap);
   Selector select_lopt      = fastjet::SelectorPtMin( partMinPt );
-  
   Selector slo = select_track_rap * select_lopt;
 
   // Jet candidate selectors
@@ -242,7 +216,7 @@ int main ( int argc, const char** argv ) {
   cout << "Performing analysis." << endl;
   // Cycle through events
   // --------------------  
-  int nEvents = 10000;
+  int nEvents = -1;
   int nEventsUsed = 0;
 	
   //initialize the reader
@@ -253,100 +227,114 @@ int main ( int argc, const char** argv ) {
       reader.PrintStatus(10);
       //get the event header
       header = reader.GetEvent()->GetHeader();
-      particles.clear();
+      particles.clear(); ch_particles.clear();
       
       // Get the output container from the reader
       // ----------------------------------------
       container = reader.GetOutputContainer();
+
+      // Transform TStarJetVectors into (FastJet) PseudoJets
+      // ----------------------------------------------------------
+      GatherParticles(container, sv, particles, 1); //ch+ne
+      GatherParticles(container, sv, ch_particles, 0); //ch
+    
+      // Analysis
+      // --------
+      // Apply selector to the full particle set
+      vector<PseudoJet> pLo = slo( particles ); vector<PseudoJet> ch_pLo = slo( ch_particles );
       
+      // find corresponding jets with soft constituents
+      // ----------------------------------------------
+      ClusterSequenceArea csaLo ( pLo, jet_def, area_def ); // WITH background subtraction
+      ClusterSequenceArea ch_csaLo ( ch_pLo, jet_def, area_def ); //WITH background subtraction
+      /*
+      // Background initialization
+      // -------------------------
+      // Background selector - Exclude two hardest jets for background extermination
+      Selector selector_bkgd = fastjet::SelectorAbsRapMax( max_rap ) * (!fastjet::SelectorNHardest(2));
+      // Area - same as for jets
+      AreaDefinition area_def_bkgd ( area_def );
+      // Jet definition - use kT instead of anti-kT algorithm here
+      JetDefinition jet_def_bkgd (fastjet::kt_algorithm, R );
+      // Energy density estimate from median ( pt_i / area_i )
+      JetMedianBackgroundEstimator bkgd_estimator (selector_bkgd, jet_def_bkgd, area_def_bkgd);
+      bkgd_estimator.set_particles( pLo );
+      // Subtract A*rho from the original pT & m
+      Subtractor bkgd_subtractor (&bkgd_estimator);
+      bkgd_subtractor.set_use_rho_m();*/
+      vector<PseudoJet> LoResult = fastjet::sorted_by_pt(sjet(/*bkgd_subtractor(*/csaLo.inclusive_jets())/*)*/);
+      vector<PseudoJet> ch_LoResult = fastjet::sorted_by_pt(sjet(ch_csaLo.inclusive_jets()));
 
-    	// Transform TStarJetVectors into (FastJet) PseudoJets
-    	// ----------------------------------------------------------
-    	for ( int i=0; i < container->GetEntries() ; ++i ){
-            sv = container->Get(i);
-	    fastjet::PseudoJet current = fastjet::PseudoJet( *sv );
-	    current.set_user_index(sv->GetCharge());
-	    if (sv->GetCharge() != 0) { //for charged particles, we assign the pion mass
-	      current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), PionMass);
-	    }	    
-            particles.push_back( current );
-    	}
-    
-    	// Analysis
-    	// --------
-    	// Apply selector to the full particle set
-    	vector<PseudoJet> pLo = slo( particles );        
+      
+      if (LoResult.size() != 0) {
+	++ nJets;
 
-	    // find corresponding jets with soft constituents
-  	  // ----------------------------------------------
-    	ClusterSequenceArea csaLo ( pLo, jet_def, area_def ); // WITH background subtraction
-
-	    // Background initialization
-  	  // -------------------------
-    	// Background selector - Exclude two hardest jets for background extermination
-    	Selector selector_bkgd = fastjet::SelectorAbsRapMax( max_rap ) * (!fastjet::SelectorNHardest(2));
-    	// Area - same as for jets
-        AreaDefinition area_def_bkgd ( area_def );
-    	// Jet definition - use kT instead of anti-kT algorithm here
-    	JetDefinition jet_def_bkgd (fastjet::kt_algorithm, R );
-    	// Energy density estimate from median ( pt_i / area_i )
-    	JetMedianBackgroundEstimator bkgd_estimator (selector_bkgd, jet_def_bkgd, area_def_bkgd);
-        bkgd_estimator.set_particles( pLo );
-    	// Subtract A*rho from the original pT & m
-    	Subtractor bkgd_subtractor (&bkgd_estimator);
-	bkgd_subtractor.set_use_rho_m();
-    	vector<PseudoJet> LoResult = fastjet::sorted_by_pt(sjet(bkgd_subtractor(csaLo.inclusive_jets())));
-	
-	if (LoResult.size() != 0) {
-	  ++ nJets;
-	  //leading
-	  m_v_pt_lead->Fill(LoResult[0].m(), LoResult[0].pt());
-	  PtEtaPhi_lead->Fill(LoResult[0].pt(),LoResult[0].eta(),LoResult[0].phi());
-	  vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); 
-	  FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
-	  FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
-	  for (int cons = 0; cons < LoResult[0].constituents().size(); ++ cons) {
-	    if (LoResult[0].constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts
-	    cons_PtEtaPhi_lead->Fill(LoResult[0].constituents()[cons].pt(), LoResult[0].constituents()[cons].eta(), LoResult[0].constituents()[cons].phi());
-	  }
-	  m_lead->Fill(LoResult[0].m());
-	  
-	  //inclusive
-	  FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
-	  for (int j = 0; j < LoResult.size(); ++ j) {
-	    m_v_pt_incl->Fill(LoResult[j].m(), LoResult[j].pt());
-	    PtEtaPhi_incl->Fill(LoResult[j].pt(),LoResult[j].eta(),LoResult[j].phi()); 
-	    FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
-	    for (int cons = 0; cons < LoResult[j].constituents().size(); ++ cons) {
-	      if (LoResult[j].constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts
-	      cons_PtEtaPhi_incl->Fill(LoResult[j].constituents()[cons].pt(), LoResult[j].constituents()[cons].eta(), LoResult[j].constituents()[cons].phi());
-	    }
-	    m_incl->Fill(LoResult[j].m());
-	  }
+	FillHists(hists1D, hists2D, hists3D, "full", "", LoResult, 1.0); 
+	//leading
+	vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); //I do this so I can use the same function for jets & constituents (takes a vector of pseudojets)
+	FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
+	FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
+	//subleading
+	if (LoResult.size() > 1) {
+	  vector<PseudoJet> LoSublead; LoSublead.push_back(LoResult[1]);
+	  FillTrees(LoSublead, subleadTree, sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E, nCons_sublead, dummy_double, dummy_double);
 	}
-	  // And we're done! Fill histograms
-	  // -----------------------------
-    
-	nEventsUsed++;
+	//inclusive
+	FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
+	for (int j = 0; j < LoResult.size(); ++ j) {
+	  FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
+	}
+      }
+      
+      if (ch_LoResult.size() != 0) {
+	FillHists(hists1D, hists2D, hists3D, "ch", "", ch_LoResult, 1.0);
+		//leading
+	/*	vector<PseudoJet> ch_LoLead; ch_LoLead.push_back(ch_LoResult[0]); //I do this so I can use the same function for jets & constituents (takes a vector of pseudojets)
+	FillTrees(ch_LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
+	FillTrees(ch_LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
+	//subleading
+	if (ch_LoResult.size() > 1) {
+	  vector<PseudoJet> ch_LoSublead; ch_LoSublead.push_back(ch_LoResult[1]);
+	  FillTrees(ch_LoSublead, subleadTree, sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E, nCons_sublead, dummy_double, dummy_double);
+	}
+	//inclusive
+	FillTrees(ch_LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
+	for (int j = 0; j < ch_LoResult.size(); ++ j) {
+	  FillTrees(ch_LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
+	}
+	*/
+      }
+      // And we're done!
+      // -----------------------------
+      
+      nEventsUsed++;
     } // Event loop
   }catch ( std::exception& e) {
     std::cerr << "Caught " << e.what() << std::endl;
     return -1;
   }
-
- // Output                                                                                                                                                                                               
+  
+  // Output
   // ------                                                                                                                                                                                               
   TFile* fout = new TFile((outputDir + outFileName).c_str(), "RECREATE");
 
   // Close up shop
   // -------------
  
-  leadTree->Write("lead"); cons_leadTree->Write("cons_lead"); 
+  leadTree->Write("lead"); cons_leadTree->Write("cons_lead");
+  subleadTree->Write("sublead");
   inclTree->Write("incl"); cons_inclTree->Write("cons_incl");
+    
+  for (int i = 0; i < flag_i.size(); ++ i) {
+    for (int j = 0; j < flag_j.size(); ++ j) {
+      for (int k = 0; k < flag_k.size(); ++ k) {
+	hists1D.write(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
+	hists2D.write(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
+	hists3D.write(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      }
+    }
+  }
 
-  PtEtaPhi_incl->Write(); PtEtaPhi_lead->Write();
-  cons_PtEtaPhi_incl->Write(); cons_PtEtaPhi_lead->Write();
-  m_incl->Write(); m_lead->Write(); m_v_pt_incl->Write(); m_v_pt_lead->Write();
 
   //fout->Write();
   fout->Close();

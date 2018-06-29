@@ -67,4 +67,5 @@ set arg = "$outLocation $outName $Files"
 
 qsub -q erhiq -V -l mem=2GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
 #make python script later: jet_analysis/submit scripts start with pbs
+#add back in a second: -q erhiq
 end

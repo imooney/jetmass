@@ -49,23 +49,21 @@ namespace Analysis {
     std::cout <<std::endl << "Writing to:  " << outName << std::endl << std::endl;
   }
 
-  std::vector<fastjet::PseudoJet> GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container , double etaCutVal, double partMinPtVal, std::vector<fastjet::PseudoJet> & rawParticles ){
+  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container , TStarJetVector *sv, std::vector<fastjet::PseudoJet> & Particles, const bool full){
     for ( int i=0; i < container->GetEntries() ; ++i ) {
-      TStarJetVector* sv = container->Get(i);
+      sv = container->Get(i);
       fastjet::PseudoJet current = fastjet::PseudoJet( *sv );
       current.set_user_index( sv->GetCharge() );
       
       if (sv->GetCharge() != 0) {
-	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), PionMass);
+	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), PionMass); //assigning pion mass to charged particles
       }
+      if ((sv->GetCharge() == 0) && (full == 0)) { continue; } // if we don't want full jets, skip neutrals
 
-      if ( std::abs(current.eta()) > 1.0 )      { continue; }  // removes particles with eta>|1|
-      if ( current.pt() < 0.2 )      { continue; }  // removes particles with pt<0.2GeV
-
-      rawParticles.push_back(current);
+      Particles.push_back(current);
     }
-    return rawParticles;
-  }  
+    return;
+  }
 
   double LookupXsec(TString currentfile ) {
 
@@ -119,6 +117,23 @@ namespace Analysis {
     return 1;
   }
 
+  //finds potential trigger jets out of the two highest pT jets
+  bool GetTriggerJet(std::vector<fastjet::PseudoJet> & triggers, const std::vector<fastjet::PseudoJet> jets) {
+    triggers.clear();
+    bool placeholder = 0; //to keep track of which jet was the trigger in the case of only one trigger 
+    for (int i = 0; i < jets.size(); ++ i) {
+      if (i == 2) {return placeholder;} //only want to look at the two highest pT jets
+      for (int j = 0; j < jets[i].constituents().size(); ++ j) {
+	if (jets[i].constituents()[j].pt() > dat_evEtMin) {//has a trigger
+	  placeholder = i;
+	  triggers.push_back(jets[i]);
+	  break;
+	}
+      }
+      if (triggers.size() == 2) {return placeholder;} //we only need at most two objects in the triggers vector - one to be trigger, one to be recoil
+    }
+    return placeholder;
+  }
 
   
   //  INITIATE READER
@@ -169,5 +184,51 @@ namespace Analysis {
     // Initialize the reader
     reader.Init( nEvents ); //runs through all events with -1
   }
- 
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~FILL HISTS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+  
+  void FillHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::string flag3, const fastjet::PseudoJet jet, const double weight) {
+    c1D.fill(("m_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.m(), weight);
+    c2D.fill(("m_v_pt_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.m(), jet.pt(), weight);
+    c3D.fill(("PtEtaPhi_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.pt(), jet.eta(), jet.phi(), weight);
+    for (int cons = 0; cons < jet.constituents().size(); ++ cons) {
+      if (jet.constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts                       
+      c3D.fill(("PtEtaPhi_" + flag1 + "_" + flag3 + "_" + "cons" + flag2).c_str(), jet.constituents()[cons].pt(), jet.constituents()[cons].eta(), jet.constituents()[cons].phi(), weight);
+    }
+    return;
+  }
+  
+  void FillHists(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> & c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::vector<fastjet::PseudoJet> jets, const double weight) {
+    //leading
+    FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "lead", jets[0], weight);
+    //subleading
+    if (jets.size() > 1) {
+      FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "sublead", jets[1], weight);
+    }
+    //inclusive
+    for (int i = 0; i < jets.size(); ++ i) {
+      FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "incl", jets[i], weight);
+    }
+    //trigger & recoil
+    std::vector<fastjet::PseudoJet> candidates;
+    bool which_one = GetTriggerJet(candidates, jets);
+    if (candidates.size() == 0 || jets.size() < 2) { // means there isn't a trigger or there isn't a recoil
+      return;
+    }
+    if (candidates.size() == 1 && jets.size() > 1) { //potential trigger
+      if (fabs(fabs(jets[which_one].delta_phi_to(jets[(which_one + 1) % 2])) - Pi) < R) { //found a recoil
+	FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "trig", jets[which_one], weight); //filling hists for trigger
+	FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "rec", jets[(which_one + 1) % 2], weight); //filling hists for recoil
+	return;
+      }
+    }
+    if (candidates.size() == 2) {
+      if (fabs(fabs(candidates[0].delta_phi_to(candidates[1])) - Pi) < R) { //trigger & recoil found!
+	FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "trig", candidates[0], weight); //filling hists for trigger
+	FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "rec", candidates[1], weight); //filling hists for recoil
+	return;
+      }
+    }
+    return;
+  }
 }
