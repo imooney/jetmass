@@ -12,17 +12,25 @@ set arg = ''
 if ($1 == 'data') then
     make bin/ppdata || exit
     set execute = './bin/ppdata'
-    set base = /nfs/rhi/STAR/Data/ppHT/picoDst_
+    set base = /nfs/rhi/STAR/Data/ppJP2Run12/sum
      # Create the folder name for output
     set outFile = data
 endif
 if ($1 == 'sim') then
     make bin/ppsim || exit
     set execute = './bin/ppsim'
-    set base = /nfs/rhi/STAR/Data/AddedGeantPythia/picoDst_
+    set base = /nfs/rhi/STAR/Data/AddedEmbedPythiaRun12pp200/Clean
     # Create the folder name for output
     set outFile = sim
 endif
+if ($1 == 'matching') then
+    make bin/matching || exit
+    set execute = './bin/matching'
+    set base = /nfs/rhi/STAR/Data/AddedEmbedPythiaRun12pp200/Clean
+    # Create the folder name for output
+    set outFile = matching
+endif
+
 
 # Arguments                                                                                                                                                                   
 
@@ -64,6 +72,9 @@ echo "Logging output to " $LogFile
 echo "Logging errors to " $ErrFile
 
 set arg = "$outLocation $outName $Files"
+
+echo "now submitting this script: "
+echo qsub -q erhiq -V -l mem=2GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
 
 qsub -q erhiq -V -l mem=2GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
 #make python script later: jet_analysis/submit scripts start with pbs

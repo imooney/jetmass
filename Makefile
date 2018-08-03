@@ -1,7 +1,7 @@
 os = $(shell uname -s)
 
 #INCFLAGS      = -I$(ROOTSYS)/include -I$(FASTJETDIR)/include -I$(STARPICOPATH)
-INCFLAGS      = -I$(shell root-config --incdir) -I$(FASTJETDIR)/include -I$(STARPICOPATH) -I/opt/local/include
+INCFLAGS      = -I$(shell root-config --incdir) -I$(FASTJETDIR)/include -I$(STARPICOPATH) -I$(ROOUNFOLDPATH) -I/opt/local/include
 
 ifeq ($(os),Linux)
 CXXFLAGS      = -std=c++11
@@ -31,8 +31,8 @@ ROOTLIBS      = $(shell root-config --libs)
 FJLIBS	      = $(shell fastjet-config --libs)
 #PYTHIALIBS    = $(shell pythia8-config --ldflags)
 
-LIBPATH       = $(ROOTLIBS) -L$(FASTJETDIR)/lib -L$(STARPICOPATH)
-LIBS          = -lfastjet -lfastjettools -lTStarJetPico
+LIBPATH       = $(ROOTLIBS) -L$(FASTJETDIR)/lib -L$(STARPICOPATH) -L$(ROOUNFOLDDIR)
+LIBS          = -lRecursiveTools -lfastjettools -lfastjet -lTStarJetPico -lRooUnfold
 
 
 # for cleanup
@@ -56,17 +56,18 @@ $(ODIR)/%.o : $(SDIR)/%.cxx $(INCS)
 $(BDIR)/%  : $(ODIR)/%.o 
 	@echo 
 	@echo LINKING
-	$(CXX) $(LDFLAGS) $(LIBPATH) $(LIBS) $^ -o $@
+	$(CXX) $(LDFLAGS) $(LIBPATH) $^ $(LIBS) -o $@
 
 ###############################################################################
 
 ###############################################################################
 ############################# Main Targets ####################################
 ###############################################################################
-all : $(BDIR)/ppsim $(BDIR)/ppdata 
+all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching
 
 data : $(BDIR)/ppdata
 sim : $(BDIR)/ppsim
+matching : $(BDIR)/matching
 
 #$(SDIR)/dict.cxx                : $(SDIR)/ktTrackEff.hh
 #	cd ${SDIR}; rootcint -f dict.cxx -c -I. ./ktTrackEff.hh
@@ -77,10 +78,12 @@ sim : $(BDIR)/ppsim
 $(ODIR)/funcs.o		: $(SDIR)/funcs.cxx $(SDIR)/funcs.hh
 $(ODIR)/ppsim.o		: $(SDIR)/ppsim.cxx
 $(ODIR)/ppdata.o	: $(SDIR)/ppdata.cxx
+$(ODIR)/matching.o	: $(SDIR)/matching.cxx
 
 #data analysis
 $(BDIR)/ppsim		: $(ODIR)/ppsim.o $(ODIR)/funcs.o #$(ODIR)/ktTrackEff.o $(ODIR)/dict.o
 $(BDIR)/ppdata		: $(ODIR)/ppdata.o $(ODIR)/funcs.o
+$(BDIR)/matching	: $(ODIR)/matching.o $(ODIR)/funcs.o
 
 ###############################################################################
 ##################################### MISC ####################################
