@@ -126,6 +126,23 @@ namespace Analysis {
     }
     return;
   }
+
+  void ApplyNEFSelection(const std::vector<fastjet::PseudoJet> init, std::vector<fastjet::PseudoJet> & result) {
+    //Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
+    for (int i = 0; i < init.size(); ++ i) {
+      double towersum = 0; double ptsum = 0;
+      for (int j = 0; j < init[i].constituents().size(); ++ j) {
+	if (init[i].constituents()[j].user_index() == 0) {
+	  towersum += init[i].constituents()[j].pt();
+	}
+	ptsum += init[i].constituents()[j].pt();
+      }
+      if (towersum / (double) ptsum < NEF_max) {
+	result.push_back(init[i]);
+      }
+    }
+    return;
+  }
   
   
   double LookupRun6Xsec(TString currentfile ) {
@@ -348,28 +365,28 @@ namespace Analysis {
   
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~FILL HISTS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
   
-  void FillHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::string flag3, const fastjet::PseudoJet jet, const double weight) {
-    c1D.fill(("m_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.m(), weight);
-    c2D.fill(("m_v_pt_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.m(), jet.pt(), weight);
-    c2D.fill(("m_v_pt_rebin_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.m(), jet.pt(), weight);
-    c3D.fill(("PtEtaPhi_" + flag1 + "_" + flag3 + "_" + "jet" + flag2).c_str(), jet.pt(), jet.eta(), jet.phi(), weight);
+  void FillHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag, const fastjet::PseudoJet jet, const double weight) {
+    c1D.fill(("m_" + flag + "_" + "jet").c_str(), jet.m(), weight);
+    c2D.fill(("m_v_pt_" + flag + "_" + "jet").c_str(), jet.m(), jet.pt(), weight);
+    c2D.fill(("m_v_pt_rebin_" + flag + "_" + "jet").c_str(), jet.m(), jet.pt(), weight);
+    c3D.fill(("PtEtaPhi_" + flag + "_" + "jet").c_str(), jet.pt(), jet.eta(), jet.phi(), weight);
     for (int cons = 0; cons < jet.constituents().size(); ++ cons) {
       if (jet.constituents()[cons].pt() < partMinPt) {continue;} //ignores contributions from ghosts                       
-      c3D.fill(("PtEtaPhi_" + flag1 + "_" + flag3 + "_" + "cons" + flag2).c_str(), jet.constituents()[cons].pt(), jet.constituents()[cons].eta(), jet.constituents()[cons].phi(), weight);
+      c3D.fill(("PtEtaPhi_" + flag + "_" + "cons").c_str(), jet.constituents()[cons].pt(), jet.constituents()[cons].eta(), jet.constituents()[cons].phi(), weight);
     }
     return;
   }
   
-  void FillHists(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> & c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::vector<fastjet::PseudoJet> jets, const double weight) {
+  void FillHists(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> & c2D, Collection<std::string, TH3D> & c3D, const std::vector<fastjet::PseudoJet> jets, const double weight) {
     //leading
-    FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "lead", jets[0], weight);
+    FillHistsHelper(c1D, c2D, c3D, "lead", jets[0], weight);
     //subleading
     if (jets.size() > 1) {
-      FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "sublead", jets[1], weight);
+      FillHistsHelper(c1D, c2D, c3D, "sublead", jets[1], weight);
     }
     //inclusive
     for (int i = 0; i < jets.size(); ++ i) {
-      FillHistsHelper(c1D, c2D, c3D, flag1, flag2, "incl", jets[i], weight);
+      FillHistsHelper(c1D, c2D, c3D, "incl", jets[i], weight);
     }
     /*
     //trigger & recoil
@@ -396,26 +413,26 @@ namespace Analysis {
     return;
   }
 
-  void FillSDHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::string flag3, const fastjet::PseudoJet jet, const double weight) {
-    c1D.fill(("m_" + flag1 + "_" + flag3 + "_" + "sd" + flag2).c_str(), jet.m(), weight);
-    c1D.fill(("zg_" + flag1 + "_" + flag3 + "_" + "sd" + flag2).c_str(), jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), weight);
-    c1D.fill(("thetag_" + flag1 + "_" + flag3 + "_" + "sd" + flag2).c_str(), jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), weight);
-    c2D.fill(("m_v_pt_" + flag1 + "_" + flag3 + "_" + "sd" + flag2).c_str(), jet.m(), jet.pt(), weight);
-    c3D.fill(("PtEtaPhi_" + flag1 + "_" + flag3 + "_" + "sd" + flag2).c_str(), jet.pt(), jet.eta(), jet.phi(), weight);
+  void FillSDHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag, const fastjet::PseudoJet jet, const double weight) {
+    c1D.fill(("m_" + flag + "_" + "sd").c_str(), jet.m(), weight);
+    c1D.fill(("zg_" + flag + "_" + "sd").c_str(), jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), weight);
+    c1D.fill(("thetag_" + flag + "_" + "sd").c_str(), jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), weight);
+    c2D.fill(("m_v_pt_" + flag + "_" + "sd").c_str(), jet.m(), jet.pt(), weight);
+    c3D.fill(("PtEtaPhi_" + flag + "_" + "sd").c_str(), jet.pt(), jet.eta(), jet.phi(), weight);
     return;
   }
    
 
-  void FillSDHists(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> & c2D, Collection<std::string, TH3D> & c3D, const std::string flag1, const std::string flag2, const std::vector<fastjet::PseudoJet> jets, const double weight) {
+  void FillSDHists(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> & c2D, Collection<std::string, TH3D> & c3D, const std::vector<fastjet::PseudoJet> jets, const double weight) {
     //leading
-    FillSDHistsHelper(c1D, c2D, c3D, flag1, flag2, "lead", jets[0], weight);
+    FillSDHistsHelper(c1D, c2D, c3D, "lead", jets[0], weight);
     //subleading
     if (jets.size() > 1) {
-      FillSDHistsHelper(c1D, c2D, c3D, flag1, flag2, "sublead", jets[1], weight);
+      FillSDHistsHelper(c1D, c2D, c3D, "sublead", jets[1], weight);
     }
     //inclusive
     for (int i = 0; i < jets.size(); ++ i) {
-      FillSDHistsHelper(c1D, c2D, c3D, flag1, flag2, "incl", jets[i], weight);
+      FillSDHistsHelper(c1D, c2D, c3D, "incl", jets[i], weight);
     }
 
   }

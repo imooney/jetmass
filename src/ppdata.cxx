@@ -77,13 +77,13 @@ int main ( int argc, const char** argv) {
   std::string     outFileName        = "test.root";                        // histograms will be saved here
   std::string         chainList            = "list.txt";            // input file: can be .root, .txt, .list
   std::string  chainName     = "JetTree";                                // Tree name in input file
-    
+  bool full = 1;
   // Now check to see if we were given modifying arguments
   switch ( argc ) {
   case 1: // Default case
     __OUT("Using Default Settings");
       break;
-  case 4: { // Custom case
+  case 6: { // Custom case
     __OUT("Using Custom Settings");
       std::vector<std::string> arguments( argv+1, argv+argc );
             
@@ -93,7 +93,8 @@ int main ( int argc, const char** argv) {
     // output and file names
     outputDir         = arguments[0];
     outFileName       = arguments[1];
-    chainList         = arguments[2];
+    if (arguments[2] == "ch") {full = 0;} else {full = 1;}
+    chainList         = arguments[4];
             
     break;
   }
@@ -140,24 +141,22 @@ int main ( int argc, const char** argv) {
   Collection<string, TH1D> hists1D; Collection<string, TH2D> hists2D; Collection<string, TH3D> hists3D;
   Collection<string, THnSparseD> histsnD;
 
-  vector<string> flag_i = {"ch", "full"};
   vector<string> flag_j = {"lead", "sublead", "trig", "rec", "incl"};   
   vector<string> flag_k = {"jet", "cons", "sd"};
-  for (int i = 0; i < flag_i.size(); ++ i) {
-    for (int j = 0; j < flag_j.size(); ++ j) {
-      for (int k = 0; k < flag_k.size(); ++ k) {
-	hists1D.add(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
-	hists2D.add(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,11,5,60); //mass vs. pT
-	hists2D.add(("m_v_pt_rebin_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,9,15,60);
-	hists3D.add(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",11,5,60,30,-0.6,0.6,50,0,2*Pi); //pT vs. eta vs. phi
-      }
+  for (int j = 0; j < flag_j.size(); ++ j) {
+    for (int k = 0; k < flag_k.size(); ++ k) {
+      hists1D.add(("m_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
+      hists2D.add(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,11,5,60); //mass vs. pT
+      hists2D.add(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,9,15,60);
+      hists3D.add(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",11,5,60,30,-0.6,0.6,50,0,2*Pi); //pT vs. eta vs. phi
     }
   }
+  
   const unsigned nDim = 5;
   int bins[nDim] = {20, 20, 20, 11, 11};
   double min[nDim] = {0,0,0,5,5};
   double max[nDim] = {1,10,1,60,60};
-  THnSparse * SDnD = new THnSparseD("zg_mg_thetag_ptg_pt_full_incl_sd", "", nDim, bins, min, max);
+  THnSparse * SDnD = new THnSparseD("zg_mg_thetag_ptg_pt_incl_sd", "", nDim, bins, min, max);
   SDnD->Sumw2();
   
   TH1D * dPhi_trig_rec = new TH1D("dPhi_trig_rec",";#Delta #phi;arb.", 28, -Pi - 0.4, Pi + 0.4); //defined as trigger - recoil
@@ -209,7 +208,7 @@ int main ( int argc, const char** argv) {
   
   // Helpers
   // -------
-  vector<PseudoJet> particles, ch_particles;
+  vector<PseudoJet> particles;
 
   int nJets = 0;
 
@@ -298,7 +297,7 @@ int main ( int argc, const char** argv) {
       //get the event header
       
       header = reader.GetEvent()->GetHeader();
-      particles.clear(); ch_particles.clear();
+      particles.clear();
       
       // Get the output container from the reader
       // ----------------------------------------
@@ -306,8 +305,7 @@ int main ( int argc, const char** argv) {
       
       // Transform TStarJetVectors into (FastJet) PseudoJets
       // ----------------------------------------------------------
-      GatherParticles(container, sv, particles, 1,0); //ch+ne
-      GatherParticles(container, sv, ch_particles, 0,0); //ch
+      GatherParticles(container, sv, particles, full,0); //ch+ne
       
       for(int i = 0; i < particles.size(); ++ i) {
 	PtEtaPhi_tracks->Fill(particles[i].pt(), particles[i].eta(), particles[i].phi());
@@ -318,12 +316,11 @@ int main ( int argc, const char** argv) {
       // Analysis
       // --------
       // Apply selector to the full particle set
-      vector<PseudoJet> pLo = slo( particles ); vector<PseudoJet> ch_pLo = slo( ch_particles );
+      vector<PseudoJet> pLo = slo( particles );
       
       // find corresponding jets with soft constituents
       // ----------------------------------------------
       ClusterSequence/*Area*/ csaLo ( pLo, jet_def/*, area_def */); // WITHOUT background subtraction
-      ClusterSequence/*Area*/ ch_csaLo ( ch_pLo, jet_def/*, area_def */); //WITHOUT background subtraction
       
       /*
       // Background initialization
@@ -343,7 +340,10 @@ int main ( int argc, const char** argv) {
       
       vector<PseudoJet> LoInitial = fastjet::sorted_by_pt(sjet(/*bkgd_subtractor(*/csaLo.inclusive_jets())/*)*/);
       vector<PseudoJet> LoResult;
-      for (int i = 0; i < LoInitial.size(); ++ i) {
+      //Implementing a neutral energy fraction cut of 90% on inclusive jets
+      ApplyNEFSelection(LoInitial, LoResult);
+      
+      /*for (int i = 0; i < LoInitial.size(); ++ i) {
         double towersum = 0; double ptsum = 0;
         for (int j = 0; j < LoInitial[i].constituents().size(); ++ j) {
           if (LoInitial[i].constituents()[j].user_index() == 0) {
@@ -354,18 +354,13 @@ int main ( int argc, const char** argv) {
         if (towersum / (double) ptsum < NEF_max) {
           LoResult.push_back(LoInitial[i]);
         }
-      } 
+	} */
       vector<PseudoJet> GroomedJets;
       //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
       for (int i = 0; i < LoResult.size(); ++ i) {
 	GroomedJets.push_back(sd(LoResult[i]));
       }
 
-      vector<PseudoJet> ch_LoResult = fastjet::sorted_by_pt(sjet(ch_csaLo.inclusive_jets()));
-      vector<PseudoJet> ch_GroomedJets;
-      for (int i = 0; i < ch_LoResult.size(); ++ i) {
-	ch_GroomedJets.push_back(sd(ch_LoResult[i]));
-      }      
       //      auto execution_func = std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - start_timefunc).count();
       //cout << "Function time = " << execution_func << " microseconds" << endl;
             
@@ -381,8 +376,8 @@ int main ( int argc, const char** argv) {
 	    }  
 	  }
 	}
-	FillHists(hists1D, hists2D, hists3D, "full", "", LoResult, 1.0); 
-	FillSDHists(hists1D, hists2D, hists3D, "full", "", GroomedJets, 1.0);
+	FillHists(hists1D, hists2D, hists3D, "", LoResult, 1.0); 
+	FillSDHists(hists1D, hists2D, hists3D, "", GroomedJets, 1.0);
 
 	//leading
 	vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); //I do this so I can use the same function for jets & constituents (takes a vector of pseudojets)
@@ -428,11 +423,6 @@ int main ( int argc, const char** argv) {
 	
 	}
       
-      if (ch_LoResult.size() != 0) {
-	FillHists(hists1D, hists2D, hists3D, "ch", "", ch_LoResult, 1.0);
-	FillSDHists(hists1D, hists2D, hists3D, "ch","",ch_GroomedJets, 1.0);
-      }
-      
       // And we're done!
       // -----------------------------
       
@@ -459,16 +449,15 @@ int main ( int argc, const char** argv) {
   subleadTree->Write("sublead");
   inclTree->Write("incl"); cons_inclTree->Write("cons_incl");
     
-  for (int i = 0; i < flag_i.size(); ++ i) {
-    for (int j = 0; j < flag_j.size(); ++ j) {
-      for (int k = 0; k < flag_k.size(); ++ k) {
-	hists1D.write(("m_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
-	hists2D.write(("m_v_pt_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
-	hists2D.write(("m_v_pt_rebin_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
-	hists3D.write(("PtEtaPhi_"+flag_i[i]+"_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      }
+  for (int j = 0; j < flag_j.size(); ++ j) {
+    for (int k = 0; k < flag_k.size(); ++ k) {
+      hists1D.write(("m_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      hists2D.write(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      hists2D.write(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      hists3D.write(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str());
     }
   }
+
   SDnD->Write();
 
   dPhi_trig_rec->Write(); PtEtaPhi_tracks->Write(); nCons_v_pt->Write(); ch_frac_v_pt->Write();

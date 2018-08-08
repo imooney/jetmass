@@ -40,7 +40,7 @@ int main (int argc, const char ** argv) {
   case 1: // Default case                                                                                                                                                                                  
     __OUT("Using Default Settings");
     break;
-  case 4: { // Custom case                                                                                                                                                                                 
+  case 6: { // Custom case                                                                                                                                                                                 
     __OUT("Using Custom Settings");
     std::vector<std::string> arguments( argv+1, argv+argc );
 
@@ -49,8 +49,9 @@ int main (int argc, const char ** argv) {
     // output and file names                                                                                                                                                                               
     outputDir         = arguments[0];
     outFileName       = arguments[1];
-    chainList         = arguments[2];
-    
+    if (arguments[2] == "ch") {full = 0;} else {full = 1;}
+    chainList         = arguments[4];
+    //    cout << outputDir << " " << outFileName << " " << full << " " << arguments[3] << " " << chainList << endl;
     break;
   }
   default: { // Error: invalid custom settings                                                                                                                                                             
@@ -148,7 +149,7 @@ int main (int argc, const char ** argv) {
   TString geantFilename, pythiaFilename;
   
   // Particle containers & counters
-  vector<PseudoJet> p_Particles, g_Particles, p_Jets, g_Jets;
+  vector<PseudoJet> p_Particles, g_Particles, p_JetsInitial, g_JetsInitial;
   int nEvents = 0;   int p_NJets = 0;  int g_NJets = 0;  int p_EventID;   int g_EventID;
   //1=inclusive, 2=lead
   int counter_debug1 = 0, counter_debug2 = 0;
@@ -160,7 +161,7 @@ int main (int argc, const char ** argv) {
     if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
     
     p_Particles.clear(); g_Particles.clear();
-    p_Jets.clear(); g_Jets.clear(); //clear all containers
+    p_JetsInitial.clear(); g_JetsInitial.clear(); //clear all containers
     
     nEvents++;  P6Reader.PrintStatus(10);  GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
     
@@ -188,7 +189,11 @@ int main (int argc, const char ** argv) {
     vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
     
     ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
-    p_Jets = sorted_by_pt(sjet(p_Cluster.inclusive_jets())); g_Jets = sorted_by_pt(sjet(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+    p_JetsInitial = sorted_by_pt(p_Cluster.inclusive_jets()); g_JetsInitial = sorted_by_pt(sjet(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+    vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
+    
+    //Implementing a neutral energy fraction cut of 90% on inclusive jets
+    ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
     
     vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
     //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)                                                                              
