@@ -13,6 +13,7 @@
 using namespace fastjet;
 using namespace std;
 using namespace Analysis;
+typedef fastjet::contrib::SoftDrop SD;
 
 // -------------------------
 // Command line arguments: ( Defaults 
@@ -105,6 +106,22 @@ int main (int argc, const char ** argv) {
   TH2D *geZgvPtg = new TH2D("geZgvPtg", ";z_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
   TH2D *pyRgvPtg = new TH2D("pyRgvPtg", ";R_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
   TH2D *geRgvPtg = new TH2D("geRgvPtg", ";R_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
+
+  //note: there is only one match per event, so none of these vectors should have more than one entry. It is only done for later convenience.
+  vector<double> deltaPt; vector<double> deltaM; vector<double> deltaZg; vector<double> deltaRg;
+  vector<double> ratioPt; vector<double> ratioM; vector<double> ratioZg; vector<double> ratioRg;
+  vector<double> pyPt; vector<double> pyM; vector<double> pyZg; vector<double> pyRg;
+  vector<double> gePt; vector<double> geM; vector<double> geZg; vector<double> geRg;
+  vector<double> pyPtg; vector<double> gePtg;
+  double mc_weight;
+  
+  TTree *eventTree = new TTree("event", "event");
+  eventTree->Branch("deltaPt", &deltaPt); eventTree->Branch("deltaM", &deltaM); eventTree->Branch("deltaZg", &deltaZg); eventTree->Branch("deltaRg", &deltaRg);
+  eventTree->Branch("ratioPt", &ratioPt); eventTree->Branch("ratioM", &ratioM); eventTree->Branch("ratioZg", &ratioZg); eventTree->Branch("ratioRg", &ratioRg);
+  eventTree->Branch("pyPt", &pyPt); eventTree->Branch("pyM", &pyM); eventTree->Branch("pyZg", &pyZg); eventTree->Branch("pyRg", &pyRg);
+  eventTree->Branch("gePt", &gePt); eventTree->Branch("geM", &geM); eventTree->Branch("geZg", &geZg); eventTree->Branch("geRg", &geRg);
+  eventTree->Branch("pyPtg", &pyPtg); eventTree->Branch("gePtg", &gePtg);
+  eventTree->Branch("weight", &mc_weight);
   
   // Responses
   RooUnfoldResponse pt_response(60,0,60,80,0,80,"pt_response","");
@@ -117,14 +134,6 @@ int main (int argc, const char ** argv) {
   RooUnfoldResponse pt_m_response(geMvPt, pyMvPt, "pt_m_response");
   RooUnfoldResponse ptg_zg_response(geZgvPtg, pyZgvPtg, "ptg_zg_response");
   RooUnfoldResponse ptg_rg_response(geRgvPtg, pyRgvPtg, "ptg_rg_response");
-  
-  double wt;
-  double deltaM, deltaPt, geM, pyM, gePt, pyPt, Mratio;
-
-  TTree *matchedTree = new TTree("py_ge_matchedTree","py_ge_matchedTree");
-				 
-  matchedTree->Branch("DeltaM", &deltaM); matchedTree->Branch("DeltaPt", &deltaPt); matchedTree->Branch("GePt", &gePt); matchedTree->Branch("PyPt",&pyPt);
-  matchedTree->Branch("GeM", &geM); matchedTree->Branch("PyM", &pyM); matchedTree->Branch("Mdet:Mgen",&Mratio); matchedTree->Branch("weight", &wt);
 
   //Creating SoftDrop grooming object                                                                                                                                                        
   contrib::SoftDrop sd(beta,z_cut,R0);
@@ -145,7 +154,6 @@ int main (int argc, const char ** argv) {
   Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
   
   JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
-  double mc_weight;
   TString geantFilename, pythiaFilename;
   
   // Particle containers & counters
@@ -156,6 +164,14 @@ int main (int argc, const char ** argv) {
   double p_wt = -1, g_wt = -1;
   // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  BEGIN EVENT LOOP!  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
   while ( GEANTReader.NextEvent() ) {      //    GEANTReader    P6Reader
+    //initialize values to -9999
+    deltaPt.clear(); deltaM.clear(); deltaZg.clear(); deltaRg.clear();
+    ratioPt.clear(); ratioM.clear(); ratioZg.clear(); ratioRg.clear();
+    pyPt.clear(); pyM.clear(); pyZg.clear(); pyRg.clear();
+    gePt.clear(); geM.clear(); geZg.clear(); geRg.clear();
+    pyPtg.clear(); gePtg.clear();
+    mc_weight = -9999;
+    
     g_EventID = GEANTReader.GetNOfCurrentEvent();
     
     if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
@@ -181,7 +197,7 @@ int main (int argc, const char ** argv) {
     g_wt = LookupRun12Xsec( geantFilename );
     if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
     mc_weight = p_wt;
-    
+
     //  GATHER PARTICLES
     GatherParticles ( p_container, p_sv, p_Particles, full,1);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
     GatherParticles ( g_container, g_sv, g_Particles, full,0);    //  GEANT particles
@@ -189,7 +205,7 @@ int main (int argc, const char ** argv) {
     vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
     
     ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
-    p_JetsInitial = sorted_by_pt(p_Cluster.inclusive_jets()); g_JetsInitial = sorted_by_pt(sjet(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+    p_JetsInitial = sorted_by_pt(sjet(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet(g_Cluster.inclusive_jets()));    // EXTRACT JETS
     vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
     
     //Implementing a neutral energy fraction cut of 90% on inclusive jets
@@ -209,30 +225,42 @@ int main (int argc, const char ** argv) {
     if (p_Jets.size() != 0) {
       int position = -1;
       MatchJets(g_Jets, p_Jets[0], position); //MatchJets returns with position = -1 if there is no geant jet to match in this event
-      if (position == -1) {Misses(pt_res_coarse, pt_response, m_response, pt_m_response, p_Jets[0], mc_weight);} //didn't find a match
-      else {
+      if (position == -1) {//didn't find a match
+	Misses(pt_res_coarse, pt_response, m_response, pt_m_response, p_Jets[0], mc_weight);
+	MissesSD(zg_response, rg_response, ptg_zg_response, ptg_rg_response, p_GroomedJets[0], mc_weight);
+      }
+      else { //found a match
 	deltaMvPyPt->Fill(p_Jets[0].pt(),(g_Jets[position].m() - p_Jets[0].m()) / (double) p_Jets[0].m(), mc_weight);
 	ratioMvPyPt->Fill(g_Jets[position].m() / (double) p_Jets[0].m(), p_Jets[0].pt(), mc_weight);
 	deltaPtvPyPt->Fill(p_Jets[0].pt(),(g_Jets[position].pt() - p_Jets[0].pt()) /(double) p_Jets[0].pt(), mc_weight);
 	ratioPtvPyPt->Fill(g_Jets[position].pt() / (double) p_Jets[0].pt(), p_Jets[0].pt(), mc_weight);
-	FillMatchedTree(p_Jets[0], g_Jets[position], matchedTree, pyPt, gePt, pyM, geM, deltaPt, deltaM, Mratio, wt, mc_weight);
+	//	FillMatchedTree(p_Jets[0], g_Jets[position], matchedTree, pyPt, gePt, pyM, geM, deltaPt, deltaM, Mratio, wt, mc_weight);
 	ConstructResponses(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[position], p_Jets[0], mc_weight);
 	pyMvPt->Fill(p_Jets[0].m(), p_Jets[0].pt());
 	geMvPt->Fill(g_Jets[position].m(), g_Jets[position].pt());
-      }
-    }
-    
-    if (p_GroomedJets.size() != 0) {
-      int position = -1;
-      MatchJets(g_GroomedJets, p_GroomedJets[0], position);
-      if (position == -1) {MissesSD(zg_response, rg_response, ptg_zg_response, ptg_rg_response, p_GroomedJets[0], mc_weight);}
-      else { //found match
-	deltaZgvPyPt->Fill(p_GroomedJets[0].pt(), g_GroomedJets[position].structure_of<contrib::SoftDrop>().symmetry() - p_GroomedJets[0].structure_of<contrib::SoftDrop>().symmetry(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
-	ratioZgvPyPt->Fill(g_GroomedJets[position].structure_of<contrib::SoftDrop>().symmetry() / (double) p_GroomedJets[0].structure_of<contrib::SoftDrop>().symmetry(), p_GroomedJets[0].pt(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
-	deltaRgvPyPt->Fill(p_GroomedJets[0].pt(), g_GroomedJets[position].structure_of<contrib::SoftDrop>().delta_R() - p_GroomedJets[0].structure_of<contrib::SoftDrop>().delta_R(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
-	ratioRgvPyPt->Fill(g_GroomedJets[position].structure_of<contrib::SoftDrop>().delta_R() / (double) p_GroomedJets[0].structure_of<contrib::SoftDrop>().delta_R(), p_GroomedJets[0].pt(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
+	
+	deltaZgvPyPt->Fill(p_GroomedJets[0].pt(), g_GroomedJets[position].structure_of<SD>().symmetry() - p_GroomedJets[0].structure_of<SD>().symmetry(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
+	ratioZgvPyPt->Fill(g_GroomedJets[position].structure_of<SD>().symmetry() / (double) p_GroomedJets[0].structure_of<SD>().symmetry(), p_GroomedJets[0].pt(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
+	deltaRgvPyPt->Fill(p_GroomedJets[0].pt(), g_GroomedJets[position].structure_of<SD>().delta_R() - p_GroomedJets[0].structure_of<SD>().delta_R(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
+	ratioRgvPyPt->Fill(g_GroomedJets[position].structure_of<SD>().delta_R() / (double) p_GroomedJets[0].structure_of<SD>().delta_R(), p_GroomedJets[0].pt(), mc_weight); //NOTE THAT WE'RE FILLING WITH THE ~GROOMED~ JET PT!
 	
 	ConstructResponsesSD(zg_response, rg_response, ptg_zg_response, ptg_rg_response, g_GroomedJets[position], p_GroomedJets[0], mc_weight);
+	
+	
+	deltaPt.push_back((g_Jets[position].pt() - p_Jets[0].pt()) / (double) p_Jets[0].pt());
+	deltaM.push_back((g_Jets[position].m() - p_Jets[0].m()) /(double) p_Jets[0].m());
+	deltaZg.push_back(g_GroomedJets[position].structure_of<SD>().symmetry() - p_GroomedJets[0].structure_of<SD>().symmetry());
+	deltaRg.push_back(g_GroomedJets[position].structure_of<SD>().delta_R() - p_GroomedJets[0].structure_of<SD>().delta_R());
+	ratioPt.push_back(g_Jets[position].pt() / (double) p_Jets[0].pt());
+	ratioM.push_back(g_Jets[position].m() / (double) p_Jets[0].m());
+	ratioZg.push_back(g_GroomedJets[position].structure_of<SD>().symmetry() / (double) p_GroomedJets[0].structure_of<SD>().symmetry());
+	ratioRg.push_back(g_GroomedJets[position].structure_of<SD>().delta_R() / (double) p_GroomedJets[0].structure_of<SD>().delta_R());
+	pyPt.push_back(p_Jets[0].pt()); pyM.push_back(p_Jets[0].m()); pyZg.push_back(p_GroomedJets[0].structure_of<SD>().symmetry()); pyRg.push_back(p_GroomedJets[0].structure_of<SD>().delta_R());
+	gePt.push_back(g_Jets[position].pt()); geM.push_back(g_Jets[position].m()); geZg.push_back(g_GroomedJets[position].structure_of<SD>().symmetry()); geRg.push_back(g_GroomedJets[position].structure_of<SD>().delta_R());
+	pyPtg.push_back(p_GroomedJets[0].pt()); gePtg.push_back(g_GroomedJets[position].pt());
+	
+	eventTree->Fill();
+	
       }
     }
     
@@ -240,10 +268,10 @@ int main (int argc, const char ** argv) {
     if (g_Jets.size() != 0) {
       int position = -1;
       MatchJets(p_Jets, g_Jets[0], position);
-      if (position == -1) {Fakes(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[0], mc_weight);}
-      position = -1;
-      MatchJets(p_GroomedJets, g_GroomedJets[0], position);
-      if (position == -1) {FakesSD(zg_response, rg_response, ptg_zg_response, ptg_rg_response, g_GroomedJets[0], mc_weight);}
+      if (position == -1) {
+	Fakes(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[0], mc_weight);
+	FakesSD(zg_response, rg_response, ptg_zg_response, ptg_rg_response, g_GroomedJets[0], mc_weight);
+      }
     }
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -261,14 +289,15 @@ int main (int argc, const char ** argv) {
   std::cout << g_NJets << " reco jets have been found" << std::endl << std::endl;
   std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
 
-  matchedTree->Write("py_ge_matchedTree");
-
+  //  matchedTree->Write("py_ge_matchedTree");
+  eventTree->Write("event");
+  
   pt_res_coarse.Write(); pt_m_response.Write();
   pt_response.Write(); m_response.Write(); zg_response.Write(); rg_response.Write();
   ptg_zg_response.Write(); ptg_rg_response.Write();
-  deltaMvPyPt->Write(); ratioMvPyPt->Write(); deltaPtvPyPt->Write(); ratioPtvPyPt->Write();
-  deltaZgvPyPt->Write(); ratioZgvPyPt->Write(); deltaRgvPyPt->Write(); ratioRgvPyPt->Write();
-  pyMvPt->Write(); geMvPt->Write();
+  //deltaMvPyPt->Write(); ratioMvPyPt->Write(); deltaPtvPyPt->Write(); ratioPtvPyPt->Write();
+  //deltaZgvPyPt->Write(); ratioZgvPyPt->Write(); deltaRgvPyPt->Write(); ratioRgvPyPt->Write();
+  //pyMvPt->Write(); geMvPt->Write();
   
   fout->Close();
 

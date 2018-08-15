@@ -41,24 +41,108 @@ void DivideCanvas(TCanvas *can, const std::string log_scale, const unsigned rows
 //make variable bin-size histogram from tree
 TH1D* HistFromTree(const std::string hist_name, const int nBins, double * edges, TTree * tree, double & branch, double & weight) {
   TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, edges);
-    
-    for (int i = 0; i < tree->GetEntries(); ++ i) {
-        tree->GetEntry(i);
-        hist->Fill(branch, weight);
-    }
-    return hist;
+  
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    hist->Fill(branch, weight);
+  }
+  return hist;
 }
 
-//make variable bin-size histogram from tree
+//make constant bin-size histogram from tree
 TH1D* HistFromTree(const std::string hist_name, const int nBins, const double lo, const double hi, TTree * tree, double & branch, double & weight) {
   TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, lo, hi);
-    
-    for (int i = 0; i < tree->GetEntries(); ++ i) {
-        tree->GetEntry(i);
-        hist->Fill(branch, weight);
-    }
-    return hist;
+  
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    hist->Fill(branch, weight);
+  }
+  return hist;
 }
+
+
+//make variable bin-size histogram from tree with vector of doubles
+TH1D* HistFromTree(const std::string hist_name, const int nBins, double * edges, TTree * tree, std::vector<double> * branch, double & weight) {
+  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, edges);
+  
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    for (int j = 0; j < branch->size(); ++ j) {
+      hist->Fill(branch->at(j), weight);
+    }
+  }
+  tree->ResetBranchAddresses();
+  return hist;
+}
+
+//make constant bin-size histogram from tree with vector of doubles
+TH1D* HistFromTree(const std::string hist_name, const int nBins, const double lo, const double hi, TTree * tree, std::vector<double> * branch, double & weight) {
+  std::cout << "L" << std::endl;
+  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, lo, hi);
+  std::cout << "M" << std::endl;
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    for (int j = 0; j < branch->size(); ++ j) {
+      hist->Fill(branch->at(j), weight);
+    }
+  }
+  std::cout << "N" << std::endl;
+  tree->ResetBranchAddresses();
+  std::cout << "O" << std::endl;
+  return hist;
+}
+
+
+//make variable bin-size histogram from tree with vector of doubles
+TH2D* HistFromTree(const std::string hist_name, const int nBinsx, double * edgesx, const int nBinsy, double * edgesy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
+  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, edgesx, nBinsy, edgesy);
+  
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
+    for (int j = 0; j < branchx->size(); ++ j) {
+      hist->Fill(branchx->at(j), branchy->at(j), weight);
+    }
+  }
+  tree->ResetBranchAddresses();
+  return hist;
+}
+
+//make variable bin-size histogram from tree with vector of doubles
+TH2D* HistFromTree(const std::string hist_name, const int nBinsx, const double lox, const double hix, const int nBinsy, const double loy, const double hiy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
+  std::cout << "AAAAA" << std::endl;
+  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, lox, hix, nBinsy, loy, hiy);
+  std::cout << "BBBBB" << std::endl;
+  std::cout << tree->GetName() << std::endl;
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    //    std::cout << "CCCCC" << std::endl;
+    tree->GetEntry(i);
+    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
+    for (int j = 0; j < branchx->size(); ++ j) {
+      hist->Fill(branchx->at(j), branchy->at(j), weight);
+    }
+  }
+  std::cout << "DDDDD" << std::endl;
+  tree->ResetBranchAddresses();
+  std::cout << "EEEEE" << std::endl;
+  return hist;
+}
+
+//make variable bin-size histogram from tree with vector of doubles
+TH2D* HistFromTree(const std::string hist_name, const int nBinsx, const double lox, const double hix, const int nBinsy, double * edgesy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
+  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, lox, hix, nBinsy, edgesy);
+  
+  for (int i = 0; i < tree->GetEntries(); ++ i) {
+    tree->GetEntry(i);
+    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
+    for (int j = 0; j < branchx->size(); ++ j) {
+      hist->Fill(branchx->at(j), branchy->at(j), weight);
+    }
+  }
+  tree->ResetBranchAddresses();
+  return hist;
+}
+
 
 //projects a 2D histogram in desired ranges and returns an array of the (1D) projections on desired axis
 std::vector<TH1D*> Projection2D (TH2D * hist2D, const int nBins, double * ranges, const std::string axis) {
@@ -241,11 +325,16 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, pt_bins, "X");
   vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
   vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
-
+  
+  double lox, hix, hiy;
+  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0.001; hix = 0.501;}
+  
+  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 0.5; }
+  
   for(int i = 0; i < nHists; ++ i) {
-    Prettify1DwLineStyle(py_projs[i], kGreen, kDashed, 5, xTitle, "prob.",-1,-1, 0, 0.5);
-    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, "prob.",-1,-1, 0, 0.5);
-    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, "prob.",-1,-1, 0, 0.5);
+    Prettify1DwLineStyle(py_projs[i], kGreen, kDashed, 5, xTitle, "prob.",lox, hix, 0, hiy);
+    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, "prob.",lox, hix, 0, hiy);
+    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, "prob.",lox, hix, 0, hiy);
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
@@ -276,15 +365,76 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   return;
 }
 
-void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype) {
+void MakeCrossSection(TFile *pyFile, TFile *geFile, TFile *dataFile, TH1D* h_p, TH1D* h_g, TH1D* h_d) {
+  std::cout << "a" << std::endl;
+  double njets_tot_py = 0; double njets_tot_ge = 0; double njets_tot_d = 0;
+  double njets_py = -9999; double njets_ge = -9999; double njets_d = -9999;
+  double dummy_d_weight = 1; double p_weight, g_weight;
+  double n, w;
+  
+  TTree* py = (TTree*) pyFile->Get("event");
+  TTree* ge = (TTree*) geFile->Get("event");
+  TTree* d = (TTree*) dataFile->Get("event");
+  
+  py->SetBranchAddress("n_jets",&njets_py); ge->SetBranchAddress("n_jets",&njets_ge); d->SetBranchAddress("n_jets",&njets_d);
+  py->SetBranchAddress("weight", &p_weight); ge->SetBranchAddress("weight",&g_weight);
+  
+  for (int i = 0; i < py->GetEntries(); ++ i) {
+    py->GetEntry(i);
+    n = njets_py; w = p_weight;
+    njets_tot_py += (double) (n * w);
+  }
+  for (int i = 0; i < ge->GetEntries(); ++ i) {
+    ge->GetEntry(i);
+    n = njets_ge; w = g_weight;
+    njets_tot_ge += (double) (n * w);
+  }
+  
+  for (int i = 0; i < d->GetEntries(); ++ i) {
+    d->GetEntry(i);
+    n = njets_d; w = dummy_d_weight; 
+    njets_tot_d += (double) (n * w);
+  }
+  
+  double binwidth_py = (h_p->GetXaxis()->GetXmax() - h_p->GetXaxis()->GetXmin()) / (double) h_p->GetXaxis()->GetNbins();
+  double binwidth_ge = (h_g->GetXaxis()->GetXmax() - h_g->GetXaxis()->GetXmin()) / (double) h_g->GetXaxis()->GetNbins();
+  double binwidth_d = (h_d->GetXaxis()->GetXmax() - h_d->GetXaxis()->GetXmin()) / (double) h_d->GetXaxis()->GetNbins();
+
+  double scale_factor_py = njets_tot_py * binwidth_py;
+  double scale_factor_ge = njets_tot_ge * binwidth_ge;
+  double scale_factor_d = njets_tot_d * binwidth_d;
+  
+  double temp = h_p->Integral(); 
+  h_p->Scale(1/(double) scale_factor_py);
+  h_g->Scale(1/(double) scale_factor_ge);
+  h_d->Scale(1/(double) scale_factor_d);
+  
+  //  std::cout << h_p->GetXaxis()->GetXmin() << " " <<  h_p->GetXaxis()->GetXmax() << std::endl;
+  std::cout << "njets: " << njets_tot_py << " former integral: " << temp << " bin width: " << binwidth_py << " dividing by: " << scale_factor_py << std::endl;
+  std::cout << "b" << std::endl;
+  return;
+  
+}
+
+void Response(TFile *matchFile, TFile *pyFile, TFile *geFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype) {
+  std::cout << "A" << std::endl;
   ObsPy->SetTitle(""); ObsGe->SetTitle("");
   std::string cresName = (std::string) "cres" + (std::string) resName;
   std::string cmesName = (std::string) "cmes" + (std::string) ObsGe->GetName();
   TCanvas * cres = MakeCanvas(cresName.c_str(),"z",800,800);
-  TCanvas * cmes = MakeCanvas(cmesName.c_str(),"0",800,800);
-
-  Prettify1D(ObsPy, kGreen, kOpenCircle, 2, kBlack, xTitle, "prob.", -1,-1,-1,-1);
-  Prettify1D(ObsGe, kBlue, kFullCircle, 2, kBlack, xTitle, "prob.", -1,-1,-1,-1);
+  string logyn;
+  if (xTitle.find("p_{T}") != std::string::npos) { logyn = "y";} else{ logyn = "0";}
+  TCanvas * cmes = MakeCanvas(cmesName.c_str(),logyn,800,800);
+  double lox, hix, loy, hiy;
+  
+  cout << "XTITLE! " << xTitle << endl;
+  if (xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) { lox = -1; hix = -1; loy = -1; hiy = -1; std::cout << xTitle << " " << " SHOULD ONLY BE READING THIS IF FOLLOWING M OR PT" << std::endl; } else {lox = 0.001; hix = 0.501; loy = 0; hiy = 6; std::cout << xTitle << " " << "SHOULD BE YAXIS OF 6 IF THE THING BEFORE THIS IS RG OR ZG" << std::endl;}
+  
+  TH1D* hdummy = new TH1D("hdummy","",1,0,1); hdummy->FillRandom("gaus",10);
+  MakeCrossSection(pyFile, geFile, geFile, ObsPy, ObsGe, hdummy);
+  
+  Prettify1D(ObsPy, kGreen, kOpenCircle, 2, kBlack, xTitle, ("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str(), lox, hix,loy, hiy);
+  Prettify1D(ObsGe, kBlue, kFullCircle, 2, kBlack, xTitle, ("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str(), lox, hix,loy, hiy);
 
   RooUnfoldResponse *res = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   TH2D* hres = (TH2D*) res->Hresponse(); hres->SetTitle("");
@@ -300,7 +450,7 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
 
   cres->SaveAs((out + resName + filetype).c_str());
   cmes->SaveAs((out + ObsGe->GetName() + "_and_py" + filetype).c_str());
-
+  std::cout << "B" << std::endl;
   return;
 }
 

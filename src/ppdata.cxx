@@ -51,6 +51,7 @@
 using namespace std;
 using namespace fastjet;
 using namespace Analysis;
+typedef fastjet::contrib::SoftDrop SD;
 
 // -------------------------
 // Command line arguments: ( Defaults
@@ -145,20 +146,20 @@ int main ( int argc, const char** argv) {
   vector<string> flag_k = {"jet", "cons", "sd"};
   for (int j = 0; j < flag_j.size(); ++ j) {
     for (int k = 0; k < flag_k.size(); ++ k) {
-      hists1D.add(("m_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
+            hists1D.add(("m_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
       hists2D.add(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,11,5,60); //mass vs. pT
       hists2D.add(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,9,15,60);
       hists3D.add(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",11,5,60,30,-0.6,0.6,50,0,2*Pi); //pT vs. eta vs. phi
     }
   }
-  
+  /*
   const unsigned nDim = 5;
   int bins[nDim] = {20, 20, 20, 11, 11};
   double min[nDim] = {0,0,0,5,5};
   double max[nDim] = {1,10,1,60,60};
   THnSparse * SDnD = new THnSparseD("zg_mg_thetag_ptg_pt_incl_sd", "", nDim, bins, min, max);
   SDnD->Sumw2();
-  
+  */
   TH1D * dPhi_trig_rec = new TH1D("dPhi_trig_rec",";#Delta #phi;arb.", 28, -Pi - 0.4, Pi + 0.4); //defined as trigger - recoil
   //TEST
   TH3D *PtEtaPhi_tracks = new TH3D("PtEtaPhi_tracks",";p^{track}_{T} [GeV/c]; #eta; #phi",80,0,80,43,-1,1,50,0,2*Pi);
@@ -179,32 +180,41 @@ int main ( int argc, const char** argv) {
   double cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E;
   int nCons_incl, nCons_lead, nCons_sublead, dummy_int;
   double dummy_double;
-
+  /*
   TTree *leadTree = new TTree("lead","lead");
   TTree *subleadTree = new TTree("sublead","sublead");
   TTree *cons_leadTree = new TTree("cons_lead","cons_lead");
   TTree *inclTree = new TTree("incl","incl");
   TTree *cons_inclTree = new TTree("cons_incl","cons_incl");
 
-  //TBranch *leadPt;  TBranch *leadEta;  TBranch *leadPhi; TBranch *leadM; TBranch *leadE; TBranch *NCons_lead;
   leadTree->Branch("Pt", &lead_Pt); leadTree->Branch("Eta", &lead_Eta);  leadTree->Branch("Phi", &lead_Phi);
   leadTree->Branch("M", &lead_M); leadTree->Branch("E", &lead_E); leadTree->Branch("nCons", &nCons_lead);
 
-  //TBranch *cons_leadPt;  TBranch *cons_leadEta;  TBranch *cons_leadPhi; TBranch *cons_leadM; TBranch *cons_leadE;
   cons_leadTree->Branch("Pt", &cons_lead_Pt); cons_leadTree->Branch("Eta", &cons_lead_Eta); cons_leadTree->Branch("Phi", &cons_lead_Phi);
   cons_leadTree->Branch("M", &cons_lead_M); cons_leadTree->Branch("E", &cons_lead_E);
 
-  //TBranch *subleadPt;  TBranch *subleadEta;  TBranch *subleadPhi; TBranch *subleadM; TBranch *subleadE; TBranch *NCons_sublead;
   subleadTree->Branch("Pt", &sublead_Pt); subleadTree->Branch("Eta", &sublead_Eta); subleadTree->Branch("Phi", &sublead_Phi);
   subleadTree->Branch("M", &sublead_M); subleadTree->Branch("E", &sublead_E); subleadTree->Branch("nCons", &nCons_sublead);
 
-  //TBranch *inclPt;  TBranch *inclEta;  TBranch *inclPhi; TBranch *inclM; TBranch *inclE; TBranch *NCons_incl;
   inclTree->Branch("Pt", &incl_Pt); inclTree->Branch("Eta", &incl_Eta); inclTree->Branch("Phi", &incl_Phi);
   inclTree->Branch("M", &incl_M); inclTree->Branch("E", &incl_E); inclTree->Branch("nCons", &nCons_incl);
 
-  //TBranch *cons_inclPt;  TBranch *cons_inclEta;  TBranch *cons_inclPhi; TBranch *cons_inclM; TBranch *cons_inclE;
   cons_inclTree->Branch("Pt", &cons_incl_Pt); cons_inclTree->Branch("Eta", &cons_incl_Eta); cons_inclTree->Branch("Phi", &cons_incl_Phi);
   cons_inclTree->Branch("M", &cons_incl_M); cons_inclTree->Branch("E", &cons_incl_E);
+  */
+  //TEST!!!!!!
+  double n_jets;
+  vector<double> Pt; vector<double> Eta; vector<double> Phi; vector<double> M; vector<double> E;
+  vector<double> ch_frac;
+  vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
+  // vector<double> consPt; vector<double> consEta; vector<double> consPhi; vector<double> consM; vector<double> consE;
+  
+  TTree *eventTree = new TTree("event","event");
+  eventTree->Branch("n_jets", &n_jets);
+  eventTree->Branch("Pt", &Pt); eventTree->Branch("Eta",&Eta); eventTree->Branch("Phi",&Phi); eventTree->Branch("M",&M); eventTree->Branch("E",&E);
+  eventTree->Branch("ch_frac",&ch_frac);
+  eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
+  //eventTree->Branch("consPt",&consPt); eventTree->Branch("consEta",&consEta); eventTree->Branch("consPhi",&consPhi); eventTree->Branch("consM",&consM); eventTree->Branch("consE",&consE);
   
   // Helpers
   // -------
@@ -254,6 +264,14 @@ int main ( int argc, const char** argv) {
   
   try{
     while ( reader.NextEvent() ) {
+      
+      //clearing vectors
+      Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
+      zg.clear(); rg.clear(); mg.clear(); ptg.clear();
+      //  consPt.clear(); consEta.clear(); consPhi.clear(); consM.clear(); consE.clear();
+      ch_frac.clear();
+      //initializing variables to -9999
+      n_jets = -9999;
       //auto start_timetotal = clock::now();
 
       //TEMP!!!!!!!!!!!!!!!!!
@@ -376,24 +394,24 @@ int main ( int argc, const char** argv) {
 	    }  
 	  }
 	}
-	FillHists(hists1D, hists2D, hists3D, "", LoResult, 1.0); 
-	FillSDHists(hists1D, hists2D, hists3D, "", GroomedJets, 1.0);
+	FillHists(hists1D, hists2D, hists3D, LoResult, 1.0); 
+	FillSDHists(hists1D, hists2D, hists3D, GroomedJets, 1.0);
 
 	//leading
 	vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); //I do this so I can use the same function for jets & constituents (takes a vector of pseudojets)
-	FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
-	FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
+	//	FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
+	//FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
 	//subleading
 	if (LoResult.size() > 1) {
 	  vector<PseudoJet> LoSublead; LoSublead.push_back(LoResult[1]);
-	  FillTrees(LoSublead, subleadTree, sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E, nCons_sublead, dummy_double, dummy_double);
+	  //FillTrees(LoSublead, subleadTree, sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E, nCons_sublead, dummy_double, dummy_double);
 	}
 	//inclusive
-	FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
+	//FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
 	for (int j = 0; j < LoResult.size(); ++ j) {
-	  double val_list[nDim] = {GroomedJets[j].structure_of<contrib::SoftDrop>().symmetry(),GroomedJets[j].m(),GroomedJets[j].structure_of<contrib::SoftDrop>().delta_R(),GroomedJets[j].pt(), LoResult[j].pt()}; //Groomed jet not guaranteed to be highest pT even though ungroomed one is, but for inclusive this doesn't matter
-	  SDnD->Fill(val_list);
-	  FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
+	  //double val_list[nDim] = {GroomedJets[j].structure_of<contrib::SoftDrop>().symmetry(),GroomedJets[j].m(),GroomedJets[j].structure_of<contrib::SoftDrop>().delta_R(),GroomedJets[j].pt(), LoResult[j].pt()}; //Groomed jet not guaranteed to be highest pT even though ungroomed one is, but for inclusive this doesn't matter
+	  //	  SDnD->Fill(val_list);
+	  //FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
 	  //TEMP
 	  nCons_v_pt->Fill(LoResult[j].constituents().size(), LoResult[j].pt());
 	  int numch = 0;
@@ -403,6 +421,23 @@ int main ( int argc, const char** argv) {
 	    }
 	  }
 	  ch_frac_v_pt->Fill(numch/(double) LoResult[j].constituents().size(),LoResult[j].pt());
+	}
+
+	//TEST!!!!!!!!!!!!!!!
+	n_jets = LoResult.size();
+	for (int i = 0; i < n_jets; ++ i) {
+	  Pt.push_back(LoResult[i].pt()); Eta.push_back(LoResult[i].eta()); Phi.push_back(LoResult[i].phi());
+	  M.push_back(LoResult[i].m()); E.push_back(LoResult[i].e());
+	  zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
+	  mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
+	  int numch = 0;
+	  vector<PseudoJet> cons = LoResult[i].constituents();
+	  for (int j = 0; j < cons.size(); ++ j) {
+	    //consPt.push_back(cons[j].pt()); consEta.push_back(cons[j].eta()); consPhi.push_back(cons[j].phi());
+	    //consM.push_back(cons[j].m()); consE.push_back(cons[j].e());
+	    if (cons[j].user_index() != 0) {numch ++;}
+	  }
+	  ch_frac.push_back(numch/(double)cons.size());
 	}
       
 	
@@ -427,6 +462,7 @@ int main ( int argc, const char** argv) {
       // -----------------------------
       
       nEventsUsed++;
+      eventTree->Fill();
       
 	
       //      auto execution_total = std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - start_timetotal).count();
@@ -444,24 +480,26 @@ int main ( int argc, const char** argv) {
 
   // Close up shop
   // -------------
- 
+  /*
   leadTree->Write("lead"); cons_leadTree->Write("cons_lead");
   subleadTree->Write("sublead");
   inclTree->Write("incl"); cons_inclTree->Write("cons_incl");
-    
+  */
+  eventTree->Write();
+  
   for (int j = 0; j < flag_j.size(); ++ j) {
     for (int k = 0; k < flag_k.size(); ++ k) {
-      hists1D.write(("m_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      hists2D.write(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      hists2D.write(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      hists3D.write(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      // hists1D.write(("m_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      //hists2D.write(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      //hists2D.write(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str());
+      //hists3D.write(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str());
     }
   }
 
-  SDnD->Write();
+  // SDnD->Write();
 
-  dPhi_trig_rec->Write(); PtEtaPhi_tracks->Write(); nCons_v_pt->Write(); ch_frac_v_pt->Write();
-  towers_check->Write(); tow_id_v_e->Write(); tow_freq->Write(); tow_eta_phi_e_w->Write(); tow_eta_phi_e_wo->Write();
+  //  dPhi_trig_rec->Write(); PtEtaPhi_tracks->Write(); nCons_v_pt->Write(); ch_frac_v_pt->Write();
+  // towers_check->Write(); tow_id_v_e->Write(); tow_freq->Write(); tow_eta_phi_e_w->Write(); tow_eta_phi_e_wo->Write();
 
   
   //fout->Write();
