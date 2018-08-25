@@ -138,88 +138,27 @@ int main ( int argc, const char** argv) {
   TH1::SetDefaultSumw2();
   TH2::SetDefaultSumw2();
   TH3::SetDefaultSumw2();
-
-  Collection<string, TH1D> hists1D; Collection<string, TH2D> hists2D; Collection<string, TH3D> hists3D;
-  Collection<string, THnSparseD> histsnD;
-
-  vector<string> flag_j = {"lead", "sublead", "trig", "rec", "incl"};   
-  vector<string> flag_k = {"jet", "cons", "sd"};
-  for (int j = 0; j < flag_j.size(); ++ j) {
-    for (int k = 0; k < flag_k.size(); ++ k) {
-            hists1D.add(("m_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
-      hists2D.add(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,11,5,60); //mass vs. pT
-      hists2D.add(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str(),";M;p_{T}",20,0,10,9,15,60);
-      hists3D.add(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",11,5,60,30,-0.6,0.6,50,0,2*Pi); //pT vs. eta vs. phi
-    }
-  }
-  /*
-  const unsigned nDim = 5;
-  int bins[nDim] = {20, 20, 20, 11, 11};
-  double min[nDim] = {0,0,0,5,5};
-  double max[nDim] = {1,10,1,60,60};
-  THnSparse * SDnD = new THnSparseD("zg_mg_thetag_ptg_pt_incl_sd", "", nDim, bins, min, max);
-  SDnD->Sumw2();
-  */
-  TH1D * dPhi_trig_rec = new TH1D("dPhi_trig_rec",";#Delta #phi;arb.", 28, -Pi - 0.4, Pi + 0.4); //defined as trigger - recoil
-  //TEST
-  TH3D *PtEtaPhi_tracks = new TH3D("PtEtaPhi_tracks",";p^{track}_{T} [GeV/c]; #eta; #phi",80,0,80,43,-1,1,50,0,2*Pi);
-  TH2D *nCons_v_pt = new TH2D("nCons_v_pt",";num. constituents; p_{T}^{jet} [GeV/c]",20,0,20,80,0,80);
-  TH2D *ch_frac_v_pt = new TH2D("ch_frac_v_pt",";charged frac.;p_{T}^{jet} [GeV/c]",10,0,1,11,5,60);
-  TH1D *towers_check = new TH1D("towers_check","",200,0,200);
-  TH2D *tow_id_v_e = new TH2D("tow_id_v_e",";tower ID;tower E_{T} [GeV]",4800,1,4801,140,0,140);
-  TH1D *tow_freq = new TH1D("tow_freq",";tower ID;tower frequency",4800,1,4801);
-  TH2D *tow_eta_phi_e_w = new TH2D("tow_eta_phi_e_w",";tower #eta;tower #phi", 40,-1,1,126,-Pi,Pi);
-  TH2D *tow_eta_phi_e_wo = new TH2D("tow_eta_phi_e_wo",";tower #eta;tower #phi",40,-1,1,126,-Pi,Pi);
   
   // Trees
   // -----
-  double lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E;
-  double sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E;
-  double cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E;
-  double incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E;
-  double cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E;
-  int nCons_incl, nCons_lead, nCons_sublead, dummy_int;
+  int dummy_int;
   double dummy_double;
-  /*
-  TTree *leadTree = new TTree("lead","lead");
-  TTree *subleadTree = new TTree("sublead","sublead");
-  TTree *cons_leadTree = new TTree("cons_lead","cons_lead");
-  TTree *inclTree = new TTree("incl","incl");
-  TTree *cons_inclTree = new TTree("cons_incl","cons_incl");
 
-  leadTree->Branch("Pt", &lead_Pt); leadTree->Branch("Eta", &lead_Eta);  leadTree->Branch("Phi", &lead_Phi);
-  leadTree->Branch("M", &lead_M); leadTree->Branch("E", &lead_E); leadTree->Branch("nCons", &nCons_lead);
-
-  cons_leadTree->Branch("Pt", &cons_lead_Pt); cons_leadTree->Branch("Eta", &cons_lead_Eta); cons_leadTree->Branch("Phi", &cons_lead_Phi);
-  cons_leadTree->Branch("M", &cons_lead_M); cons_leadTree->Branch("E", &cons_lead_E);
-
-  subleadTree->Branch("Pt", &sublead_Pt); subleadTree->Branch("Eta", &sublead_Eta); subleadTree->Branch("Phi", &sublead_Phi);
-  subleadTree->Branch("M", &sublead_M); subleadTree->Branch("E", &sublead_E); subleadTree->Branch("nCons", &nCons_sublead);
-
-  inclTree->Branch("Pt", &incl_Pt); inclTree->Branch("Eta", &incl_Eta); inclTree->Branch("Phi", &incl_Phi);
-  inclTree->Branch("M", &incl_M); inclTree->Branch("E", &incl_E); inclTree->Branch("nCons", &nCons_incl);
-
-  cons_inclTree->Branch("Pt", &cons_incl_Pt); cons_inclTree->Branch("Eta", &cons_incl_Eta); cons_inclTree->Branch("Phi", &cons_incl_Phi);
-  cons_inclTree->Branch("M", &cons_incl_M); cons_inclTree->Branch("E", &cons_incl_E);
-  */
-  //TEST!!!!!!
   double n_jets;
   vector<double> Pt; vector<double> Eta; vector<double> Phi; vector<double> M; vector<double> E;
-  vector<double> ch_frac;
+  vector<double> ch_e_frac;
   vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
-  // vector<double> consPt; vector<double> consEta; vector<double> consPhi; vector<double> consM; vector<double> consE;
   
   TTree *eventTree = new TTree("event","event");
   eventTree->Branch("n_jets", &n_jets);
   eventTree->Branch("Pt", &Pt); eventTree->Branch("Eta",&Eta); eventTree->Branch("Phi",&Phi); eventTree->Branch("M",&M); eventTree->Branch("E",&E);
-  eventTree->Branch("ch_frac",&ch_frac);
+  eventTree->Branch("ch_e_frac",&ch_e_frac);
   eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
-  //eventTree->Branch("consPt",&consPt); eventTree->Branch("consEta",&consEta); eventTree->Branch("consPhi",&consPhi); eventTree->Branch("consM",&consM); eventTree->Branch("consE",&consE);
   
   // Helpers
   // -------
   vector<PseudoJet> particles;
-
+  
   int nJets = 0;
 
   // Constituent selectors
@@ -232,7 +171,7 @@ int main ( int argc, const char** argv) {
   // Jet candidate selectors
   // -----------------------
   Selector select_jet_rap     = fastjet::SelectorAbsRapMax(max_rap);
-  Selector select_jet_pt_min  = fastjet::SelectorPtMin( jet_ptmin );
+  Selector select_jet_pt_min  = fastjet::SelectorPtMin( det_jet_ptmin );
   Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
   Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
   
@@ -260,7 +199,6 @@ int main ( int argc, const char** argv) {
 	
   //initialize the reader
   //  reader.Init( nEvents ); //runs through all events with -1
- 
   
   try{
     while ( reader.NextEvent() ) {
@@ -268,48 +206,9 @@ int main ( int argc, const char** argv) {
       //clearing vectors
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
-      //  consPt.clear(); consEta.clear(); consPhi.clear(); consM.clear(); consE.clear();
-      ch_frac.clear();
+      ch_e_frac.clear();
       //initializing variables to -9999
       n_jets = -9999;
-      //auto start_timetotal = clock::now();
-
-      //TEMP!!!!!!!!!!!!!!!!!
-      //METHOD OF GETTING RAW TOWER INFO FROM EVENT
-      TStarJetPicoEvent * current_event = reader.GetEvent();
-      //      cout << "event " << reader.GetNOfCurrentEvent() << " has these tows" << endl;
-      
-      for (int i = 0; i < current_event->GetTowers()->GetEntries(); ++ i) {
-	if (current_event->GetTower(i)->GetEnergy() > 0) {
-	  tow_freq->Fill(current_event->GetTower(i)->GetId());
-	}
-	tow_id_v_e->Fill(current_event->GetTower(i)->GetId(), current_event->GetTower(i)->GetEnergy());
-	//cout << current_event->GetTower(i)->GetId() << " " << current_event->GetTower(i)->GetEnergy() << endl;
-	tow_eta_phi_e_wo->Fill(current_event->GetTower(i)->GetEta(), current_event->GetTower(i)->GetPhi(), current_event->GetTower(i)->GetEt());
-      }
-      
-      //METHOD OF GETTING TOWER INFO FROM LIST OF SELECTED TOWERS (BUT NOT ALL SELECTIONS APPLIED YET)
-      
-      TList* select_tows = reader.GetListOfSelectedTowers();
-      TIter next(select_tows);
-      TStarJetPicoTower* object = 0;
-      while ((object = (TStarJetPicoTower*) next())){
-	//tow_freq->Fill(object->GetId());
-	//tow_id_v_e->Fill(object->GetId(), object->GetEnergy());
-	tow_eta_phi_e_w->Fill(object->GetEta(), object->GetPhi(), object->GetEt());
-      }
-      
-      //METHOD OF GETTING TOWER INFO FROM CONTAINER AFTER ALL SELECTIONS ARE APPLIED
-      /*
-      container = reader.GetOutputContainer();
-      for (int i = 0; i < container->GetEntries(); ++ i) {
-	if (container->Get(i)->GetCharge() == 0) {
-	  tow_freq->Fill(container->Get(i)->GetTowerID());
-	  tow_id_v_e->Fill(container->Get(i)->GetTowerID(),container->Get(i)->Et());
-	}
-      }
-      */
-      
       
       reader.PrintStatus(10);
       //get the event header
@@ -324,13 +223,7 @@ int main ( int argc, const char** argv) {
       // Transform TStarJetVectors into (FastJet) PseudoJets
       // ----------------------------------------------------------
       GatherParticles(container, sv, particles, full,0); //ch+ne
-      
-      for(int i = 0; i < particles.size(); ++ i) {
-	PtEtaPhi_tracks->Fill(particles[i].pt(), particles[i].eta(), particles[i].phi());
-      }
-             
-      //auto start_timefunc = clock::now();
-      
+
       // Analysis
       // --------
       // Apply selector to the full particle set
@@ -358,115 +251,40 @@ int main ( int argc, const char** argv) {
       
       vector<PseudoJet> LoInitial = fastjet::sorted_by_pt(sjet(/*bkgd_subtractor(*/csaLo.inclusive_jets())/*)*/);
       vector<PseudoJet> LoResult;
+
       //Implementing a neutral energy fraction cut of 90% on inclusive jets
       ApplyNEFSelection(LoInitial, LoResult);
       
-      /*for (int i = 0; i < LoInitial.size(); ++ i) {
-        double towersum = 0; double ptsum = 0;
-        for (int j = 0; j < LoInitial[i].constituents().size(); ++ j) {
-          if (LoInitial[i].constituents()[j].user_index() == 0) {
-            towersum += LoInitial[i].constituents()[j].pt();
-          }
-          ptsum += LoInitial[i].constituents()[j].pt();
-        }
-        if (towersum / (double) ptsum < NEF_max) {
-          LoResult.push_back(LoInitial[i]);
-        }
-	} */
       vector<PseudoJet> GroomedJets;
       //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
       for (int i = 0; i < LoResult.size(); ++ i) {
 	GroomedJets.push_back(sd(LoResult[i]));
       }
-
-      //      auto execution_func = std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - start_timefunc).count();
-      //cout << "Function time = " << execution_func << " microseconds" << endl;
-            
+      
       if (LoResult.size() != 0) {
 	//SoftDrop is a groomer not a tagger, so if we have at least one ungroomed jet, we should also have a SoftDrop'd jet.
-	++ nJets;
-
-	//TEMP!!!!
-	for (int i = 0; i < LoResult.size(); ++ i) {
-	  if (LoResult[i].pt() > 30) {
-	    for (int j = 0; j < LoResult[i].constituents().size(); ++ j) {
-	      towers_check->Fill(LoResult[i].constituents()[j].Et());
-	    }  
-	  }
-	}
-	FillHists(hists1D, hists2D, hists3D, LoResult, 1.0); 
-	FillSDHists(hists1D, hists2D, hists3D, GroomedJets, 1.0);
-
-	//leading
-	vector<PseudoJet> LoLead; LoLead.push_back(LoResult[0]); //I do this so I can use the same function for jets & constituents (takes a vector of pseudojets)
-	//	FillTrees(LoLead, leadTree, lead_Pt, lead_Eta, lead_Phi, lead_M, lead_E, nCons_lead, dummy_double, dummy_double);
-	//FillTrees(LoLead[0].constituents(), cons_leadTree, cons_lead_Pt, cons_lead_Eta, cons_lead_Phi, cons_lead_M, cons_lead_E, dummy_int, dummy_double, dummy_double);
-	//subleading
-	if (LoResult.size() > 1) {
-	  vector<PseudoJet> LoSublead; LoSublead.push_back(LoResult[1]);
-	  //FillTrees(LoSublead, subleadTree, sublead_Pt, sublead_Eta, sublead_Phi, sublead_M, sublead_E, nCons_sublead, dummy_double, dummy_double);
-	}
-	//inclusive
-	//FillTrees(LoResult, inclTree, incl_Pt, incl_Eta, incl_Phi, incl_M, incl_E, nCons_incl, dummy_double, dummy_double);
-	for (int j = 0; j < LoResult.size(); ++ j) {
-	  //double val_list[nDim] = {GroomedJets[j].structure_of<contrib::SoftDrop>().symmetry(),GroomedJets[j].m(),GroomedJets[j].structure_of<contrib::SoftDrop>().delta_R(),GroomedJets[j].pt(), LoResult[j].pt()}; //Groomed jet not guaranteed to be highest pT even though ungroomed one is, but for inclusive this doesn't matter
-	  //	  SDnD->Fill(val_list);
-	  //FillTrees(LoResult[j].constituents(), cons_inclTree, cons_incl_Pt, cons_incl_Eta, cons_incl_Phi, cons_incl_M, cons_incl_E, dummy_int, dummy_double, dummy_double);
-	  //TEMP
-	  nCons_v_pt->Fill(LoResult[j].constituents().size(), LoResult[j].pt());
-	  int numch = 0;
-	  for (int k = 0; k < LoResult[j].constituents().size(); ++ k) {
-	    if (LoResult[j].constituents()[k].user_index() != 0) {
-	      numch ++;
-	    }
-	  }
-	  ch_frac_v_pt->Fill(numch/(double) LoResult[j].constituents().size(),LoResult[j].pt());
-	}
-
-	//TEST!!!!!!!!!!!!!!!
+	nJets += LoResult.size();
 	n_jets = LoResult.size();
 	for (int i = 0; i < n_jets; ++ i) {
 	  Pt.push_back(LoResult[i].pt()); Eta.push_back(LoResult[i].eta()); Phi.push_back(LoResult[i].phi());
 	  M.push_back(LoResult[i].m()); E.push_back(LoResult[i].e());
 	  zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
 	  mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
-	  int numch = 0;
+	  double ch_e = 0; double tot_e = 0;
 	  vector<PseudoJet> cons = LoResult[i].constituents();
 	  for (int j = 0; j < cons.size(); ++ j) {
-	    //consPt.push_back(cons[j].pt()); consEta.push_back(cons[j].eta()); consPhi.push_back(cons[j].phi());
-	    //consM.push_back(cons[j].m()); consE.push_back(cons[j].e());
-	    if (cons[j].user_index() != 0) {numch ++;}
+	    if (cons[j].user_index() != 0) {ch_e += cons[j].e();}
+	    tot_e += cons[j].e();
 	  }
-	  ch_frac.push_back(numch/(double)cons.size());
+	  ch_e_frac.push_back(ch_e/(double)tot_e);
 	}
-      
-	
-	//TEMP
-	//trigger & recoil                                                                                             
-	std::vector<fastjet::PseudoJet> candidates;
-	bool which_one = GetTriggerJet(candidates, LoResult);
-	if (candidates.size() == 1 && LoResult.size() > 1) { //potential trigger     
-	  if (fabs(fabs(LoResult[which_one].delta_phi_to(LoResult[(which_one + 1) % 2])) - Pi) < R) { //found a recoil
-	    dPhi_trig_rec->Fill(LoResult[which_one].phi() - LoResult[(which_one+1)%2].phi());
-	  }
-	}
-	else if (candidates.size() == 2) {
-	  if (fabs(fabs(candidates[0].delta_phi_to(candidates[1])) - Pi) < R) { //trigger & recoil found!              
-	    dPhi_trig_rec->Fill(candidates[0].phi() - candidates[1].phi());   
-	  }
-	}
-	
-	}
+      }
       
       // And we're done!
       // -----------------------------
       
       nEventsUsed++;
       eventTree->Fill();
-      
-	
-      //      auto execution_total = std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - start_timetotal).count();
-      //      cout << "Total time = " << execution_total << " microseconds" << endl;
       
     } // Event loop
   }catch ( std::exception& e) {
@@ -480,33 +298,13 @@ int main ( int argc, const char** argv) {
 
   // Close up shop
   // -------------
-  /*
-  leadTree->Write("lead"); cons_leadTree->Write("cons_lead");
-  subleadTree->Write("sublead");
-  inclTree->Write("incl"); cons_inclTree->Write("cons_incl");
-  */
   eventTree->Write();
-  
-  for (int j = 0; j < flag_j.size(); ++ j) {
-    for (int k = 0; k < flag_k.size(); ++ k) {
-      // hists1D.write(("m_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      //hists2D.write(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      //hists2D.write(("m_v_pt_rebin_"+flag_j[j]+"_"+flag_k[k]).c_str());
-      //hists3D.write(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str());
-    }
-  }
-
-  // SDnD->Write();
-
-  //  dPhi_trig_rec->Write(); PtEtaPhi_tracks->Write(); nCons_v_pt->Write(); ch_frac_v_pt->Write();
-  // towers_check->Write(); tow_id_v_e->Write(); tow_freq->Write(); tow_eta_phi_e_w->Write(); tow_eta_phi_e_wo->Write();
-
   
   //fout->Write();
   fout->Close();
 
   cout << "In " << nEventsUsed << " events, found " << endl
-       << nJets << " leading jets with constituents above 0.2 GeV." << endl;  
+       << nJets << " jets above 15 GeV, with constituents above 0.2 GeV." << endl;  
 
   cout << "Wrote to " << fout->GetName() << endl;
   cout << "Bye :)" << endl;

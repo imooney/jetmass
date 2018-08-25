@@ -88,79 +88,17 @@ int main (int argc, const char ** argv) {
     }
     TStarJetPicoEventHeader* header;  TStarJetPicoEvent* event;
     TStarJetVectorContainer<TStarJetVector> * container;        TStarJetVector* sv;
-    
-    // Histograms
-    
-    Collection<string, TH1D> hists1D; Collection<string, TH2D> hists2D; Collection<string, TH3D> hists3D;
-    
-    vector<string> flag_j = {"lead", "sublead", "trig", "rec", "incl"};
-    vector<string> flag_k = {"jet", "cons"};
-    for (int j = 0; j < flag_j.size(); ++ j) {
-      for (int k = 0; k < flag_k.size(); ++ k) {
-	hists1D.add(("m_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10); //mass
-	hists2D.add(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",20,0,10,11,5,60); //mass vs. pT
-	hists3D.add(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str(),"",11,5,60,30,-0.6,0.6,50,0,2*Pi);
-      }
-    }
-    /*    
-    const unsigned nDim = 5;
-    int bins[nDim] = {20, 20, 20, 11, 11};
-    double min[nDim] = {0,0,0,5,5};
-    double max[nDim] = {1,10,1,60,60};
-    THnSparse * SDnD = new THnSparseD("zg_mg_thetag_ptg_pt_incl_sd", "", nDim, bins, min, max);
-    SDnD->Sumw2();
-    */
-    //TESTS!
-    TH1D * dPhi_trig_rec = new TH1D("dPhi_trig_rec",";#Delta #phi;arb.", 28, -Pi - 0.4, Pi + 0.4); //defined as trigger - recoil
-    TH3D * PtEtaPhi_tracks = new TH3D("PtEtaPhi_tracks",";p^{track}_{T} [GeV/c]; #eta; #phi", 80, 0, 80, 30, -0.6,0.6,50,0,2*Pi);
-    TH2D * ch_frac_v_pt = new TH2D("ch_frac_v_pt",";charged fraction; p_{T}^{jet} [GeV/c]",10,0,1,11,5,60);
-    TH2D * tow_id_v_e = new TH2D("tow_id_v_e",";tower ID; tower E_{T} [GeV]",4800,1,4801,140,0,140);
-    
-    double jetPt_incl, jetEta_incl, jetPhi_incl, jetM_incl, jetE_incl, consPt_incl, consEta_incl, consPhi_incl, consM_incl, consE_incl, wt;
-    int nCons_incl, cons_dummy;
-    double jetPt_lead, jetEta_lead, jetPhi_lead, jetM_lead, jetE_lead, consPt_lead, consEta_lead, consPhi_lead, consM_lead, consE_lead;
-    double jetPt_sublead, jetEta_sublead, jetPhi_sublead, jetM_sublead, jetE_sublead;
-    int nCons_lead, nCons_sublead;
-    
-    TTree *inclTree = new TTree("inclTree","inclTree");
-    TTree *leadTree = new TTree("leadTree","leadTree");
-    TTree *subleadTree = new TTree("subleadTree","subleadTree");
-    TTree *cons_inclTree = new TTree("cons_inclTree","cons_inclTree");
-    TTree *cons_leadTree = new TTree("cons_leadTree","cons_leadTree");
-        
-    leadTree->Branch("Pt", &jetPt_lead); leadTree->Branch("Eta", &jetEta_lead); leadTree->Branch("Phi", &jetPhi_lead);
-    leadTree->Branch("M", &jetM_lead); leadTree->Branch("E", &jetE_lead); leadTree->Branch("nCons", &nCons_lead);
-    leadTree->Branch("weight", &wt);
-    
-    subleadTree->Branch("Pt", &jetPt_sublead); subleadTree->Branch("Eta", &jetEta_sublead); subleadTree->Branch("Phi", &jetPhi_sublead);
-    subleadTree->Branch("M", &jetM_sublead); subleadTree->Branch("E", &jetE_sublead); subleadTree->Branch("nCons", &nCons_sublead);
-    subleadTree->Branch("weight", &wt);
-    
-    cons_leadTree->Branch("Pt", &consPt_lead); cons_leadTree->Branch("Eta", &consEta_lead); cons_leadTree->Branch("Phi", &consPhi_lead);
-    cons_leadTree->Branch("M", &consM_lead); cons_leadTree->Branch("E", &consE_lead);
-    cons_leadTree->Branch("weight", &wt);
-    
-    inclTree->Branch("Pt", &jetPt_incl); inclTree->Branch("Eta", &jetEta_incl); inclTree->Branch("Phi", &jetPhi_incl);
-    inclTree->Branch("M", &jetM_incl); inclTree->Branch("E", &jetE_incl); inclTree->Branch("nCons", &nCons_incl);
-    inclTree->Branch("weight", &wt);
-    
-    cons_inclTree->Branch("Pt", &consPt_incl); cons_inclTree->Branch("Eta", &consEta_incl); cons_inclTree->Branch("Phi", &consPhi_incl);
-    cons_inclTree->Branch("M", &consM_incl); cons_inclTree->Branch("E", &consE_incl);
-    cons_inclTree->Branch("weight", &wt);
-    
-    //TEST!!!!!!                                                                                                                                                                                        
-    double n_jets;
+                                                                
+    double n_jets, wt;
     vector<double> Pt; vector<double> Eta; vector<double> Phi; vector<double> M; vector<double> E;
-    vector<double> ch_frac;
+    vector<double> ch_e_frac;
     vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
-    //vector<double> consPt; vector<double> consEta; vector<double> consPhi; vector<double> consM; vector<double> consE;
-
+    
     TTree *eventTree = new TTree("event","event");
     eventTree->Branch("n_jets", &n_jets);
     eventTree->Branch("Pt", &Pt); eventTree->Branch("Eta",&Eta); eventTree->Branch("Phi",&Phi); eventTree->Branch("M",&M); eventTree->Branch("E",&E);
-    eventTree->Branch("ch_frac", &ch_frac);
+    eventTree->Branch("ch_e_frac", &ch_e_frac);
     eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
-    // eventTree->Branch("consPt",&consPt); eventTree->Branch("consEta",&consEta); eventTree->Branch("consPhi",&consPhi); eventTree->Branch("consM",&consM); eventTree->Branch("consE",&consE);
     eventTree->Branch("weight", &wt);
     
     //Creating SoftDrop grooming object
@@ -178,12 +116,16 @@ int main (int argc, const char ** argv) {
     // Jet candidate selectors
     // -----------------------
     Selector select_jet_rap     = fastjet::SelectorAbsRapMax(max_rap);
-    Selector select_jet_pt_min  = fastjet::SelectorPtMin( jet_ptmin );
+    
+    Selector select_jet_pt_min;
+    if (ge_or_py == 0) {//pythia
+      select_jet_pt_min  = fastjet::SelectorPtMin( jet_ptmin );
+    }
+    else { select_jet_pt_min = fastjet::SelectorPtMin( det_jet_ptmin ); }
     Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
     Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
     
     JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
-    //double wt;
     TString Filename;
     
     // Particle containers & counters
@@ -192,31 +134,21 @@ int main (int argc, const char ** argv) {
     //1=inclusive, 2=lead
     int counter_debug1 = 0, counter_debug2 = 0;
 
-// LOOP!
-
+    // LOOP!
+    
     while ( Reader.NextEvent() ) {
       
       //clearing vectors                                                                                                                                                                              
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
-      //consPt.clear(); consEta.clear(); consPhi.clear(); consM.clear(); consE.clear();
-      ch_frac.clear();
+      ch_e_frac.clear();
       //initializing variables to -9999                                                                                                                                                               
-      n_jets = -9999;
+      n_jets = -9999; wt = -9999;
       
       EventID = Reader.GetNOfCurrentEvent();
       
       event = Reader.GetEvent();    header = event->GetHeader();
-      
-      //TEMP!!!!!!!!!!!!!!!!!
-      /*
-	TStarJetPicoEvent * current_event = Reader.GetEvent();
-	//      cout << "event " << reader.GetNOfCurrentEvent() << " has these tows" << endl;
-	for (int i = 0; i < current_event->GetTowers()->GetEntries(); ++ i) {
-	tow_id_v_e->Fill(current_event->GetTower(i)->GetId(), current_event->GetTower(i)->GetEnergy());
-	//cout << current_event->GetTower(i)->GetId() << " " << current_event->GetTower(i)->GetEnergy() << endl;
-	}
-      */
+
       EventID = Reader.GetNOfCurrentEvent();
       
       Particles.clear();
@@ -232,149 +164,78 @@ int main (int argc, const char ** argv) {
       Filename =  Reader.GetInputChain()->GetCurrentFile()->GetName();
       
       wt = LookupRun12Xsec( Filename );
-      
+
       //  GATHER PARTICLES
       GatherParticles ( container, sv, Particles, 1, ge_or_py);    // first bool flag: 0 signifies charged-only, 1 = ch+ne;  particles: second bool flag: pythia = 1,  = 0
-      
-      //TEST
-      for (int i = 0; i < Particles.size(); ++ i) {
-	PtEtaPhi_tracks->Fill(Particles[i].pt(), Particles[i].eta(), Particles[i].phi(), wt);
-      }
       
       vector<PseudoJet> cut_Particles = spart(Particles); //applying constituent cuts
       
       ClusterSequence Cluster(cut_Particles, jet_def);           //  CLUSTER BOTH
-    vector<PseudoJet> JetsInitial;
-    
-    if (ge_or_py == 0) {//pythia
-      JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets()));    // EXTRACT JETS
-    }
-    else {
-      JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets())); //apply jet cuts in Geant (not Pythia!)
-    }
-    
-    vector<PseudoJet> Jets;
-
-    //Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
-    if (ge_or_py == 1) { //geant
-      ApplyNEFSelection(JetsInitial, Jets);
-    }
-    else {Jets = JetsInitial;}
-    /*
-    for (int i = 0; i < JetsInitial.size(); ++ i) {
-      double towersum = 0; double ptsum = 0;
-      for (int j = 0; j < JetsInitial[i].constituents().size(); ++ j) {
-	if (JetsInitial[i].constituents()[j].user_index() == 0) {
-	  towersum += JetsInitial[i].constituents()[j].pt();
+      vector<PseudoJet> JetsInitial;
+      
+      if (ge_or_py == 0) {//pythia
+	JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets()));    // EXTRACT JETS
+      }
+      else {
+	JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets())); //apply jet cuts in Geant (not Pythia!)
+      }
+      
+      vector<PseudoJet> Jets;
+      
+      //Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
+      if (ge_or_py == 1) { //geant
+	ApplyNEFSelection(JetsInitial, Jets);
+      }
+      else {Jets = JetsInitial;}
+      
+      //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
+      for (int i = 0; i < Jets.size(); ++ i) {
+	GroomedJets.push_back(sd(Jets[i]));
+      }
+      //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TREES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+      
+      NJets += Jets.size();               //  Save jet info and add jets to total
+      n_jets = Jets.size();
+      
+      for (int i = 0; i < n_jets; ++ i) {
+	if (ge_or_py == 0) { //pythia
+	  //	  if (Jets[i].pt() > 24 && Jets[i].pt() < 26) {cout << Filename << " " << wt << " " << Jets[i].pt() << " " << Jets[i].eta() << " " << Jets[i].phi() << " " << Jets[i].m() << endl;}
+	  std::string tail = ((string) Filename).substr(((string) Filename).size() - 10);
+	  std::string upstring = tail.substr(0,2);
+	  if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = upstring.substr(0,1);}}
+	  double upbin = std::stoi(upstring);
+	  if (Jets[i].pt() > 2*upbin) { std::cout << Filename << " " << EventID << " " << wt << " " << Jets[i].pt() << " " << Jets[i].eta() << " " << Jets[i].phi() << " " << Jets[i].m() << std::endl; }
 	}
-	ptsum += JetsInitial[i].constituents()[j].pt();
-      }
-      if (towersum / (double) ptsum < NEF_max) {
-	Jets.push_back(JetsInitial[i]);
-      }
-    }
-    */
-    
-    
-    //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
-    for (int i = 0; i < Jets.size(); ++ i) {
-      GroomedJets.push_back(sd(Jets[i]));
-    }
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    if (Jets.size() != 0) {
-      //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-      //leading
-      vector<PseudoJet> Lead; Lead.push_back(Jets[0]);
-      FillTrees(Lead, leadTree, jetPt_lead, jetEta_lead, jetPhi_lead, jetM_lead, jetE_lead, nCons_lead, wt, wt);
-      //subleading
-      if (Jets.size() > 1) {
-	vector<PseudoJet> Sublead; Sublead.push_back(Jets[1]);
-	FillTrees(Sublead, subleadTree, jetPt_sublead, jetEta_sublead, jetPhi_sublead, jetM_sublead, jetE_sublead, nCons_sublead, wt, wt);
-      }
-      //constituents
-      FillTrees(Lead[0].constituents(), cons_leadTree, consPt_lead, consEta_lead, consPhi_lead, consM_lead, consE_lead, cons_dummy, wt, wt);
-      //inclusive
-      FillTrees(Jets, inclTree, jetPt_incl, jetEta_incl, jetPhi_incl, jetM_incl, jetE_incl, nCons_incl, wt, wt);
-      //constituents
-      for(int j = 0; j < Jets.size(); ++ j) {
-	FillTrees(Jets[j].constituents(), cons_inclTree, consPt_incl, consEta_incl, consPhi_incl, consM_incl, consE_incl, cons_dummy, wt, wt);
-	//TEMP
-	int numch = 0;
-	for (int k = 0; k < Jets[j].constituents().size(); ++ k) {
-	  if (Jets[j].constituents()[k].user_index() != 0) {
-	    numch ++;
-	  }
+	Pt.push_back(Jets[i].pt()); Eta.push_back(Jets[i].eta()); Phi.push_back(Jets[i].phi());
+	M.push_back(Jets[i].m()); E.push_back(Jets[i].e());
+	zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
+	mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
+	double ch_e = 0; double tot_e = 0;
+	vector<PseudoJet> cons = Jets[i].constituents();
+	for (int j = 0; j < cons.size(); ++ j) {
+	  if (cons[j].user_index() != 0) {ch_e += cons[j].e();}
+	  tot_e += cons[j].e();
 	}
-	ch_frac_v_pt->Fill(numch/(double) Jets[j].constituents().size(),Jets[j].pt(), wt);
-        
+	ch_e_frac.push_back(ch_e/(double)tot_e);
+      }
+      if (Jets.size() != 0) {
+	eventTree->Fill();
       }
     }
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
     
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~HISTOS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    if(Jets.size() != 0) {
-      FillHists(hists1D, hists2D, hists3D, Jets, wt);
-      /*for (int j = 0; j < Jets.size(); ++ j) {
-	 double val_list[nDim] = {GroomedJets[j].structure_of<contrib::SoftDrop>().symmetry(),GroomedJets[j].m(),GroomedJets[j].structure_of<contrib::SoftDrop>().delta_R(),GroomedJets[j].pt(), Jets[j].pt()}; //Groomed jet not guaranteed to be highest pT even though ungroomed one is
-	//SDnD->Fill(val_list);
-      }*/
-    }
-    NJets += Jets.size();               //  Save jet info and add jets to total
-    n_jets = Jets.size();
-    //TEST!!!!!!!!!!!!!!!
-    for (int i = 0; i < n_jets; ++ i) {
-      Pt.push_back(Jets[i].pt()); Eta.push_back(Jets[i].eta()); Phi.push_back(Jets[i].phi());
-      M.push_back(Jets[i].m()); E.push_back(Jets[i].e());
-      zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
-      mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
-      int numch = 0;
-      vector<PseudoJet> cons = Jets[i].constituents();
-      for (int j = 0; j < cons.size(); ++ j) {
-	//	consPt.push_back(cons[j].pt()); consEta.push_back(cons[j].eta()); consPhi.push_back(cons[j].phi());
-	//consM.push_back(cons[j].m()); consE.push_back(cons[j].e());
-	if (cons[j].user_index() != 0) {numch ++;}
-      }
-      ch_frac.push_back(numch/(double)cons.size());
-    }
+    //~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ END EVENT LOOP! ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
     
-    eventTree->Fill();
- }
- 
-//~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ END EVENT LOOP! ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- 
- 
- TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
- 
- std::cout << std::endl << std::endl << "Of " << nEvents << " events" << std::endl;
- std::cout << NJets << " jets have been found" << std::endl;
- std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
- /* 
- leadTree->Write("leadTree");
- subleadTree->Write("subleadTree");
- cons_leadTree->Write("cons_leadTree");
- inclTree->Write("inclTree");
- cons_inclTree->Write("cons_inclTree");
- */
- eventTree->Write();
-
- //hist1->Write(); hist2->Write(); etc, goes here
- for (int j = 0; j < flag_j.size(); ++ j) {
-   for (int k = 0; k < flag_k.size(); ++ k) {
-     //  hists1D.write(("m_"+flag_j[j]+"_"+flag_k[k]).c_str());
-     // hists2D.write(("m_v_pt_"+flag_j[j]+"_"+flag_k[k]).c_str());
-     //hists3D.write(("PtEtaPhi_"+flag_j[j]+"_"+flag_k[k]).c_str());
-   }
- }
- 
- //SDnD->Write();
- 
- // dPhi_trig_rec->Write();
- //PtEtaPhi_tracks->Write();
- //ch_frac_v_pt->Write();
- //tow_id_v_e->Write();
- 
- fout->Close();
- 
- return 0;
- 
+    
+    TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
+    
+    std::cout << std::endl << std::endl << "Of " << nEvents << " events" << std::endl;
+    std::cout << NJets << " jets have been found" << std::endl;
+    std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
+   
+    eventTree->Write();
+    
+    fout->Close();
+    
+    return 0;
+    
 }

@@ -101,25 +101,27 @@ namespace Analysis {
     std::cout << egMatchedJets << " GEANT jets have been matched to Pythia6+Efficiency jets" << std::endl;
     std::cout <<std::endl << "Writing to:  " << outName << std::endl << std::endl;
   }
-
-  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container , TStarJetVector *sv, std::vector<fastjet::PseudoJet> & Particles, const bool full, const bool py){
+  //remind self later: why am I passing TStarJetVector *sv? should just be declaring it before the for-loop
+  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container, TStarJetVector *sv, std::vector<fastjet::PseudoJet> & Particles, const bool full, const bool py){
     for ( int i=0; i < container->GetEntries() ; ++i ) {
       sv = container->Get(i);
       fastjet::PseudoJet current = fastjet::PseudoJet( *sv );
+
       // current.set_user_index( sv->GetCharge() );
 
       //      if (py == 1 && full == 1) {std::cout << "starting with charge: " << sv->GetCharge() << " for particle " << i << std::endl;}
       
       if (sv->GetCharge() != 0 && py == 0) {
-	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), PionMass); //assigning pion mass to charged particles
+	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), chPionMass); //assigning pion mass to charged particles
       }
       if (py != 0) {
 	current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), current.m());
       }
+
       if ((sv->GetCharge() == 0) && (full == 0)) { continue; } // if we don't want full jets, skip neutrals
 
       current.set_user_index( sv->GetCharge() );
-
+      
       // if (py == 1 && full == 1) {std::cout << "ending with charge: " << current.user_index() << " for particle " << i << std::endl;}
       
       Particles.push_back(current);
@@ -261,11 +263,15 @@ namespace Analysis {
     return;
   }
   
-  void ConstructResponsesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_zg_response, RooUnfoldResponse & ptg_rg_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const double mc_weight) {
+  void ConstructResponsesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_response, RooUnfoldResponse & mg_response, RooUnfoldResponse & pt_zg_response, RooUnfoldResponse & pt_rg_response, RooUnfoldResponse & pt_ptg_response, RooUnfoldResponse & pt_mg_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const fastjet::PseudoJet g_ungroom, const fastjet::PseudoJet p_ungroom, const double mc_weight) {
     zg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), mc_weight);
     rg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), mc_weight);
-    ptg_zg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), g_jet.pt(), p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_jet.pt(), mc_weight);
-    ptg_rg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), g_jet.pt(), p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_jet.pt(), mc_weight);
+    ptg_response.Fill(g_jet.pt(), p_jet.pt(), mc_weight);
+    mg_response.Fill(g_jet.m(), p_jet.m(), mc_weight);
+    pt_zg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), g_ungroom.pt(), p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_ungroom.pt(), mc_weight);
+    pt_rg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), g_ungroom.pt(), p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_ungroom.pt(), mc_weight);
+    pt_ptg_response.Fill(g_jet.pt(), g_ungroom.pt(), p_jet.pt(), p_ungroom.pt(), mc_weight);
+    pt_mg_response.Fill(g_jet.m(), g_ungroom.pt(), p_jet.m(), p_ungroom.pt(), mc_weight);
     
     return;
   }
@@ -278,11 +284,16 @@ namespace Analysis {
     return;
   }
   
-  void MissesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_zg_response, RooUnfoldResponse & ptg_rg_response, const fastjet::PseudoJet p_jet, const double mc_weight) {
+  void MissesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_response, RooUnfoldResponse & mg_response, RooUnfoldResponse & pt_zg_response, RooUnfoldResponse & pt_rg_response, RooUnfoldResponse & pt_ptg_response, RooUnfoldResponse & pt_mg_response, const fastjet::PseudoJet p_jet, const fastjet::PseudoJet p_ungroom, const double mc_weight) {
     zg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), mc_weight);
     rg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), mc_weight);
-    ptg_zg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_jet.pt(), mc_weight);
-    ptg_rg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_jet.pt(), mc_weight);
+    ptg_response.Miss(p_jet.pt(), mc_weight);
+    mg_response.Miss(p_jet.m(), mc_weight);
+    pt_zg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_ungroom.pt(), mc_weight);
+    pt_rg_response.Miss(p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_ungroom.pt(), mc_weight);
+    pt_ptg_response.Miss(p_jet.pt(), p_ungroom.pt(), mc_weight);
+    pt_mg_response.Miss(p_jet.m(), p_ungroom.pt(), mc_weight);
+    
     return;
   }
   
@@ -294,11 +305,16 @@ namespace Analysis {
     return;
   }
   
-  void FakesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_zg_response, RooUnfoldResponse & ptg_rg_response, const fastjet::PseudoJet g_jet, const double mc_weight) {
+  void FakesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_response, RooUnfoldResponse & mg_response, RooUnfoldResponse & pt_zg_response, RooUnfoldResponse & pt_rg_response, RooUnfoldResponse & pt_ptg_response, RooUnfoldResponse & pt_mg_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet g_ungroom, const double mc_weight) {
     zg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), mc_weight);
     rg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), mc_weight);
-    ptg_zg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), g_jet.pt(), mc_weight);
-    ptg_rg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), g_jet.pt(), mc_weight);
+    ptg_response.Fake(g_jet.pt(), mc_weight);
+    mg_response.Fake(g_jet.m(), mc_weight);
+    pt_zg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), g_ungroom.pt(), mc_weight);
+    pt_rg_response.Fake(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), g_ungroom.pt(), mc_weight);
+    pt_ptg_response.Fake(g_jet.pt(), g_ungroom.pt(), mc_weight);
+    pt_mg_response.Fake(g_jet.m(), g_ungroom.pt(), mc_weight);
+    
     return;
   }
   

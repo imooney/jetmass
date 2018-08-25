@@ -94,15 +94,15 @@ namespace Analysis {
 
   void ConstructResponses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
-  void ConstructResponsesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
+  void ConstructResponsesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse&, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
   void Misses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const double);
 
-  void MissesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const double);
+  void MissesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
   void Fakes(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const double);
 
-  void FakesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const double);  
+  void FakesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);  
   
   void InitReader(TStarJetPicoReader &, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const std::string, const std::string);
 

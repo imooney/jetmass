@@ -31,7 +31,7 @@ ROOTLIBS      = $(shell root-config --libs)
 FJLIBS	      = $(shell fastjet-config --libs)
 #PYTHIALIBS    = $(shell pythia8-config --ldflags)
 
-LIBPATH       = $(ROOTLIBS) -L$(FASTJETDIR)/lib -L$(STARPICOPATH) -L$(ROOUNFOLDDIR)
+LIBPATH       = $(ROOTLIBS) $(FJLIBS) -L$(STARPICOPATH) -L$(ROOUNFOLDDIR) #-L$(FASTJETDIR)/lib -L$(STARPICOPATH) -L$(ROOUNFOLDDIR)
 LIBS          = -lRecursiveTools -lfastjettools -lfastjet -lTStarJetPico -lRooUnfold
 
 
