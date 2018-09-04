@@ -259,7 +259,6 @@ namespace Analysis {
     pt_response.Fill(g_jet.pt(), p_jet.pt(), mc_weight);
     m_response.Fill(g_jet.m(), p_jet.m(), mc_weight);
     pt_m_response.Fill(g_jet.m(), g_jet.pt(), p_jet.m(), p_jet.pt(), mc_weight);
-    
     return;
   }
   

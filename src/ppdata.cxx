@@ -148,12 +148,14 @@ int main ( int argc, const char** argv) {
   vector<double> Pt; vector<double> Eta; vector<double> Phi; vector<double> M; vector<double> E;
   vector<double> ch_e_frac;
   vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
+  vector<double> mcd;
   
   TTree *eventTree = new TTree("event","event");
   eventTree->Branch("n_jets", &n_jets);
   eventTree->Branch("Pt", &Pt); eventTree->Branch("Eta",&Eta); eventTree->Branch("Phi",&Phi); eventTree->Branch("M",&M); eventTree->Branch("E",&E);
   eventTree->Branch("ch_e_frac",&ch_e_frac);
   eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
+  eventTree->Branch("mcd",&mcd);
   
   // Helpers
   // -------
@@ -206,7 +208,7 @@ int main ( int argc, const char** argv) {
       //clearing vectors
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
-      ch_e_frac.clear();
+      ch_e_frac.clear(); mcd.clear();
       //initializing variables to -9999
       n_jets = -9999;
       
@@ -270,6 +272,9 @@ int main ( int argc, const char** argv) {
 	  M.push_back(LoResult[i].m()); E.push_back(LoResult[i].e());
 	  zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
 	  mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
+	  double m2 = (LoResult[i].m())*(LoResult[i].m()); double gm2 = (GroomedJets[i].m())*(GroomedJets[i].m());
+	  double m_cd = (double) sqrt(m2 - gm2); if ((m2 - gm2) < 10e-10) {m_cd = 0;}
+	  mcd.push_back(m_cd);
 	  double ch_e = 0; double tot_e = 0;
 	  vector<PseudoJet> cons = LoResult[i].constituents();
 	  for (int j = 0; j < cons.size(); ++ j) {
@@ -282,10 +287,10 @@ int main ( int argc, const char** argv) {
       
       // And we're done!
       // -----------------------------
-      
-      nEventsUsed++;
-      eventTree->Fill();
-      
+      if (LoResult.size() != 0) {
+	nEventsUsed++;
+	eventTree->Fill();
+      }
     } // Event loop
   }catch ( std::exception& e) {
     std::cerr << "Caught " << e.what() << std::endl;

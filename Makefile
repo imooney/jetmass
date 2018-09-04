@@ -63,11 +63,12 @@ $(BDIR)/%  : $(ODIR)/%.o
 ###############################################################################
 ############################# Main Targets ####################################
 ###############################################################################
-all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching
+all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching $(BDIR)/closure
 
 data : $(BDIR)/ppdata
 sim : $(BDIR)/ppsim
 matching : $(BDIR)/matching
+closure : $(BDIR)/closure
 
 #$(SDIR)/dict.cxx                : $(SDIR)/ktTrackEff.hh
 #	cd ${SDIR}; rootcint -f dict.cxx -c -I. ./ktTrackEff.hh
@@ -79,11 +80,13 @@ $(ODIR)/funcs.o		: $(SDIR)/funcs.cxx $(SDIR)/funcs.hh
 $(ODIR)/ppsim.o		: $(SDIR)/ppsim.cxx
 $(ODIR)/ppdata.o	: $(SDIR)/ppdata.cxx
 $(ODIR)/matching.o	: $(SDIR)/matching.cxx
+$(ODIR)/closure.o	: $(SDIR)/closure.cxx
 
 #data analysis
 $(BDIR)/ppsim		: $(ODIR)/ppsim.o $(ODIR)/funcs.o #$(ODIR)/ktTrackEff.o $(ODIR)/dict.o
 $(BDIR)/ppdata		: $(ODIR)/ppdata.o $(ODIR)/funcs.o
 $(BDIR)/matching	: $(ODIR)/matching.o $(ODIR)/funcs.o
+$(BDIR)/closure		: $(ODIR)/closure.o $(ODIR)/funcs.o
 
 ###############################################################################
 ##################################### MISC ####################################

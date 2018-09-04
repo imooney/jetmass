@@ -38,112 +38,6 @@ void DivideCanvas(TCanvas *can, const std::string log_scale, const unsigned rows
     return;
 }
 
-//make variable bin-size histogram from tree
-TH1D* HistFromTree(const std::string hist_name, const int nBins, double * edges, TTree * tree, double & branch, double & weight) {
-  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, edges);
-  
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    hist->Fill(branch, weight);
-  }
-  return hist;
-}
-
-//make constant bin-size histogram from tree
-TH1D* HistFromTree(const std::string hist_name, const int nBins, const double lo, const double hi, TTree * tree, double & branch, double & weight) {
-  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, lo, hi);
-  
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    hist->Fill(branch, weight);
-  }
-  return hist;
-}
-
-
-//make variable bin-size histogram from tree with vector of doubles
-TH1D* HistFromTree(const std::string hist_name, const int nBins, double * edges, TTree * tree, std::vector<double> * branch, double & weight) {
-  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, edges);
-  
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    for (int j = 0; j < branch->size(); ++ j) {
-      hist->Fill(branch->at(j), weight);
-    }
-  }
-  tree->ResetBranchAddresses();
-  return hist;
-}
-
-//make constant bin-size histogram from tree with vector of doubles
-TH1D* HistFromTree(const std::string hist_name, const int nBins, const double lo, const double hi, TTree * tree, std::vector<double> * branch, double & weight) {
-  std::cout << "L" << std::endl;
-  TH1D * hist = new TH1D((hist_name).c_str(), "", nBins, lo, hi);
-  std::cout << "M" << std::endl;
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    for (int j = 0; j < branch->size(); ++ j) {
-      hist->Fill(branch->at(j), weight);
-    }
-  }
-  std::cout << "N" << std::endl;
-  tree->ResetBranchAddresses();
-  std::cout << "O" << std::endl;
-  return hist;
-}
-
-
-//make variable bin-size histogram from tree with vector of doubles
-TH2D* HistFromTree(const std::string hist_name, const int nBinsx, double * edgesx, const int nBinsy, double * edgesy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
-  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, edgesx, nBinsy, edgesy);
-  
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
-    for (int j = 0; j < branchx->size(); ++ j) {
-      hist->Fill(branchx->at(j), branchy->at(j), weight);
-    }
-  }
-  tree->ResetBranchAddresses();
-  return hist;
-}
-
-//make variable bin-size histogram from tree with vector of doubles
-TH2D* HistFromTree(const std::string hist_name, const int nBinsx, const double lox, const double hix, const int nBinsy, const double loy, const double hiy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
-  std::cout << "AAAAA" << std::endl;
-  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, lox, hix, nBinsy, loy, hiy);
-  std::cout << "BBBBB" << std::endl;
-  std::cout << tree->GetName() << std::endl;
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    //    std::cout << "CCCCC" << std::endl;
-    tree->GetEntry(i);
-    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
-    for (int j = 0; j < branchx->size(); ++ j) {
-      hist->Fill(branchx->at(j), branchy->at(j), weight);
-    }
-  }
-  std::cout << "DDDDD" << std::endl;
-  tree->ResetBranchAddresses();
-  std::cout << "EEEEE" << std::endl;
-  return hist;
-}
-
-//make variable bin-size histogram from tree with vector of doubles
-TH2D* HistFromTree(const std::string hist_name, const int nBinsx, const double lox, const double hix, const int nBinsy, double * edgesy, TTree * tree, std::vector<double> * branchx, std::vector<double> * branchy, double & weight) {
-  TH2D * hist = new TH2D((hist_name).c_str(), "", nBinsx, lox, hix, nBinsy, edgesy);
-  
-  for (int i = 0; i < tree->GetEntries(); ++ i) {
-    tree->GetEntry(i);
-    if (branchx->size() != branchy->size()) {std::cerr << "Mismatching observable entries in tree! Exiting!" << std::endl; exit(1);}
-    for (int j = 0; j < branchx->size(); ++ j) {
-      hist->Fill(branchx->at(j), branchy->at(j), weight);
-    }
-  }
-  tree->ResetBranchAddresses();
-  return hist;
-}
-
-
 //projects a 2D histogram in desired ranges and returns an array of the (1D) projections on desired axis
 std::vector<TH1D*> Projection2D (TH2D * hist2D, const int nBins, double * ranges, const std::string axis) {
   std::vector<TH1D*> proj1Ds;
@@ -171,11 +65,13 @@ std::vector<TH1D*> Projection2D (TH2D * hist2D, const int nBins, double * ranges
 //prettify 1D histogram
 void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
 		 const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  if (yTitle.find("arb") != std::string::npos || yTitle.find("prob") != std::string::npos) {
+  if (yTitle.find("arb") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
     hist->Scale(1/(double)hist->Integral());
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
   }
   else {
-    cout << "Not scaling by histogram " << hist->GetName() << "'s integral! If this is not a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing 'prob' or 'arb'" << endl;
+    cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
   }
   hist->SetMarkerColor(markColor); hist->SetMarkerStyle(markStyle); hist->SetMarkerSize(markSize); hist->SetLineColor(lineColor);
   hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
@@ -191,8 +87,10 @@ void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, 
 //prettify 1D histogram to be drawn as line with "C" option
 void Prettify1DwLineStyle(TH1D * hist, const Color_t lineColor, const Style_t lineStyle, const double lineWidth,
 			  const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  if (yTitle.find("arb") != std::string::npos || yTitle.find("prob") != std::string::npos) {
+  if (yTitle.find("arb") == std::string::npos) {
     hist->Scale(1/(double)hist->Integral());
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
   }
   else {
     std::cout << "Not scaling by histogram " << hist->GetName() << "'s integral! If this is not a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing 'prob' or 'arb'" << std::endl;
@@ -278,63 +176,86 @@ void Resolution (TH2D* DeltaObsvPt, const std::string out, const std::string fil
   if (groom == 1) {kind = "SD ";}
   std::string cName = (std::string) "c" + (std::string) DeltaObsvPt->GetName();
   TCanvas * cres = MakeCanvas(cName, "z", 600,800);
-  DivideCanvas(cres,"z",1,2);
+  DivideCanvas(cres,"z",1,3);
 
   const int nDeltas = 11;
   double ranges_delta[nDeltas+1] = {0,1,2,3,4,5,6,7,8,9,10,11};
   vector<TH1D*> delta_projs = Projection2D(DeltaObsvPt, nDeltas, ranges_delta, "Y");
-  double means[nDeltas]; double rms[nDeltas];
+  double means[nDeltas]; double rms[nDeltas]; double meanerr[nDeltas]; double rmserr[nDeltas];
   for (int i = 0; i < nDeltas; ++ i) {
     means[i] = delta_projs[i]->GetMean();
     rms[i] = delta_projs[i]->GetRMS();
+    meanerr[i] = delta_projs[i]->GetMeanError();
+    rmserr[i] = delta_projs[i]->GetRMSError();
   }
-
+  /*
   double x[nDeltas] = {7.5,12.5,17.5,22.5,27.5,32.5,37.5,42.5,47.5,52.5,57.5};
   double y[nDeltas] = {means[0],means[1],means[2],means[3],means[4],means[5],means[6],means[7],means[8],means[9],means[10]};
   double xerr[nDeltas] = {0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1};
   double yerr[nDeltas] = {rms[0],rms[1],rms[2],rms[3],rms[4],rms[5],rms[6],rms[7],rms[8],rms[9],rms[10]};
+  */
+  double x[nDeltas] = {7.5,12.5,17.5,22.5,27.5,32.5,37.5,42.5,47.5,52.5,57.5};
+  double ymean[nDeltas] = {means[0],means[1],means[2],means[3],means[4],means[5],means[6],means[7],means[8],means[9],means[10]};
+  double xerr[nDeltas] = {0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1};
+  double yerrmean[nDeltas] = {meanerr[0],meanerr[1],meanerr[2],meanerr[3],meanerr[4],meanerr[5],meanerr[6],meanerr[7],meanerr[8],meanerr[9],meanerr[10]};
 
-  TGraphErrors *gr = new TGraphErrors(nDeltas,x,y,xerr,yerr);
+  double yrms[nDeltas] = {rms[0],rms[1],rms[2],rms[3],rms[4],rms[5],rms[6],rms[7],rms[8],rms[9],rms[10]};
+  double yerrrms[nDeltas] = {rmserr[0],rmserr[1],rmserr[2],rmserr[3],rmserr[4],rmserr[5],rmserr[6],rmserr[7],rmserr[8],rmserr[9],rmserr[10]};
 
-  PrettifyTGraph(gr, kRed, kFullCircle, 1, kBlack, ("Gen. p^{" + kind + "jet}_{T} [GeV/c]").c_str(), "#mu #pm #sigma", 5, 60, -2, 2);
-
-  Prettify2D(DeltaObsvPt, ("Gen. p^{" + kind + "jet}_{T} [GeV/c]").c_str(), yTitle, 5,60,-1,-1,1e-11,1e-3);
+  TGraphErrors *mean = new TGraphErrors(nDeltas,x,ymean,xerr,yerrmean);
+  TGraphErrors *sigma = new TGraphErrors(nDeltas,x,yrms,xerr,yerrrms);
+  
+  PrettifyTGraph(mean, kRed, kFullCircle, 1, kBlack, "Gen. p^{jet}_{T} [GeV/c]", "#mu", 5, 60, -2, 2);
+  PrettifyTGraph(sigma, kRed, kFullCircle, 1, kBlack, "Gen. p^jet}_{T} [GeV/c]","#sigma",5,60,0,0.5);
+  
+  Prettify2D(DeltaObsvPt, "Gen. p^{jet}_{T} [GeV/c]", yTitle, 5,60,-1,-1,1e-11,1e-3);
 
   cres->cd(1); DeltaObsvPt->Draw("colz");
-  cres->cd(2); gr->Draw("APZ");
-
+  cres->cd(2); mean->Draw("APZ");
+  cres->cd(3); sigma->Draw("APZ");
+  
   cres->SaveAs((out + DeltaObsvPt->GetName() + filetype).c_str()); 
   
   return;
 }
 
 
-void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const std::string out, const std::string filetype, const std::string xTitle, const bool matched, const bool groom) {
+void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const std::string out, const std::string filetype, const std::string xTitle, const bool matched, const bool groom, double* pt_bins) {
 
   //NOTE: this function is also used for the matched jet resolution for various observables, so "ObsvPt_ge" does not have the same meaning in this context. The other two 2Ds are unused.
   ObsvPt_d->SetTitle(""); ObsvPt_py->SetTitle(""); ObsvPt_ge->SetTitle("");
   std::string kind = "";
-  if (matched == 1) {if (groom == 1) {kind = "gen-SD ";} else {kind = "gen-";}}
+  /*  if (matched == 1) {if (groom == 1) {kind = "gen-SD ";} else {*/kind = "gen-";//}}
   std::string cName = (std::string) "c" + (std::string) ObsvPt_ge->GetName();
   TCanvas * c = MakeCanvas(cName,"0",800,600);
-  DivideCanvas(c,"0",4,2);
+  DivideCanvas(c,"0",3,2);
 
-  const int nHists = 7;
-  double pt_bins[nHists+1] = {0,1,2,3,4,5,7,11}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc. 
-  double corresp_pts[nHists+1] ={5,10,15,20,25,30,40,60};
-  vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, pt_bins, "X");
+  const int nHists = 5;
+  double gen_pt_bins[nHists+1] = {pt_bins[0] + 2,pt_bins[1] + 2,pt_bins[2] + 2,pt_bins[3] + 2, pt_bins[4] + 2,pt_bins[5] + 2}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc. 
+  double corresp_pts[nHists+1] ={15,20,25,30,40,60};
+  vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, gen_pt_bins, "X");
   vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
   vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
   
-  double lox, hix, hiy;
-  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0.001; hix = 0.501;}
+  double lox, hix, loy, hiy;
+  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
+
+  if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
   
-  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 0.5; }
+  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 0.5; } 
   
+  if (xTitle.find("p_{T,g} / ") != std::string::npos) {hiy = 20;}
+  
+  std::string yTitle;
+  
+  if (matched == 1) { hiy /= (double) 0.039; /*std::string sub = xTitle.substr(xTitle.find(' ')); yTitle = ("1/N_{pair} dN_{pair}/d" + sub.substr(1,sub.length())).c_str();*/ yTitle = "1/N_{pair} dN_{pair}/d(ratio)";}
+  else {
+    yTitle = ("1/N_{pair} dN_{pair}/d" + xTitle.substr(xTitle.find(' '))).c_str();
+  }
   for(int i = 0; i < nHists; ++ i) {
-    Prettify1DwLineStyle(py_projs[i], kGreen, kDashed, 5, xTitle, "prob.",lox, hix, 0, hiy);
-    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, "prob.",lox, hix, 0, hiy);
-    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, "prob.",lox, hix, 0, hiy);
+    Prettify1DwLineStyle(py_projs[i], kGreen, kDashed, 5, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
@@ -364,9 +285,9 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
   return;
 }
-
+/*
+//IN PROGRESS. CURRENTLY PRODUCES SEG FAULT LATER IN PROGRAM?
 void MakeCrossSection(TFile *pyFile, TFile *geFile, TFile *dataFile, TH1D* h_p, TH1D* h_g, TH1D* h_d) {
-  std::cout << "a" << std::endl;
   double njets_tot_py = 0; double njets_tot_ge = 0; double njets_tot_d = 0;
   double njets_py = -9999; double njets_ge = -9999; double njets_d = -9999;
   double dummy_d_weight = 1; double p_weight, g_weight;
@@ -411,46 +332,54 @@ void MakeCrossSection(TFile *pyFile, TFile *geFile, TFile *dataFile, TH1D* h_p, 
   
   //  std::cout << h_p->GetXaxis()->GetXmin() << " " <<  h_p->GetXaxis()->GetXmax() << std::endl;
   std::cout << "njets: " << njets_tot_py << " former integral: " << temp << " bin width: " << binwidth_py << " dividing by: " << scale_factor_py << std::endl;
-  std::cout << "b" << std::endl;
   return;
   
 }
-
-void Response(TFile *matchFile, TFile *pyFile, TFile *geFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype) {
-  std::cout << "A" << std::endl;
+*/
+void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype, const std::string flag) {
   ObsPy->SetTitle(""); ObsGe->SetTitle("");
   std::string cresName = (std::string) "cres" + (std::string) resName;
   std::string cmesName = (std::string) "cmes" + (std::string) ObsGe->GetName();
   TCanvas * cres = MakeCanvas(cresName.c_str(),"z",800,800);
   string logyn;
-  if (xTitle.find("p_{T}") != std::string::npos) { logyn = "y";} else{ logyn = "0";}
+  if (xTitle.find("p_{T") != std::string::npos) { logyn = "y";} else{ logyn = "0";}
   TCanvas * cmes = MakeCanvas(cmesName.c_str(),logyn,800,800);
-  double lox, hix, loy, hiy;
   
-  cout << "XTITLE! " << xTitle << endl;
-  if (xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) { lox = -1; hix = -1; loy = -1; hiy = -1; std::cout << xTitle << " " << " SHOULD ONLY BE READING THIS IF FOLLOWING M OR PT" << std::endl; } else {lox = 0.001; hix = 0.501; loy = 0; hiy = 6; std::cout << xTitle << " " << "SHOULD BE YAXIS OF 6 IF THE THING BEFORE THIS IS RG OR ZG" << std::endl;}
+  double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
+  if (flag != "pt") {loy = 0; hiy = 7;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (flag == "pt") {loy = -1; hiy = -1;} else {lox = 0; hix = 0.5;}
   
-  TH1D* hdummy = new TH1D("hdummy","",1,0,1); hdummy->FillRandom("gaus",10);
-  MakeCrossSection(pyFile, geFile, geFile, ObsPy, ObsGe, hdummy);
-  
-  Prettify1D(ObsPy, kGreen, kOpenCircle, 2, kBlack, xTitle, ("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str(), lox, hix,loy, hiy);
-  Prettify1D(ObsGe, kBlue, kFullCircle, 2, kBlack, xTitle, ("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str(), lox, hix,loy, hiy);
+  //if (xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) { lox = -1; hix = -1; } else {lox = 0; hix = 0.5;}
 
+  std::string yTitle = "";
+  if (flag == "pt") {
+    yTitle = "arb.";
+    ObsGe->Scale(1/(double)ObsGe->Integral());
+    double rat_scale = ObsGe->GetBinContent(1) / (double) ObsPy->GetBinContent(3);
+    ObsPy->Scale(rat_scale);
+  }
+  else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
+
+  Prettify1D(ObsPy, kGreen, kOpenCircle, 2, kBlack, xTitle, yTitle, lox, hix,loy, hiy);
+  Prettify1D(ObsGe, kBlue, kFullCircle, 2, kBlack, xTitle, yTitle, lox, hix,loy, hiy);
   RooUnfoldResponse *res = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   TH2D* hres = (TH2D*) res->Hresponse(); hres->SetTitle("");
 
-  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), -1,-1,-1,-1,1e-11,1e-3);
+  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), -1,-1,-1,-1,1e-11,1e-5);
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                  
-  TLegend *tmes = TitleLegend(0.5,0.57,0.8,0.88);
+  TLegend *tmes;
+  if (xTitle.find("R_") != std::string::npos || xTitle.find("r_") != std::string::npos) {
+    tmes = TitleLegend(0.15, 0.57, 0.45, 0.88);
+  }
+  else { tmes = TitleLegend(0.5,0.57,0.8,0.88); }
   tmes->AddEntry(ObsPy, "PYTHIA6", "p");
   tmes->AddEntry(ObsGe, "PYTHIA6+GEANT", "p");
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                  
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                             
   cres->cd(); hres->Draw("colz");
   cmes->cd(); ObsPy->Draw(); ObsGe->Draw("same"); tmes->Draw("same");
 
   cres->SaveAs((out + resName + filetype).c_str());
   cmes->SaveAs((out + ObsGe->GetName() + "_and_py" + filetype).c_str());
-  std::cout << "B" << std::endl;
   return;
 }
 

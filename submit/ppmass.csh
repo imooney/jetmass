@@ -40,6 +40,13 @@ if ($1 == 'matching') then
     # Create the folder name for output
     set outFile = matching
 endif
+if ($1 == 'closure') then
+    make bin/closure || exit
+    set execute = './bin/closure'
+    set base = /nfs/rhi/STAR/Data/AddedEmbedPythiaRun12pp200/Cleanpp12Pico_pt
+    # Create the folder name for output
+    set outFile = closure
+endif
 
 if ($2 == 'ch') then
     set full_or_ch = "ch"

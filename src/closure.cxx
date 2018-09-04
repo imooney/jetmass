@@ -1,8 +1,4 @@
-//  Veronica Verkest        May 13, 2018
-//  Compare:   p6  VS  p6+efficiency  VS  p6+GEANT
-//  Functions in src/functions.cxx
-//  Parameters in src/parameters.cxx
-//  Adapted by Isaac Mooney June, 2018 for jet mass analysis
+//  Isaac Mooney 8/28/2018 - for jet mass analysis
 
 #include "params.hh"
 #include "funcs.hh"
@@ -104,36 +100,10 @@ int main (int argc, const char ** argv) {
   eventTree->Branch("pyPtg", &pyPtg); eventTree->Branch("pyMg", &pyMg); eventTree->Branch("gePtg", &gePtg); eventTree->Branch("geMg", &geMg);
   eventTree->Branch("weight", &mc_weight); eventTree->Branch("EventID", &p_EventID);
 
-  //Hists for use in responses
-  TH2D *pyMvPt = new TH2D("pyMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
-  TH2D *geMvPt = new TH2D("geMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
-  TH2D *pyZgvPt = new TH2D("pyZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
-  TH2D *geZgvPt = new TH2D("geZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
-  TH2D *pyRgvPt = new TH2D("pyRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
-  TH2D *geRgvPt = new TH2D("geRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
-  TH2D *pyPtgvPt = new TH2D("pyPtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",15,5,80,15,5,80);
-  TH2D *gePtgvPt = new TH2D("gePtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",15,5,80,15,5,80);
-  TH2D *pyMgvPt = new TH2D("pyMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
-  TH2D *geMgvPt = new TH2D("geMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
+  //temp hists
+    TH1D *pt_gen_odd = new TH1D("pt_gen_odd","",15,5,80); TH1D *pt_det_odd = new TH1D("pt_det_odd","",9,15,60);
   
-  
-  // Responses
-  RooUnfoldResponse pt_response(60,0,60,80,0,80,"pt_response","");
-  RooUnfoldResponse m_response(20,0,10,20,0,10,"m_response","");
-  RooUnfoldResponse zg_response(20,0,1,20,0,1, "zg_response","");
-  RooUnfoldResponse rg_response(20,0,1,20,0,1, "rg_response","");
-  RooUnfoldResponse ptg_response(15,5,80,15,5,80, "ptg_response","");
-  RooUnfoldResponse mg_response(20,0,10,20,0,10, "mg_response","");
-  
-  RooUnfoldResponse pt_res_coarse(15,5,80,15,5,80,"pt_res_coarse","");
-  
-  RooUnfoldResponse pt_m_response(geMvPt, pyMvPt, "pt_m_response");
-  RooUnfoldResponse pt_zg_response(geZgvPt, pyZgvPt, "pt_zg_response");
-  RooUnfoldResponse pt_rg_response(geRgvPt, pyRgvPt, "pt_rg_response");
-  RooUnfoldResponse pt_ptg_response(gePtgvPt, pyPtgvPt, "pt_ptg_response");
-  RooUnfoldResponse pt_mg_response(geMgvPt, pyMgvPt, "pt_mg_response");
-
-  //for MC Closure test
+  //responses for MC Closure test
   RooUnfoldResponse pt_odd(15,5,80,15,5,80,"pt_odd","");
   RooUnfoldResponse pt_even(15,5,80,15,5,80,"pt_even","");
   RooUnfoldResponse m_odd(20,0,10,20,0,10,"m_odd","");
@@ -168,7 +138,7 @@ int main (int argc, const char ** argv) {
   //1=inclusive, 2=lead
   int counter_debug1 = 0, counter_debug2 = 0;
   double p_wt = -1, g_wt = -1; 
-  // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  BEGIN EVENT LOOP!  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+  // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  BEGIN EVEN EVENT LOOP!  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
   while ( GEANTReader.NextEvent() ) {      //    GEANTReader    P6Reader
     //initialize values to -9999
     pyPt.clear(); pyM.clear(); pyZg.clear(); pyRg.clear();
@@ -192,159 +162,204 @@ int main (int argc, const char ** argv) {
     p_EventID = P6Reader.GetNOfCurrentEvent();
     if ( p_EventID != g_EventID ) { cout << endl << "ERROR: READING DIFFERENT EVENTS " <<endl; }
     
-    p_container = P6Reader.GetOutputContainer();      // Pythia container
-    g_container = GEANTReader.GetOutputContainer();      // GEANT container
-    
-    pythiaFilename =  P6Reader.GetInputChain()->GetCurrentFile()->GetName();	
-    geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();	
-
-    //TEMP! CHANGE BACK IF DOESN'T FIX THINGS
-    if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue;}
- 
-    if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
-    
-    p_wt = LookupRun12Xsec( pythiaFilename );
-    g_wt = LookupRun12Xsec( geantFilename );
-    if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
-    mc_weight = p_wt;
-
-    //  GATHER PARTICLES
-    GatherParticles ( p_container, p_sv, p_Particles, full,1);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
-    GatherParticles ( g_container, g_sv, g_Particles, full,0);    //  GEANT particles
-    
-    vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
-    
-    ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
-    p_JetsInitial = sorted_by_pt(sjet_gen(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet_det(g_Cluster.inclusive_jets()));    // EXTRACT JETS
-    vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
-    
-    //Implementing a neutral energy fraction cut of 90% on inclusive jets
-    ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
-    
-    vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
-    //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)                                                                              
-    for (int i = 0; i < p_Jets.size(); ++ i) {
-      p_GroomedJets.push_back(sd(p_Jets[i]));
-    }
-    for (int i = 0; i < g_Jets.size(); ++ i) {
-      g_GroomedJets.push_back(sd(g_Jets[i]));
-    }
-     
-    /*
-    //TEST!
-    bool bad_event = 0;
-    std::string tail = ((string) pythiaFilename).substr(((string) pythiaFilename).size() - 10);
-    std::string upstring = tail.substr(0,2);
-    std::string upstring_copy = upstring;
-    if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring =\
-	  upstring.substr(0,1);}}
-    int upbin = std::stoi(upstring);
-
-    for (int i = 0; i < p_Jets.size(); ++ i) {
-      if ((p_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	std::cout << "from " << pythiaFilename << " removing pythia event " << p_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << p_Jets[i].pt() << " " << p_Jets[i].eta() << " " << p_Jets[i].phi() << " " << p_Jets[i].m() << std::endl;
-	bad_event = 1;
+    //BEGIN EVENS
+    if (p_EventID % 2 == 0) { //even events will be used for the response
+      p_container = P6Reader.GetOutputContainer();      // Pythia container
+      g_container = GEANTReader.GetOutputContainer();      // GEANT container
+      
+      pythiaFilename =  P6Reader.GetInputChain()->GetCurrentFile()->GetName();	
+      geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();	
+      
+      //TEMP! CHANGE BACK IF DOESN'T WORK!
+      if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
+      
+      if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
+      
+      p_wt = LookupRun12Xsec( pythiaFilename );
+      g_wt = LookupRun12Xsec( geantFilename );
+      if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
+      mc_weight = p_wt;
+      
+      //  GATHER PARTICLES
+      GatherParticles ( p_container, p_sv, p_Particles, full,1);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
+      GatherParticles ( g_container, g_sv, g_Particles, full,0);    //  GEANT particles
+      
+      vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
+      
+      ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
+      p_JetsInitial = sorted_by_pt(sjet_gen(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet_det(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+      vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
+      
+      //Implementing a neutral energy fraction cut of 90% on inclusive jets
+      ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
+      
+      vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
+      //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)                                                                              
+      for (int i = 0; i < p_Jets.size(); ++ i) {
+	p_GroomedJets.push_back(sd(p_Jets[i]));
       }
-    }
-    for (int i = 0; i < g_Jets.size(); ++ i) {
-      if ((g_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	std::cout << "from " << pythiaFilename << " removing geant event " << g_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << g_Jets[i].pt() << " " << g_Jets[i].eta() << " " << g_Jets[i].phi() << " " << g_Jets[i].m() << std::endl;
-	bad_event = 1;
+      for (int i = 0; i < g_Jets.size(); ++ i) {
+	g_GroomedJets.push_back(sd(g_Jets[i]));
       }
-    }
-
-    if (bad_event == 1) {counter_debug1 ++; continue; }
-    if (bad_event == 1) {std::cout << "should never see this message" << std::endl;}
-    */
-    //constructing even & odd population sample responses for the MC closure test
-    if (p_Jets.size() != 0) {
-      int position = -1; 
-      MatchJets(g_Jets, p_Jets[0], position);
-      if (position == -1) { //didn't find a match
-	if (p_EventID % 2 != 0) { //p_EventID & g_EventID should be identical
-	  pt_odd.Miss(p_Jets[0].pt(), mc_weight);
-	  m_odd.Miss(p_Jets[0].m(), mc_weight);
-	  
-	}
-	else {
-	  pt_even.Miss(p_Jets[0].pt(), mc_weight);
-	  m_even.Miss(p_Jets[0].m(), mc_weight);
-	  
+      /*      
+      //TEST!
+      bool bad_event = 0;
+      std::string tail = ((string) pythiaFilename).substr(((string) pythiaFilename).size() - 10);
+      std::string upstring = tail.substr(0,2);
+      std::string upstring_copy = upstring;
+      if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = \
+	    upstring.substr(0,1);}}
+      int upbin = std::stoi(upstring);
+      
+      for (int i = 0; i < p_Jets.size(); ++ i) {
+	if ((p_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
+	  std::cout << "from " << pythiaFilename << " removing pythia event " << p_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << p_Jets[i].pt() << " " << p_Jets[i].eta() << " " << p_Jets[i].phi() << " " << p_Jets[i].m() << std::endl;
+	  bad_event = 1;
 	}
       }
-      else { //found a match
-	if (p_EventID % 2 != 0) {
-	  pt_odd.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
-	  m_odd.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
-	  
-	}
-	else {
-	  pt_even.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
-	  m_even.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
-	  
+      for (int i = 0; i < g_Jets.size(); ++ i) {
+	if ((g_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
+	  std::cout << "from " << pythiaFilename << " removing geant event " << g_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << g_Jets[i].pt() << " " << g_Jets[i].eta() << " " << g_Jets[i].phi() << " " << g_Jets[i].m() << std::endl;
+	  bad_event = 1;
 	}
       }
-    }
-
-    //fake rate  
-    if (g_Jets.size() != 0) {
-      int position = -1;
-      MatchJets(p_Jets, g_Jets[0], position);
-      if (position == -1) { //didn't find a match
-        if (p_EventID % 2 != 0) {
-	  pt_odd.Fake(g_Jets[0].pt(), mc_weight);
-	  m_odd.Fake(g_Jets[0].m(), mc_weight);
-	  
+      
+      if (bad_event == 1) {counter_debug1 ++; continue; }
+      if (bad_event == 1) {std::cout << "should never see this message" << std::endl;}
+      */
+      //constructing even population sample responses for the MC closure test
+      if (p_Jets.size() != 0) {
+	int position = -1; 
+	MatchJets(g_Jets, p_Jets[0], position);
+	if (position == -1) { //didn't find a match
+          pt_even.Miss(p_Jets[0].pt(), mc_weight);
+          m_even.Miss(p_Jets[0].m(), mc_weight);
 	}
-	else {
-	  pt_even.Fake(g_Jets[0].pt(), mc_weight);
-	  m_even.Fake(g_Jets[0].m(), mc_weight);
-
+	else { //found a match
+          pt_even.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
+          m_even.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
 	}
       }
-    }
+      
+      //fake rate  
+      if (g_Jets.size() != 0) {
+	int position = -1;
+	MatchJets(p_Jets, g_Jets[0], position);
+	if (position == -1) { //didn't find a match
+          pt_even.Fake(g_Jets[0].pt(), mc_weight);
+          m_even.Fake(g_Jets[0].m(), mc_weight);
+	}
+      }
+    } //END EVENS
     
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    //matching leading Pythia jet to Pythia+Geant jet
-    if (p_Jets.size() != 0) {
-      int position = -1;
-      MatchJets(g_Jets, p_Jets[0], position); //MatchJets returns with position = -1 if there is no geant jet to match in this event
-      if (position == -1) {//didn't find a match
-	Misses(pt_res_coarse, pt_response, m_response, pt_m_response, p_Jets[0], mc_weight);
-	MissesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, p_GroomedJets[0], p_Jets[0], mc_weight);
+      //BEGIN ODDS
+    if (p_EventID % 2 != 0) { //odd events will be used for the 'data'
+      p_container = P6Reader.GetOutputContainer();      // Pythia container
+      g_container = GEANTReader.GetOutputContainer();      // GEANT container
+      
+      pythiaFilename =  P6Reader.GetInputChain()->GetCurrentFile()->GetName();
+      geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();
+      
+      //TEMP! CHANGE BACK IF DOESN'T WORK!
+      if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
+      
+      if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
+      
+      p_wt = LookupRun12Xsec( pythiaFilename );
+      g_wt = LookupRun12Xsec( geantFilename );
+      if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
+      mc_weight = p_wt;
+      
+      //  GATHER PARTICLES
+      GatherParticles ( p_container, p_sv, p_Particles, full,1);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
+      GatherParticles ( g_container, g_sv, g_Particles, full,0);    //  GEANT particles
+      
+      vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
+      
+      ClusterSequence p_Cluster(p_cut_Particles, jet_def); ClusterSequence g_Cluster(g_cut_Particles, jet_def);           //  CLUSTER BOTH
+      p_JetsInitial = sorted_by_pt(sjet_gen(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet_det(g_Cluster.inclusive_jets()));    // EXTRACT JETS
+      vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
+      
+      //Implementing a neutral energy fraction cut of 90% on inclusive jets
+      ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
+      
+      vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
+      //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
+      for (int i = 0; i < p_Jets.size(); ++ i) {
+	p_GroomedJets.push_back(sd(p_Jets[i]));
       }
-      else { //found a match
-	ConstructResponses(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[position], p_Jets[0], mc_weight);	
-	ConstructResponsesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, g_GroomedJets[position], p_GroomedJets[0], g_Jets[position], p_Jets[0], mc_weight);
-	pyPt.push_back(p_Jets[0].pt()); pyM.push_back(p_Jets[0].m()); pyZg.push_back(p_GroomedJets[0].structure_of<SD>().symmetry()); pyRg.push_back(p_GroomedJets[0].structure_of<SD>().delta_R());
-	gePt.push_back(g_Jets[position].pt()); geM.push_back(g_Jets[position].m()); geZg.push_back(g_GroomedJets[position].structure_of<SD>().symmetry()); geRg.push_back(g_GroomedJets[position].structure_of<SD>().delta_R());
-	pyPtg.push_back(p_GroomedJets[0].pt()); pyMg.push_back(p_GroomedJets[0].m());
-	gePtg.push_back(g_GroomedJets[position].pt()); geMg.push_back(g_GroomedJets[position].m());
-	
-	eventTree->Fill();
-	
+      for (int i = 0; i < g_Jets.size(); ++ i) {
+	g_GroomedJets.push_back(sd(g_Jets[i]));
       }
-    }
-    
-    //NEED TO ALSO LOOP OVER THE GEANT JETS TO GET THE FAKE RATE
-    if (g_Jets.size() != 0) {
-      int position = -1;
-      MatchJets(p_Jets, g_Jets[0], position);
-      if (position == -1) {
-	Fakes(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[0], mc_weight);
-	FakesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, g_GroomedJets[0], g_Jets[0], mc_weight);
+      /*
+      //TEST!
+      bool bad_event = 0;
+      std::string tail = ((string) pythiaFilename).substr(((string) pythiaFilename).size() - 10);
+      std::string upstring = tail.substr(0,2);
+      std::string upstring_copy = upstring;
+      if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = \
+	    upstring.substr(0,1);}}
+      int upbin = std::stoi(upstring);
+      
+      for (int i = 0; i < p_Jets.size(); ++ i) {
+	if ((p_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
+	  std::cout << "from " << pythiaFilename << " removing pythia event " << p_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << p_Jets[i].pt() << " " << p_Jets[i].eta() << " " << p_Jets[i].phi() << " " << p_Jets[i].m() << std::endl;
+	  bad_event = 1;
+	}
       }
-    }
-
+      for (int i = 0; i < g_Jets.size(); ++ i) {
+	if ((g_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
+	  std::cout << "from " << pythiaFilename << " removing geant event " << g_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << g_Jets[i].pt() << " " << g_Jets[i].eta() << " " << g_Jets[i].phi() << " " << g_Jets[i].m() << std::endl;
+	  bad_event = 1;
+	}
+      }
+      
+      if (bad_event == 1) {counter_debug1 ++; continue; }
+      if (bad_event == 1) {std::cout << "should never see this message" << std::endl;}
+      */
+      
+      //unmatched filling
+      for (int i = 0; i < p_Jets.size(); ++ i) {
+	pt_gen_odd->Fill(p_Jets[i].pt(), mc_weight);
+      }
+      for (int i = 0; i < g_Jets.size(); ++ i) {
+	pt_det_odd->Fill(g_Jets[i].pt(), mc_weight);
+      }
+      
+      //constructing odd population sample responses for the MC Closure test
+      if (p_Jets.size() != 0) {
+	int position = -1; 
+	MatchJets(g_Jets, p_Jets[0], position);
+	if (position == -1) { //didn't find a match
+          pt_odd.Miss(p_Jets[0].pt(), mc_weight);
+          m_odd.Miss(p_Jets[0].m(), mc_weight);
+	}
+	else { //found a match
+          pt_odd.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
+          m_odd.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
+	}
+      }
+      
+      //fake rate  
+      if (g_Jets.size() != 0) {
+	int position = -1;
+	MatchJets(p_Jets, g_Jets[0], position);
+	if (position == -1) { //didn't find a match
+          pt_odd.Fake(g_Jets[0].pt(), mc_weight);
+          m_odd.Fake(g_Jets[0].m(), mc_weight);
+	}
+      }
+      
+      p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total
+    } //END ODDS
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total
     
   }
-
+  
   //~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ END EVENT LOOP! ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-
+  
   TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
-
+  
   std::cout << std::endl << std::endl << "Of " << nEvents << " events" << std::endl;
   std::cout << p_NJets << " gen jets have been found" << std::endl;
   std::cout << g_NJets << " det jets have been found" << std::endl << std::endl;
@@ -352,14 +367,10 @@ int main (int argc, const char ** argv) {
   std::cout << "Discarded " << counter_debug1 << " events on grounds of the found jets being too much higher than the pT-hat range" << std::endl;
 
   eventTree->Write("event");
-  
-  pt_res_coarse.Write(); pt_m_response.Write();
-  /*pt_response.Write();*/ m_response.Write(); zg_response.Write(); rg_response.Write();
-  ptg_response.Write(); mg_response.Write();
-  pt_zg_response.Write(); pt_rg_response.Write(); pt_ptg_response.Write(); pt_mg_response.Write();
-  
+
   pt_odd.Write(); pt_even.Write(); m_odd.Write(); m_even.Write();
-  
+
+  pt_gen_odd->Write(); pt_det_odd->Write();
   fout->Close();
 
   return 0;

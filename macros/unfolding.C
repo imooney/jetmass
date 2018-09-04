@@ -5,78 +5,7 @@
 
 using namespace std;
 
-//bins pT finely or coarsely for the subsequent call to "Response()"                                                                
-vector<TH1D*> PtBinCorrectly(TFile *dataFile, TFile* pyFile, TFile* geFile) {
-  vector<double> * pT = 0; vector<double> *g_pt = 0; vector<double> * p_pt = 0;
-  double p_weight, g_weight;
-
-  TTree* d = (TTree*) dataFile->Get("event");
-  TTree* py = (TTree*) pyFile->Get("event");
-  TTree* ge = (TTree*) geFile->Get("event");
-
-  d->SetBranchAddress("Pt", &pT); double dummy_weight = 1.0;
-  py->SetBranchAddress("Pt",&p_pt); ge->SetBranchAddress("Pt",&g_pt);
-  py->SetBranchAddress("weight", &p_weight); ge->SetBranchAddress("weight",&g_weight);
-  
-  TH1D* mes_incl_pT = HistFromTree("mes_incl_pT", 9, 15, 60, d, pT, dummy_weight); 
-  TH1D* py_ptcoarse = HistFromTree("py_ptcoarse", 15, 5, 80, py, p_pt, p_weight);
-  TH1D* ge_ptcoarse = HistFromTree("ge_ptcoarse", 13, 15, 80, ge, g_pt, g_weight);
-  
-  vector<TH1D*> hists = {mes_incl_pT, py_ptcoarse, ge_ptcoarse};
-
-  return hists;
-}
-
-//bins simulation observable in desired manner from tree                                                                                                                          
-vector<TH1D*> PtBinCorrectly(TFile* dataFile, TFile* pyFile, TFile* geFile, const int nBins_py, const double lo_py, const double hi_py, const int nBins_ge, const double lo_ge, const double hi_ge, const std::string obs) {
-  cout << "i" << endl;
-  vector<double> *d_obs = 0; vector<double> *g_obs = 0; vector<double> *p_obs = 0;
-  double dummy_d_weight = 1.0; double g_weight, p_weight;
-  cout << "ii" << endl;
-  TTree* py = (TTree*) pyFile->Get("event");
-  TTree* ge = (TTree*) geFile->Get("event");
-  TTree* d = (TTree*) dataFile->Get("event");
-
-  py->SetBranchAddress(obs.c_str(),&p_obs); ge->SetBranchAddress(obs.c_str(),&g_obs); d->SetBranchAddress(obs.c_str(),&d_obs);
-  py->SetBranchAddress("weight", &p_weight); ge->SetBranchAddress("weight",&g_weight);
-  cout << "iii" << endl;
-  TH1D * py_obs = HistFromTree(("py_" + obs).c_str(), nBins_py, lo_py, hi_py, py, p_obs, p_weight);
-  cout << "iiia" << endl;
-  TH1D * ge_obs = HistFromTree(("ge_" + obs).c_str(), nBins_ge, lo_ge, hi_ge, ge, g_obs, g_weight);
-  cout << "iiib" << endl;
-  TH1D * data_obs = HistFromTree(("data_" + obs).c_str(), nBins_ge, lo_ge, hi_ge, d, d_obs, dummy_d_weight);
-  cout << "iv" << endl;
-  
-  vector<TH1D*> hists = {data_obs, py_obs, ge_obs};
-  cout << "v" << endl;
-  return hists;
-}
-
-
-//bins simulation observable in desired manner from tree                                                                                                                          
-vector<TH2D*> PtBinCorrectly(TFile* dataFile, TFile* pyFile, TFile* geFile, const int nBins_py, const double lo_py, const double hi_py, const int nBins_d, const double lo_d, const double hi_d, const int nBins_x, const double lo_x, const double hi_x, const std::string obsx, const std::string obsy) {
-  vector<double> *d_obsx = 0; vector<double> *g_obsx = 0; vector<double> *p_obsx = 0;
-  vector<double> *d_obsy = 0; vector<double> *g_obsy = 0; vector<double> *p_obsy = 0; 
-  double dummy_d_weight = 1.0; double g_weight, p_weight;
-
-  TTree* py = (TTree*) pyFile->Get("event");
-  TTree* ge = (TTree*) geFile->Get("event");
-  TTree* d = (TTree*) dataFile->Get("event");
-
-  py->SetBranchAddress(obsx.c_str(),&p_obsx); ge->SetBranchAddress(obsx.c_str(),&g_obsx); d->SetBranchAddress(obsx.c_str(),&d_obsx);
-  py->SetBranchAddress(obsy.c_str(),&p_obsy); ge->SetBranchAddress(obsy.c_str(),&g_obsy); d->SetBranchAddress(obsy.c_str(),&d_obsy); 
-  py->SetBranchAddress("weight", &p_weight); ge->SetBranchAddress("weight",&g_weight);
-
-  TH2D * py_obs = HistFromTree(("py4_" + obsx).c_str(), nBins_x, lo_x, hi_x, nBins_py, lo_py, hi_py, py, p_obsx, p_obsy, p_weight);
-  TH2D * ge_obs = HistFromTree(("ge4_" + obsx).c_str(), nBins_x, lo_x, hi_x, nBins_py, lo_py, hi_py, ge, g_obsx, g_obsy, g_weight);
-  TH2D * data_obs = HistFromTree(("data4_" + obsx).c_str(), nBins_x, lo_x, hi_x, nBins_d, lo_d, hi_d, d, d_obsx, d_obsy, dummy_d_weight);
-
-  vector<TH2D*> hists = {data_obs, py_obs, ge_obs};
-  return hists;
-}
-
-
-void UnfoldedObs(TFile* matchFile, TFile* pyFile, TFile* geFile, TFile* dataFile, TH1D* raw, TH1D* gen, TH1D* det, const string resName, const string xTitle, const string log, const string out, const string filetype, const string flag) {
+void UnfoldedObs(TFile* matchFile, TH1D* raw, TH1D* gen, TH1D* det, const string resName, const string xTitle, const string log, const string out, const string filetype, const string flag) {
   string cName = (string) "cu" + (string) raw->GetName();
   TCanvas * cu = MakeCanvas(cName.c_str(),log,800,800);
 
@@ -87,21 +16,30 @@ void UnfoldedObs(TFile* matchFile, TFile* pyFile, TFile* geFile, TFile* dataFile
     2: Errors from the covariance matrix given by the unfolding
     3: Errors from the covariance matrix from the variation of the results in toy MC tests*/
   
+  std::string yTitle = "";
+  if (flag == "pt") {
+    yTitle = "arb.";
+    raw->Scale(1/(double)raw->Integral()); det->Scale(1/(double)det->Integral());
+    double rat_scale = raw->GetBinContent(1) / (double) gen->GetBinContent(3);
+    gen->Scale(rat_scale); 
+  } 
+  else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
+
   RooUnfoldBayes *unfolded_4iter = new RooUnfoldBayes(res, raw, 4, false, ((string) "unfolded_4iter" + (string) raw->GetName()).c_str(),"");
   TH1D * reco2 = (TH1D*) unfolded_4iter->Hreco((RooUnfold::ErrorTreatment) 1);
-  double lowx = -2; double hix = -2; double lowy =-2; double highy = -2;
-  if (log == "Y") {lowy = -1; highy = -1;} else {lowy = 0; highy = 0.5;}
-  if (flag == "mass") {lowx = -1; hix = -1;} else {lowx = 0; hix = 0.5;}
+  double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
+  if (log != "Y") {loy = 0; hiy = 7;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
   
-  //  MakeCrossSection(pyFile, geFile, dataFile, gen, det, raw);
-  
-  Prettify1D(raw, kBlack, kFullStar, 2, kBlack, xTitle, /*("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str()*/"prob.",lowx,hix,lowy, highy);
-  Prettify1DwLineStyle(gen, kGreen, kDashed, 5, xTitle, /*("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str()*/"prob.",lowx,hix,lowy, highy);
-  Prettify1D(det, kBlue, kOpenCircle, 2, kBlue, xTitle, /*("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str()*/"prob.",lowx,hix,lowy, highy);
-  Prettify1D(reco2, kRed, kFullStar, 2, kRed, xTitle, /*("1/N_{j} dN_{j}/d" + xTitle.substr(0,5)).c_str()*/"prob.",lowx,hix,lowy, highy);
+  Prettify1D(raw, kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox,hix,loy, hiy);
+  Prettify1DwLineStyle(gen, kGreen, kDashed, 5, xTitle, yTitle,lox,hix,loy, hiy);
+  Prettify1D(det, kBlue, kOpenCircle, 2, kBlue, xTitle, yTitle,lox,hix,loy, hiy);
+  Prettify1D(reco2, kRed, kFullStar, 2, kRed, xTitle, yTitle,lox,hix,loy, hiy);
   reco2->SetTitle("");
-  
-  TLegend * tu = TitleLegend(0.44,0.57,0.84,0.87);
+
+  TLegend *tu;
+  if (xTitle.find("R_{g}") != std::string::npos) {tu = TitleLegend(0.15,0.57,0.51,0.87);}
+  else {tu = TitleLegend(0.48,0.57,0.84,0.87);}
   tu->AddEntry(gen,"PYTHIA6","l");
   tu->AddEntry(det,"PYTHIA6+GEANT","p");
   tu->AddEntry(raw,"Raw data", "p");
@@ -117,6 +55,13 @@ void UnfoldedObs(TFile* matchFile, TFile* pyFile, TFile* geFile, TFile* dataFile
 void Unfold4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const string log, const string out, const string filetype, const string xTitle, const string resName, const string flag) {
   string cName = (string) "c4" + (string) raw->GetName();
   TCanvas *c4 = MakeCanvas(cName, log, 800,800);
+
+  std::string yTitle = "";
+  if (flag == "pt") {
+    yTitle = "arb.";
+    raw->Scale(1/(double)raw->Integral()); det->Scale(1/(double)det->Integral());
+  }
+  else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
   
   RooUnfoldResponse *res4D = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   cout << resName.c_str() << endl; cout << raw->GetName() << endl; cout << res4D->GetName() << endl;
@@ -129,17 +74,28 @@ void Unfold4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const string lo
   vector<TH1D*> rawXs = Projection2D(raw, nBins, ranges, "x"); 
   vector<TH1D*> genXs = Projection2D(gen, nBins, ranges, "x");
   vector<TH1D*> detXs = Projection2D(det, nBins, ranges, "x");
+
+  if (flag == "pt") {
+    rawXs[0]->Scale(1/(double)rawXs[0]->Integral()); detXs[0]->Scale(1/(double)detXs[0]->Integral());
+    double rat1D_scale = rawXs[0]->GetBinContent(1) / (double) genXs[0]->GetBinContent(3);
+    genXs[0]->Scale(rat1D_scale);
+  }
+
+  double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
+
+  if (log != "Y") {loy = 0; hiy = 7;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
+
   
-  double lox, hix;
-  
-  if (flag == "mass") {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
-  Prettify1D(rawXs[0], kBlack, kFullStar, 2, kBlack, xTitle, "prob.",lox, hix,0,0.5);
-  Prettify1DwLineStyle(genXs[0], kGreen, kDashed, 5, xTitle, "prob.",lox, hix,0,0.5);
-  Prettify1D(detXs[0], kBlue, kOpenCircle, 2, kBlue, xTitle, "prob.",lox, hix,0,0.5);
-  Prettify1D(recoXs[0], kRed, kFullStar, 2, kRed, xTitle, "prob.",lox, hix,0,0.5);
+  Prettify1D(rawXs[0], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix,loy,hiy);
+  Prettify1DwLineStyle(genXs[0], kGreen, kDashed, 5, xTitle, yTitle,lox, hix,loy,hiy);
+  Prettify1D(detXs[0], kBlue, kOpenCircle, 2, kBlue, xTitle, yTitle,lox, hix,loy,hiy);
+  Prettify1D(recoXs[0], kRed, kFullStar, 2, kRed, xTitle, yTitle,lox, hix,loy,hiy);
   recoXs[0]->SetTitle("");
 
-  TLegend * tu = TitleLegend(0.44,0.57,0.84,0.87);
+  TLegend *tu;
+  if (xTitle.find("R_{g}") != std::string::npos) {tu = TitleLegend(0.15,0.57,0.51,0.87);}
+  else {tu = TitleLegend(0.48,0.57,0.84,0.87);}
   tu->AddEntry(genXs[0],"PYTHIA6","l");
   tu->AddEntry(detXs[0],"PYTHIA6+GEANT","p");
   tu->AddEntry(rawXs[0],"Raw data", "p");
@@ -154,10 +110,17 @@ void Unfold4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const string lo
 
 void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const string log, const string out, const string filetype, const string xTitle, const string resName, const string flag) {
   string cName = (string) "cslice" + (string) raw->GetName();
-  TCanvas *cslice = MakeCanvas(cName.c_str(), log, 800,600);
-  DivideCanvas(cslice,"0",3,2);
+  TCanvas *cslice = MakeCanvas(cName.c_str(), "0", 800,600);
+  DivideCanvas(cslice,log,3,2);
   RooUnfoldResponse *res4D = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   
+  std::string yTitle = "";
+  if (flag == "pt") {
+    yTitle = "arb.";
+    raw->Scale(1/(double)raw->Integral()); det->Scale(1/(double)det->Integral());
+  }
+  else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
+
   RooUnfoldBayes *unfold4D_4iter = new RooUnfoldBayes(res4D, raw, 4, false, ((string) "unfold4D_4iter" + (string) raw->GetName()).c_str(),"");
   TH2D *reco = (TH2D*) unfold4D_4iter->Hreco((RooUnfold::ErrorTreatment) 1);
   
@@ -168,15 +131,36 @@ void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const st
   vector<TH1D*> recoXs = Projection2D(reco, nBins, ranges, "x"); 
   vector<TH1D*> rawXs = Projection2D(raw, nBins, ranges_d, "x");
   vector<TH1D*> genXs = Projection2D(gen, nBins, ranges, "x");
-  vector<TH1D*> detXs = Projection2D(det, nBins, ranges, "x");
+  vector<TH1D*> detXs = Projection2D(det, nBins, ranges_d, "x");
   
-  double lox, hix;
+  if (flag == "pt") {
+    for (int i = 0; i < 2; ++ i) {
+      rawXs[i]->Scale(1/(double)rawXs[i]->Integral()); detXs[i]->Scale(1/(double)detXs[i]->Integral());
+      double rat1D_scale = rawXs[i]->GetBinContent(1) / (double) genXs[i]->GetBinContent(3);
+      genXs[i]->Scale(rat1D_scale);
+    }
+    for (int i = 2; i < genXs.size(); ++ i) {
+      rawXs[i]->Scale(1/(double)rawXs[i]->Integral()); detXs[i]->Scale(1/(double)detXs[i]->Integral());
+      double rat1D_scale = rawXs[i]->GetBinContent(3) / (double) genXs[i]->GetBinContent(5);
+      genXs[i]->Scale(rat1D_scale);
+    }
+  }
+  /*
+  double lox, hix, loy, hiy;
+  if (log == "Y") {loy = 0.0001; hiy = 50;} else {loy = 0; hiy = 0.5;}
   if (flag == "mass") {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
+*/
+  double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
+  
+  if (log != "Y") {loy = 0; hiy = 7;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {loy = 0.001; hiy = 50;} else {lox = 0; hix = 0.5;}
+  
+
   for(int i = 0; i < nBins; ++ i) { 
-    Prettify1D(rawXs[i], kBlack, kFullStar, 2, kBlack, xTitle, "prob.",lox, hix,0,0.5);
-    Prettify1DwLineStyle(genXs[i], kGreen, kDashed, 5, xTitle, "prob.",lox, hix,0,0.5);
-    Prettify1D(detXs[i], kBlue, kOpenCircle, 2, kBlue, xTitle, "prob.",lox, hix,0,0.5);
-    Prettify1D(recoXs[i], kRed, kFullStar, 2, kRed, xTitle, "prob.",lox, hix,0,0.5);
+    Prettify1D(rawXs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix,loy,hiy);
+    Prettify1DwLineStyle(genXs[i], kGreen, kDashed, 5, xTitle, yTitle,lox, hix,loy,hiy);
+    Prettify1D(detXs[i], kBlue, kOpenCircle, 2, kBlue, xTitle, yTitle,lox, hix,loy,hiy);
+    Prettify1D(recoXs[i], kRed, kFullStar, 2, kRed, xTitle, yTitle,lox, hix,loy,hiy);
     recoXs[i]->SetTitle("");
   }
   TLegend * tu = new TLegend(0.1,0.15,0.8,0.45); tu->SetBorderSize(0);
@@ -188,7 +172,8 @@ void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const st
   TLegend *tslices[nBins];
   for (int i = 0; i < nBins; ++ i) {
     tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{unfolded jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.9,0.95);
-  }  
+  }
+  
   cslice->cd(1); TLatex* title = PanelTitle(); tu->Draw();
   for (int i = 0; i < nBins; ++ i) {
     cslice->cd(i+2); recoXs[i]->Draw(); rawXs[i]->Draw("same"); genXs[i]->Draw("C,same"); detXs[i]->Draw("same"); tslices[i]->Draw("same");
@@ -199,127 +184,175 @@ void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const st
   return;
 }
 
-void AllUnfolds(TFile *matchFile, TFile *pyFile, TFile *geFile, TFile *dataFile, const string out, const string filetype) {
-
-  vector<TH1D*> pts = PtBinCorrectly(dataFile, pyFile, geFile);
-  cout << "w" <<endl;
-  UnfoldedObs(matchFile, pyFile, geFile, dataFile, pts[0], pts[1], pts[2], "pt_res_coarse", "p_{T}^{j} [GeV/c]", "Y", out, filetype, "mass");
-  cout << "x" << endl;
-  vector<TH1D*> ms = PtBinCorrectly(dataFile, pyFile, geFile, 20, 0, 10, 20, 0, 10, "M");
-  cout << "y" << endl;
-  UnfoldedObs(matchFile, pyFile, geFile, dataFile, ms[0], ms[1], ms[2], "m_response", "M^{j} [GeV/c^{2}]", "0", out, filetype, "mass");
-  vector<TH1D*> zgs = PtBinCorrectly(dataFile, pyFile, geFile, 20, 0.001, 1.001, 20, 0.0/01, 1.001, "zg");
-  UnfoldedObs(matchFile, pyFile, geFile, dataFile, zgs[0] , zgs[1], zgs[2], "zg_response", "z_{g}", "0", out, filetype, "");
-  vector<TH1D*> rgs = PtBinCorrectly(dataFile, pyFile, geFile, 20, 0.001, 1.001, 20, 0.001, 1.001, "rg");
-  UnfoldedObs(matchFile, pyFile, geFile, dataFile, rgs[0], rgs[1], rgs[2], "rg_response", "R_{g}", "0", out, filetype,"");
+void AllUnfolds(TFile *matchFile, TFile *inFile, const string out, const string filetype) {
+    
+  vector<TH1D*> pts = {(TH1D*) inFile->Get("pt_d"), (TH1D*) inFile->Get("pt_p"), (TH1D*) inFile->Get("pt_g")};
+  vector<TH1D*> ms = {(TH1D*) inFile->Get("m_d"), (TH1D*) inFile->Get("m_p"), (TH1D*) inFile->Get("m_g")};
+  vector<TH1D*> zgs = {(TH1D*) inFile->Get("zg_d"), (TH1D*) inFile->Get("zg_p"), (TH1D*) inFile->Get("zg_g")};
+  vector<TH1D*> rgs = {(TH1D*) inFile->Get("rg_d"), (TH1D*) inFile->Get("rg_p"), (TH1D*) inFile->Get("rg_g")};
+  vector<TH1D*> ptgs = {(TH1D*) inFile->Get("ptg_d"), (TH1D*) inFile->Get("ptg_p"), (TH1D*) inFile->Get("ptg_g")};
+  vector<TH1D*> mgs = {(TH1D*) inFile->Get("mg_d"), (TH1D*) inFile->Get("mg_p"), (TH1D*) inFile->Get("mg_g")};
   
+  UnfoldedObs(matchFile, pts[0], pts[1], pts[2], "pt_res_coarse", "p_{T} [GeV/c]", "Y", out, filetype, "pt");
+  /*UnfoldedObs(matchFile, ms[0], ms[1], ms[2], "m_response", "M [GeV/c^{2}]", "0", out, filetype, "mass");
+  UnfoldedObs(matchFile, zgs[0] , zgs[1], zgs[2], "zg_response", "z_{g}", "0", out, filetype, "");
+  UnfoldedObs(matchFile, rgs[0], rgs[1], rgs[2], "rg_response", "R_{g}", "0", out, filetype,"");
+  */UnfoldedObs(matchFile, ptgs[0], ptgs[1], ptgs[2], "ptg_response", "p_{T,g} [GeV/c]", "Y", out, filetype,"pt");
+  /*UnfoldedObs(matchFile, mgs[0], mgs[1], mgs[2], "mg_response", "M_{g} [GeV/c^{2}]", "0", out, filetype,"mass");
+  */
   return;
 }
-/*
-//cuts off the low pT range of a 2D with another observable
-void rebin2(TH1 *h, Int_t ngx, Int_t ngy)
-{  
-  //make a clone of h
-  TH1 *hold = (TH1*)h->Clone();
-  hold->SetDirectory(0);
 
-  Int_t  nbinsx = hold->GetXaxis()->GetNbins();
-  Int_t  nbinsy = hold->GetYaxis()->GetNbins();
-  Float_t xmin  = hold->GetXaxis()->GetXmin();
-  Float_t xmax  = hold->GetXaxis()->GetXmax();
-  Float_t ymin  = hold->GetYaxis()->GetXmin() + 10;
-  Float_t ymax  = hold->GetYaxis()->GetXmax();
-  Int_t nx = 20;
-  Int_t ny = 9;
-  Double_t cu;
-  Float_t bx,by;
-  Int_t ix,iy,ibin,bin,binx,biny;
-  h->SetBins (nx,xmin,xmax,ny,ymin,ymax);
-  //loop on all bins to reset contents and errors
-  for (biny=1;biny<=nbinsy;biny++) {
-    for (binx=1;binx<=nbinsx;binx++) {
-      ibin = h->GetBin(binx,biny);
-      h->SetBinContent(ibin,0);
-    }
-  }
-  //loop on all bins and refill
-  for (biny=1;biny<=nbinsy;biny++) {
-    by  = hold->GetYaxis()->GetBinCenter(biny);
-    iy  = h->GetYaxis()->FindBin(by);
-    for (binx=1;binx<=nbinsx;binx++) {
-      bx = hold->GetXaxis()->GetBinCenter(binx);
-      ix  = h->GetXaxis()->FindBin(bx);
-      bin = hold->GetBin(binx,biny);
-      ibin= h->GetBin(ix,iy);
-      cu  = hold->GetBinContent(bin);
-      h->AddBinContent(ibin,cu);
-      h->SetBinError(ibin, (double) sqrt(h->GetBinContent(ibin)));
-    }
-  }
-  h->SetEntries(hold->GetEntries());
-  h->Sumw2();
-  delete hold;          
-}
-*/
-void Draw4DResponse(TFile* matchFile, const std::string resName, const std::string out, const std::string filetype) {
+void Draw4DResponse(TFile* matchFile, const std::string resName, const std::string out, const std::string filetype, const int nBinsx, const int nBinsy) {
   TCanvas * c4res = MakeCanvas(("c4res_" + resName).c_str(), "z", 800,800);
   RooUnfoldResponse *res4D = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   TH2D* res_matrix = (TH2D*) res4D->Hresponse();
-  Prettify2D(res_matrix, "p^{meas.}_{T} [GeV/c]", "p^{truth}_{T} [GeV/c]", -1,-1, -1,-1, 10e-14, 10e-1);
+  Prettify2D(res_matrix, "p^{meas.}_{T} [GeV/c]", "p^{truth}_{T} [GeV/c]", -1,-1, -1,-1, 10e-11, 10e-6);
   
   //  res_matrix->GetXaxis()->SetBinLabel(180, "60");
-  for (int i = 1; i < 181; i += 20) {
-    res_matrix->GetXaxis()->SetBinLabel(i,(std::to_string( (int) ((i-1)/(double) 4) + 15)).c_str());
+  for (int i = 1; i < (9*nBinsx + 1); i += nBinsx) {
+    if (nBinsx == 20) {res_matrix->GetXaxis()->SetBinLabel(i,(std::to_string( (int) ((i-1)/(double) 4) + 15)).c_str()); }
+    if (nBinsx == 9) {res_matrix->GetXaxis()->SetBinLabel(i,(std::to_string( (int) (5*(i-1)/(double) 9) + 15)).c_str()); }
   } //0 -> 15, 20 -> 20, 40 -> 25, 60 -> 30, 80 -> 35, 100 -> 40, 120 -> 45, 140 -> 50, 160 ->55, 180 -> 60
   // 1 => (1 - 1) / x + 15 ... 21=> (21 - 1) / x + 15 = 20
   //res_matrix->GetYaxis()->SetNoAlphanumeric();
-  for (int i = 1; i <= 281; i += 40) {
+  for (int i = 1; i <= (14*nBinsy + 1); i += 2*nBinsy) {
     //res_matrix->GetYaxis()->ChangeLabel(i+1,-1,-1,-1,-1,-1,(std::to_string((i)+5)).c_str());
-    res_matrix->GetYaxis()->SetBinLabel(i, (std::to_string( (int) ((i-1)/(double) 4) + 5) ).c_str()); 
+    if (nBinsy == 20) {res_matrix->GetYaxis()->SetBinLabel(i, (std::to_string( (int) ((i-1)/(double) 4) + 5) ).c_str());} 
+    if (nBinsy == 15) {res_matrix->GetYaxis()->SetBinLabel(i,(std::to_string( (int) ((i-1)/(double) 3) + 5) ).c_str());}
   } // 1 => (1 - 1) / 4 + 5... 21 => (21 - 1) / 4 + 5
   res_matrix->SetTitle("");
   
   res_matrix->Draw("colz");
 
-  //  c4res->SaveAs((out+"4D_"+resName+filetype).c_str());
+  c4res->SaveAs((out+"4D_"+resName+filetype).c_str());
 
   return;
 }
 
+void MCClosure(TFile *File, const std::string xTitle, const std::string resName,const std::string out,const std::string filetype, TH1D* detOdd, TH1D* genOdd, const std::string flag) {
+  TCanvas* cclos = MakeCanvas("cclos","0",800,800); cclos->cd();
+  
+  std::string resOdd = (resName + "_odd").c_str(); std::string resEven = (resName + "_even").c_str();
+  RooUnfoldResponse *res_odd = (RooUnfoldResponse*) File->Get(resOdd.c_str());
+  RooUnfoldResponse *res_even = (RooUnfoldResponse*) File->Get(resEven.c_str());
+
+  if (flag == "pt") {
+    detOdd->Scale(1/(double)detOdd->Integral());
+    double rat = detOdd->GetBinContent(1) / (double) genOdd->GetBinContent(3);
+    genOdd->Scale(rat); 
+  }
+  
+  else {detOdd->Scale(1/(double)detOdd->Integral()); genOdd->Scale(1/(double)genOdd->Integral());}
+
+  RooUnfoldBayes *unfolded_opp = new RooUnfoldBayes(res_even, detOdd, 4, false, ((string) "unfolded_4iter" + (string) detOdd->GetName() + "_opp").c_str(),"");
+  RooUnfoldBayes *unfolded_same = new RooUnfoldBayes(res_odd, detOdd, 4, false, ((string) "unfolded_4iter" + (string) detOdd->GetName() + "_same").c_str(),"");
+  
+  TH1D *reco_opp = (TH1D*) unfolded_opp->Hreco((RooUnfold::ErrorTreatment) 1);
+  TH1D *reco_same = (TH1D*) unfolded_same->Hreco((RooUnfold::ErrorTreatment) 1);
+  double reco_rat_opp = detOdd->GetBinContent(1) / (double) reco_opp->GetBinContent(3);
+  double reco_rat_same = detOdd->GetBinContent(1) / (double) reco_same->GetBinContent(3);
+
+  if (flag != "pt") {
+    reco_opp->Scale(1/(double)reco_opp->Integral());
+    reco_same->Scale(1/(double)reco_same->Integral()); 
+  }
+  else {
+    reco_opp->Scale(reco_rat_opp); reco_same->Scale(reco_rat_same);
+  }
+  reco_opp->Divide(genOdd); reco_same->Divide(genOdd);
+  
+  //detOdd->SetMarkerStyle(kOpenCircle); genOdd->SetMarkerStyle(kFullCircle); reco_opp->SetMarkerStyle(kFullSquare); reco_same->SetMarkerStyle(kOpenSquare);
+  //genOdd->Draw(); detOdd->Draw("same"); reco_opp->Draw("same"); reco_same->Draw("same");
+  
+  //reco_opp->SetMarkerStyle(kOpenSquare); reco_same->SetMarkerStyle(kFullCircle);
+  
+  double loy = 0.5; double hiy = 1.5; double lox, hix;
+  if (flag == "pt") {lox = 0; hix = 60;} else if (flag == "mass") {lox = 0; hix = 10;} else {lox = 0; hix = 1;}
+  
+  Prettify1D(reco_opp, kBlue, kOpenSquare, 2, kBlue, xTitle, "arb."/*yTitle*/,lox,hix,loy,hiy);
+  Prettify1D(reco_same, kViolet, kFullCircle, 2, kViolet, xTitle, "arb.", lox,hix,loy,hiy);
+  reco_opp->SetTitle("STAR Simulation"); reco_same->SetTitle("");
+  
+  TLine *one = new TLine(0,1,60,1); TLine *low = new TLine(0,0.95,60,0.95); TLine *high = new TLine(0,1.05,60,1.05); 
+  one->SetLineStyle(kDashed); low->SetLineStyle(kDashed); high->SetLineStyle(kDashed);
+  
+  TLegend *t = TitleLegend(0.15,0.15, 0.45, 0.35);
+  t->AddEntry((TObject*)0,"Bayesian unfolding closure test","");
+  TLegend *l = new TLegend(0.15,0.7,0.45, 0.85); l->SetBorderSize(0);
+  l->AddEntry(reco_opp,"Opp. side (4 iter.)","p");
+  l->AddEntry(reco_same,"Same side (4 iter.)","p");
+
+  reco_opp->Draw(); reco_same->Draw("same"); one->Draw("same"); low->Draw("same"); high->Draw("same");
+  t->Draw("same"); l->Draw("same");
+  return;
+}
+
+
 void unfolding () {
-  string dir = "~/jetmass_local/";
+  string dir = "~/jetmass/";
   string matchin = "out/matching/";
+  string closein = "out/closure/";
   string pyin = "out/sim/py/";
   string gein = "out/sim/ge/";
   string datain = "out/data/";
+  string in = "macros/hists/";
+  string infile = "hists.root";
   string file = "full.root";
-  string out = "~/jetmass_local/plots/unfolding/";
+  string out = "~/jetmass/plots/unfolding/";
   string filetype = ".pdf";
   string flag1 = "full";
   string flag2 = "incl";
 
   TFile* matchFile = new TFile( (dir + matchin + file).c_str(), "READ");
-  TFile* pyFile = new TFile( (dir + pyin +file).c_str(), "READ");
-  TFile* geFile = new TFile( (dir + gein +file).c_str(), "READ");
-  TFile* dataFile = new TFile( (dir + datain + file).c_str(), "READ");
-  
+  //TFile* pyFile = new TFile( (dir + pyin +file).c_str(), "READ");
+  //TFile* geFile = new TFile( (dir + gein +file).c_str(), "READ");
+  //TFile* dataFile = new TFile( (dir + datain + file).c_str(), "READ");
+  TFile* inFile = new TFile( (dir + in + infile).c_str(), "READ");
+  TFile* closureFile = new TFile( (dir + closein + file).c_str(), "READ");
+
   //plots the raw and unfolded data for all observables (pT, m, zg, Rg) along with truth & reco
-  /* AllUnfolds(matchFile, pyFile, geFile, dataFile, out, filetype);
+  AllUnfolds(matchFile, inFile, out, filetype);
+      
+  vector<TH2D*> m2d = {(TH2D*) inFile->Get("m_v_pt_d"), (TH2D*) inFile->Get("m_v_pt_p"), (TH2D*) inFile->Get("m_v_pt_g")};
+  vector<TH2D*> zg2d = {(TH2D*) inFile->Get("zg_v_pt_d"), (TH2D*) inFile->Get("zg_v_pt_p"), (TH2D*) inFile->Get("zg_v_pt_g")};
+  vector<TH2D*> rg2d = {(TH2D*) inFile->Get("rg_v_pt_d"), (TH2D*) inFile->Get("rg_v_pt_p"), (TH2D*) inFile->Get("rg_v_pt_g")};
+  vector<TH2D*> ptg2d = {(TH2D*) inFile->Get("ptg_v_pt_d"), (TH2D*) inFile->Get("ptg_v_pt_p"), (TH2D*) inFile->Get("ptg_v_pt_g")};
+  vector<TH2D*> mg2d = {(TH2D*) inFile->Get("mg_v_pt_d"), (TH2D*) inFile->Get("mg_v_pt_p"), (TH2D*) inFile->Get("mg_v_pt_g")};
   
-  vector<TH2D*> m2d = PtBinCorrectly(dataFile, pyFile, geFile, 11, 5, 60, 9, 15, 60, 20, 0, 10, "M", "Pt");
-  Unfold4D(matchFile, m2d[0], m2d[1], m2d[2], "0", out, filetype, "M_{jet} [GeV/c^{2}]", "pt_m_response", "mass");
-  vector<TH2D*> zg2d = PtBinCorrectly(dataFile, pyFile, geFile, 11, 5, 60, 9, 15, 60, 20, 0.001, 1.001, "zg", "ptg"); 
-  Unfold4D(matchFile, zg2d[0], zg2d[1], zg2d[2], "0", out, filetype, "z_{g}", "ptg_zg_response", "");
-  vector<TH2D*> rg2d = PtBinCorrectly(dataFile, pyFile, geFile, 11, 5, 60, 9, 15, 60, 20, 0.001, 1.001, "rg", "ptg");
-  Unfold4D(matchFile, rg2d[0], rg2d[1], rg2d[2], "0", out, filetype, "R_{g}", "ptg_rg_response", "");
+  /*  
+  Unfold4D(matchFile, m2d[0], m2d[1], m2d[2], "0", out, filetype, "M [GeV/c^{2}]", "pt_m_response", "mass");
+  Unfold4D(matchFile, zg2d[0], zg2d[1], zg2d[2], "0", out, filetype, "z_{g}", "pt_zg_response", "");
+  Unfold4D(matchFile, rg2d[0], rg2d[1], rg2d[2], "0", out, filetype, "R_{g}", "pt_rg_response", "");
+  */Unfold4D(matchFile, ptg2d[0], ptg2d[1], ptg2d[2], "Y", out, filetype, "p_{T,g} [GeV/c]", "pt_ptg_response", "pt");
+  //Unfold4D(matchFile, mg2d[0], mg2d[1], mg2d[2], "0", out, filetype, "M_{g} [GeV/c^{2}]", "pt_mg_response", "mass");
   
+  /*
   SliceUnfolded4D(matchFile, m2d[0], m2d[1], m2d[2], "0", out, filetype, "M_{jet} [GeV/c^{2}]", "pt_m_response", "mass");
-  SliceUnfolded4D(matchFile, zg2d[0], zg2d[1], zg2d[2], "0", out, filetype, "z_{g}", "ptg_zg_response", "");
-  SliceUnfolded4D(matchFile, rg2d[0], rg2d[1], rg2d[2], "0", out, filetype, "R_{g}", "ptg_rg_response", "");
-*/  
-  Draw4DResponse(matchFile, "pt_m_response", out, filetype);
-  Draw4DResponse(matchFile, "ptg_zg_response", out, filetype);
-  Draw4DResponse(matchFile, "ptg_rg_response", out, filetype);
+  SliceUnfolded4D(matchFile, zg2d[0], zg2d[1], zg2d[2], "0", out, filetype, "z_{g}", "pt_zg_response", "");
+  SliceUnfolded4D(matchFile, rg2d[0], rg2d[1], rg2d[2], "0", out, filetype, "R_{g}", "pt_rg_response", "");
+  SliceUnfolded4D(matchFile, ptg2d[0], ptg2d[1], ptg2d[2], "Y", out, filetype, "p_{T,g}", "pt_ptg_response", "pt");
+  SliceUnfolded4D(matchFile, mg2d[0], mg2d[1], mg2d[2], "0", out, filetype, "R_{g}", "pt_mg_response", "mass");
   
+  
+  Draw4DResponse(matchFile, "pt_m_response", out, filetype, 20, 20);
+  Draw4DResponse(matchFile, "pt_zg_response", out, filetype, 20, 20);
+  Draw4DResponse(matchFile, "pt_rg_response", out, filetype, 20, 20);
+  Draw4DResponse(matchFile, "pt_ptg_response", out, filetype, 9, 15);
+  Draw4DResponse(matchFile, "pt_mg_response", out, filetype, 20, 20);
+  */
+  
+  TH1D* genPtOdd = (TH1D*) closureFile->Get("pt_gen_odd"); TH1D* detPtOdd = (TH1D*) closureFile->Get("pt_det_odd");
+  
+  //MCClosure(closureFile,"p_{T} [GeV/c]", "pt",out,filetype, detPtOdd, genPtOdd, "pt");
+    /*TH1D* genRgEven = (TH1D*) inFile->Get("pyRgEven"); TH1D* detRgEven = (TH1D*) inFile->Get("geRgEven");
+  TH1D* genRgOdd = (TH1D*) inFile->Get("pyRgOdd"); TH1D* detRgOdd = (TH1D*) inFile->Get("geRgOdd");
+  MCClosure(matchFile, "rg_response",out,filetype, detRgOdd, genRgOdd,"");
+  */
+  /*
+  TH1D* genMEven = (TH1D*) inFile->Get("pyMEven"); TH1D* detMEven = (TH1D*) inFile->Get("geMEven");
+  TH1D* genMOdd = (TH1D*) inFile->Get("pyMOdd"); TH1D* detMOdd = (TH1D*) inFile->Get("geMOdd");
+  MCClosure(matchFile, "m",out,filetype,detMOdd, genMOdd, "");
+  */
   return;
 }
