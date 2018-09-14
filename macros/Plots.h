@@ -220,42 +220,49 @@ void Resolution (TH2D* DeltaObsvPt, const std::string out, const std::string fil
 }
 
 
-void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const std::string out, const std::string filetype, const std::string xTitle, const bool matched, const bool groom, double* pt_bins) {
-
+void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* ObsvPt_p8, const std::string out, const std::string filetype, std::string xTitle, const bool matched, const bool groom, double* pt_bins) {  
   //NOTE: this function is also used for the matched jet resolution for various observables, so "ObsvPt_ge" does not have the same meaning in this context. The other two 2Ds are unused.
-  ObsvPt_d->SetTitle(""); ObsvPt_py->SetTitle(""); ObsvPt_ge->SetTitle("");
+  ObsvPt_d->SetTitle(""); ObsvPt_py->SetTitle(""); ObsvPt_ge->SetTitle(""); ObsvPt_p8->SetTitle("");
   std::string kind = "";
   /*  if (matched == 1) {if (groom == 1) {kind = "gen-SD ";} else {*/kind = "gen-";//}}
   std::string cName = (std::string) "c" + (std::string) ObsvPt_ge->GetName();
   TCanvas * c = MakeCanvas(cName,"0",800,600);
   DivideCanvas(c,"0",3,2);
-
+  
   const int nHists = 5;
-  double gen_pt_bins[nHists+1] = {pt_bins[0] + 2,pt_bins[1] + 2,pt_bins[2] + 2,pt_bins[3] + 2, pt_bins[4] + 2,pt_bins[5] + 2}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc. 
+  //double gen_pt_bins[nHists+1] = {pt_bins[0] + 2,pt_bins[1] + 2,pt_bins[2] + 2,pt_bins[3] + 2, pt_bins[4] + 2,pt_bins[5] + 2}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc. 
   double corresp_pts[nHists+1] ={15,20,25,30,40,60};
-  vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, gen_pt_bins, "X");
-  vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
-  vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
+  double gen_pts[nHists+1] = {2,3,4,5,7,11};
   
+  vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, gen_pts, "X");
+  //  vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
+  //  vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
+  vector<TH1D*> p8_projs = Projection2D (ObsvPt_p8, nHists, gen_pts, "X");
+ 
   double lox, hix, loy, hiy;
-  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
-
-  if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
   
+  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
+  
+  if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
+
   if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 0.5; } 
   
   if (xTitle.find("p_{T,g} / ") != std::string::npos) {hiy = 20;}
   
   std::string yTitle;
-  
-  if (matched == 1) { hiy /= (double) 0.039; /*std::string sub = xTitle.substr(xTitle.find(' ')); yTitle = ("1/N_{pair} dN_{pair}/d" + sub.substr(1,sub.length())).c_str();*/ yTitle = "1/N_{pair} dN_{pair}/d(ratio)";}
+
+  if (matched == 1) {hiy /= (double) 0.039; /*std::string sub = xTitle.substr(xTitle.find(' ')); yTitle = ("1/N_{pair} dN_{pair}/d" + sub.substr(1,sub.length())).c_str();*/ yTitle = "1/N_{pair} dN_{pair}/d(ratio)";}
   else {
     yTitle = ("1/N_{pair} dN_{pair}/d" + xTitle.substr(xTitle.find(' '))).c_str();
   }
+
+  if (xTitle.find("z_") != std::string::npos || xTitle.find("R_") != std::string::npos) {xTitle = (xTitle.substr(0,5)).c_str(); hiy = 7;}
+  
   for(int i = 0; i < nHists; ++ i) {
-    Prettify1DwLineStyle(py_projs[i], kGreen, kDashed, 5, xTitle, yTitle,lox, hix, 0, hiy);
-    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix, 0, hiy);
-    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1DwLineStyle(py_projs[i], kGreen, kSolid, 5, xTitle, yTitle,lox, hix, loy, hiy);
+    //Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix, 0, hiy);
+    //Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1DwLineStyle(p8_projs[i], kGreen, kDashed, 5, xTitle, yTitle, lox, hix, loy, hiy);
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
@@ -264,78 +271,30 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   TLegend *pan_leg = new TLegend(0.1,0.15,0.8,0.45); pan_leg->SetBorderSize(0);
   if (matched == 0) {
     pan_leg->AddEntry(py_projs[0], "PYTHIA6", "l");
-    pan_leg->AddEntry(ge_projs[0], "PYTHIA6+GEANT", "p");
-    pan_leg->AddEntry(d_projs[0], "Raw data", "p");
+    //pan_leg->AddEntry(ge_projs[0], "PYTHIA6+GEANT", "p");
+    //pan_leg->AddEntry(d_projs[0], "Raw data", "p");
+    pan_leg->AddEntry(p8_projs[0], "PYTHIA8", "l");
   }
+
   TLegend *tslices[nHists];
   for (int i = 0; i < nHists; ++ i) {
     tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{" + kind + "jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.9,0.95);
   }
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                 
-
+  
   c->cd(1); TLatex *t = PanelTitle(); if(matched==0) { pan_leg->Draw(); }
   for (int i = 0; i < nHists; ++ i) {
     c->cd(i+2);
     if (matched == 0) {
-      py_projs[i]->Draw("C"); d_projs[i]->Draw("same");
+      py_projs[i]->Draw("C"); p8_projs[i]->Draw("C,same"); //d_projs[i]->Draw("same");
     }
-    ge_projs[i]->Draw("same"); tslices[i]->Draw("same");
+    /*ge_projs[i]->Draw("same");*/ tslices[i]->Draw("same");
   }
-
-  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
+  cout << "vi" << endl;
+  //  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
   return;
 }
-/*
-//IN PROGRESS. CURRENTLY PRODUCES SEG FAULT LATER IN PROGRAM?
-void MakeCrossSection(TFile *pyFile, TFile *geFile, TFile *dataFile, TH1D* h_p, TH1D* h_g, TH1D* h_d) {
-  double njets_tot_py = 0; double njets_tot_ge = 0; double njets_tot_d = 0;
-  double njets_py = -9999; double njets_ge = -9999; double njets_d = -9999;
-  double dummy_d_weight = 1; double p_weight, g_weight;
-  double n, w;
-  
-  TTree* py = (TTree*) pyFile->Get("event");
-  TTree* ge = (TTree*) geFile->Get("event");
-  TTree* d = (TTree*) dataFile->Get("event");
-  
-  py->SetBranchAddress("n_jets",&njets_py); ge->SetBranchAddress("n_jets",&njets_ge); d->SetBranchAddress("n_jets",&njets_d);
-  py->SetBranchAddress("weight", &p_weight); ge->SetBranchAddress("weight",&g_weight);
-  
-  for (int i = 0; i < py->GetEntries(); ++ i) {
-    py->GetEntry(i);
-    n = njets_py; w = p_weight;
-    njets_tot_py += (double) (n * w);
-  }
-  for (int i = 0; i < ge->GetEntries(); ++ i) {
-    ge->GetEntry(i);
-    n = njets_ge; w = g_weight;
-    njets_tot_ge += (double) (n * w);
-  }
-  
-  for (int i = 0; i < d->GetEntries(); ++ i) {
-    d->GetEntry(i);
-    n = njets_d; w = dummy_d_weight; 
-    njets_tot_d += (double) (n * w);
-  }
-  
-  double binwidth_py = (h_p->GetXaxis()->GetXmax() - h_p->GetXaxis()->GetXmin()) / (double) h_p->GetXaxis()->GetNbins();
-  double binwidth_ge = (h_g->GetXaxis()->GetXmax() - h_g->GetXaxis()->GetXmin()) / (double) h_g->GetXaxis()->GetNbins();
-  double binwidth_d = (h_d->GetXaxis()->GetXmax() - h_d->GetXaxis()->GetXmin()) / (double) h_d->GetXaxis()->GetNbins();
 
-  double scale_factor_py = njets_tot_py * binwidth_py;
-  double scale_factor_ge = njets_tot_ge * binwidth_ge;
-  double scale_factor_d = njets_tot_d * binwidth_d;
-  
-  double temp = h_p->Integral(); 
-  h_p->Scale(1/(double) scale_factor_py);
-  h_g->Scale(1/(double) scale_factor_ge);
-  h_d->Scale(1/(double) scale_factor_d);
-  
-  //  std::cout << h_p->GetXaxis()->GetXmin() << " " <<  h_p->GetXaxis()->GetXmax() << std::endl;
-  std::cout << "njets: " << njets_tot_py << " former integral: " << temp << " bin width: " << binwidth_py << " dividing by: " << scale_factor_py << std::endl;
-  return;
-  
-}
-*/
 void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype, const std::string flag) {
   ObsPy->SetTitle(""); ObsGe->SetTitle("");
   std::string cresName = (std::string) "cres" + (std::string) resName;
@@ -355,7 +314,7 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
   if (flag == "pt") {
     yTitle = "arb.";
     ObsGe->Scale(1/(double)ObsGe->Integral());
-    double rat_scale = ObsGe->GetBinContent(1) / (double) ObsPy->GetBinContent(3);
+    double rat_scale = ObsGe->GetBinContent(1) / (double) ObsPy->GetBinContent(1);
     ObsPy->Scale(rat_scale);
   }
   else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
@@ -365,7 +324,10 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
   RooUnfoldResponse *res = (RooUnfoldResponse*) matchFile->Get(resName.c_str());
   TH2D* hres = (TH2D*) res->Hresponse(); hres->SetTitle("");
 
-  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), -1,-1,-1,-1,1e-11,1e-5);
+  double lor = -1; double hir = -1;
+  if (flag == "pt") {lor = 15; hir = 60;}
+  
+  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), lor,hir,-1,-1,1e-11,1e-4);
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                  
   TLegend *tmes;
   if (xTitle.find("R_") != std::string::npos || xTitle.find("r_") != std::string::npos) {

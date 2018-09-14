@@ -6,6 +6,8 @@
 #include "funcs.hh"
 //#include "ktTrackEff.hh"
 
+typedef fastjet::contrib::SoftDrop SD;
+
 namespace Analysis {
 
   // -------------------------                                                                                                                                                                            
@@ -234,7 +236,7 @@ namespace Analysis {
     }
     return placeholder;
   }
-
+  /*
   void MatchJets(const std::vector<fastjet::PseudoJet> candidates, const fastjet::PseudoJet toMatch, int & match_position) {                                                         match_position = -1;
     if (candidates.size() == 0) {
       return;
@@ -246,15 +248,215 @@ namespace Analysis {
     if (matchedToLead.size() == 0) {return;}
     //If here, found match(es)
     for (int i = 0; i < candidates.size(); ++ i) { //finding which one was the highest pT match
-      if (matchedToLead[0].delta_R(candidates[i]) <0.0001) { //is probably the same jet
+      if (matchedToLead[0].delta_R(candidates[i]) < 0.0001) { //is probably the same jet
 	match_position = i;
 	return;
       }
     }
     return;
   }
+  */
+  //PLAN: get rid of "match_position". Pass two vectors instead, and have a third & fourth which are written to with the matches (tomatch & candidate). If size != 0, we have matches.
+  //another consideration: need to be able to remove jets from the "candidates" vector after they've been matched. Make a copy prior to the function call? Feels risky. Do it in the function. Also make a copy candidates vector for each iteration on toMatch since it gets selected.
+  //In finding which jets were the matches, we know the tomatch jet match will be the 'i'th jet since we are iterating. The candidate_copy jet should be the highest pT match, so the first one in the candidate_copy list. Geometrically match the candidate_copy jet to the nearest candidate jet.
+  std::vector<int> MatchJets(const std::vector<fastjet::PseudoJet> candidates_safe, const std::vector<fastjet::PseudoJet> toMatch, std::vector<fastjet::PseudoJet> & c_matches, std::vector<fastjet::PseudoJet> & t_matches) {
+    std::vector<int> match_indices;
+    if (candidates_safe.size() == 0 || toMatch.size() == 0) {
+      return match_indices;
+    }
+    std::vector<fastjet::PseudoJet> candidates = candidates_safe; 
+    for (int i = 0; i < toMatch.size(); ++ i) {
+      std::vector<fastjet::PseudoJet> candidates_copy = candidates;
+      fastjet::Selector selectMatchedLead = fastjet::SelectorCircle( R );
+      selectMatchedLead.set_reference( toMatch[i] );
+      std::vector<fastjet::PseudoJet> matchedToLead = sorted_by_pt( selectMatchedLead( candidates_copy ));
+      if (candidates_copy.size() == 0) { continue; } //means no match to this jet. Remove none from candidates. Continuing on to the next one.
+      else { //found at least one match. Need to remove the highest pT one from candidates and add the respective jets to the match vectors.
+	match_indices.push_back(i); //for using the groomed jet corresponding to this jet, later
+	t_matches.push_back(toMatch[i]);
+	c_matches.push_back(candidates_copy[0]);
+	for (int j = 0; j < candidates.size(); ++ j) { //finding which one to delete from candidates before next toMatch iteration.
+	  if (candidates_copy[0].delta_R(candidates[j]) < 0.0001) { //is probably the same jet
+	    candidates.erase(candidates.begin() + j); //removing the jet from the overall list of candidates so it can't be considered next time
+	    match_indices.push_back(j);
+	    break; //should exit only the c_matches loop.
+	  }
+	}
+      }
+    } 
+    return match_indices;
+  }
+
+  //this function is similar to the "MatchJets" function, but it instead takes a list of jets which have already been matched ("candidates_safe") and finds the jets to which they correspond in the list of unmatched jets ("toMatch") by geometrical matching. I know, it is confusing to match matched jets to unmatched jets. But that's what we're doing. When we have jets which don't have a basically perfect geometrical match to a matched jet, we know that the jet in our hands is unmatched (to a detector/particle-level complement rather than to itself in the other list, basically). 
+  std::vector<int> FakesandMisses(const std::vector<fastjet::PseudoJet> candidates_safe, const std::vector<fastjet::PseudoJet> toMatch, std::vector<fastjet::PseudoJet> & unmatched) {
+    std::vector<int> miss_fake_index;
+    std::vector<fastjet::PseudoJet> candidates = candidates_safe; 
+    for (int i = 0; i < toMatch.size(); ++ i) {
+      std::vector<fastjet::PseudoJet> candidates_copy = candidates;
+      fastjet::Selector selectMatchedLead = fastjet::SelectorCircle( 0.0001 ); //a "match" is now if we found the same exact jet.
+      selectMatchedLead.set_reference( toMatch[i] );
+      std::vector<fastjet::PseudoJet> matchedToLead = sorted_by_pt( selectMatchedLead( candidates_copy ));
+      if (candidates_copy.size() == 0) { //means no match to this jet. Remove none from candidates. Add it to unmatched & continue to next one.
+	miss_fake_index.push_back(i);
+	unmatched.push_back(toMatch[i]);
+	continue;
+      } 
+      else { //found at least one match. Need to remove the highest pT one from candidates
+	for (int j = 0; j < candidates.size(); ++ j) { //finding which one to delete from candidates before next toMatch iteration.
+	  if (candidates_copy[0].delta_R(candidates[j]) < 0.0001) { //is probably the same jet
+	    candidates.erase(candidates.begin() + j); //removing the jet from the overall list of candidates so it can't be considered next time
+	    break; //should exit only the candidates loop.
+	  }
+	}
+      }
+    } 
+    return miss_fake_index;
+  }
   
-  void ConstructResponses(RooUnfoldResponse & pt_res_coarse, RooUnfoldResponse & pt_response, RooUnfoldResponse & m_response, RooUnfoldResponse & pt_m_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const double mc_weight) {
+
+  /*
+  void ConstructResponse(RooUnfoldResponse & res, const std::vector<fastjet::PseudoJet> g_Jets, const std::vector<fastjet::PseudoJet> p_Jets, const double mc_weight) {
+    if (p_Jets.size() != 0) {
+      int position = -1;
+      MatchJets(g_Jets, p_Jets[0], position);
+      if (position == -1) { //didn't find a match                                                                                                   
+	res.Miss(p_Jets[0].pt(), mc_weight);
+	std::cout << "MISS " << p_Jets[0].pt() << std::endl;
+      }
+      else { //found a match                                                                                                                        
+	res.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
+	std::cout << "MATCH " << p_Jets[0].pt() << " " << g_Jets[position].pt() << std::endl;
+      }
+    }
+
+    //fake rate                                                                                                                                     
+    if (g_Jets.size() != 0) {
+      int position = -1;
+      MatchJets(p_Jets, g_Jets[0], position);
+      if (position == -1) { //didn't find a match                                                                                                   
+	res.Fake(g_Jets[0].pt(), mc_weight);
+	std::cout << "FAKE " << g_Jets[0].pt() << " " << std::endl;
+      }
+    }
+    return;
+  }
+  */
+
+  //new construction of responses based on ~inclusive~ matching. We now need to have two vectors to be filled with matched jets. If they aren't, when looping over pythia jets, we have misses. Fill all pythia jets into the misses. Same goes when looping over geant jets with fakes. And for matches, we just fill with however many entries there are in the matched vectors.
+  //MatchJets now returns a vector of pairs of indices (i,j). The first entry is the candidate's position, the second its match's position, the third the next candidate's position, the fourth its match's position, etc.
+  //FakesandMisses now returns a vector of indices (i) corresponding to the indices of misses or fakes from the original candidate vector.
+  void ConstructResponses(std::vector<RooUnfoldResponse*> res, const std::vector<fastjet::PseudoJet> g_Jets, const std::vector<fastjet::PseudoJet> p_Jets, const std::vector<fastjet::PseudoJet> g_Groomed, const std::vector<fastjet::PseudoJet> p_Groomed, std::vector<std::vector<double> > & g_tree, std::vector<std::vector<double> > & p_tree, const double mc_weight/*, double & nEntries, double & nFakes, double & nMisses, double & nMatches*/) {
+    std::vector<fastjet::PseudoJet> g_matches; std::vector<fastjet::PseudoJet> p_matches; 
+    std::vector<fastjet::PseudoJet> fakes; std::vector<fastjet::PseudoJet> misses;
+    std::vector<fastjet::PseudoJet> g_sd_matches; std::vector<fastjet::PseudoJet> p_sd_matches; 
+    std::vector<fastjet::PseudoJet> sd_fakes; std::vector<fastjet::PseudoJet> sd_misses;
+    std::vector<int> sd_match_indices;
+    std::vector<int> sd_miss_indices; std::vector<int> sd_fake_indices;
+    
+    if (p_Jets.size() != 0) {
+      g_matches.clear(); p_matches.clear(); g_sd_matches.clear(); p_sd_matches.clear(); misses.clear(); sd_misses.clear();
+      sd_match_indices.clear(); sd_miss_indices.clear();
+      sd_match_indices = MatchJets(g_Jets, p_Jets, g_matches, p_matches);
+      if (sd_match_indices.size() != 0) {//means there is >= 1 match. Will index the g_vector with these match indices (and the p_vector with index 0). 
+	for (int i = 0; i < sd_match_indices.size(); i += 2) {
+	  p_sd_matches.push_back(p_Groomed[sd_match_indices[i]]);
+	}
+	for (int i = 1; i < sd_match_indices.size(); i += 2) {
+	  g_sd_matches.push_back(g_Groomed[sd_match_indices[i]]);
+	}
+      }
+      if (g_matches.size() != p_matches.size()) {std::cerr << "Somehow we have different-sized match vectors. This should never happen!" <<std::endl; exit(1);}
+      if (g_sd_matches.size() != g_matches.size()) {std::cerr << "There should be as many matched groomed jets as matched ungroomed jets!" <<std::endl; exit(1);}
+      if (g_matches.size() < p_Jets.size()) { //then we have misses
+	sd_miss_indices = FakesandMisses(p_matches, p_Jets, misses);
+	for (int i = 0; i < misses.size(); ++ i) {
+	  res[0]->Miss(misses[i].pt(), mc_weight);
+	  res[1]->Miss(misses[i].m(), mc_weight);
+	  res[2]->Miss(misses[i].m(), misses[i].pt(), mc_weight);
+	  //	  nMisses ++;
+	  //	  std::cout << "MISS " << misses[i].pt() << std::endl;
+	}
+	for (int i = 0; i < sd_miss_indices.size(); ++ i) {
+	  res[3]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().symmetry(), mc_weight);
+	  res[4]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().delta_R(), mc_weight);
+	  res[5]->Miss(p_Groomed[sd_miss_indices[i]].pt(), mc_weight);
+	  res[6]->Miss(p_Groomed[sd_miss_indices[i]].m(), mc_weight);
+	  res[7]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().symmetry(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	  res[8]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().delta_R(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	  res[9]->Miss(p_Groomed[sd_miss_indices[i]].pt(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	  res[10]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	}
+      }
+      if (g_matches.size() != 0) { //found match(es)
+	for (int i = 0; i < g_matches.size(); ++ i) {
+	  res[0]->Fill(g_matches[i].pt(), p_matches[i].pt(), mc_weight); //matches should be at same index in respective vectors
+	  res[1]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  res[2]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), mc_weight);
+	  //  nMatches ++; nEntries ++;
+	  g_tree[0].push_back(g_matches[i].pt());
+	  g_tree[1].push_back(g_matches[i].m());
+	  std::cout << g_tree[1][0] << std::endl;
+	  
+	  p_tree[0].push_back(p_matches[i].pt());
+	  p_tree[1].push_back(p_matches[i].m()); 
+	  //std::cout << "MATCH p:" << p_matches[i].pt() << " g:" << g_matches[i].pt() << std::endl;
+	}
+	for (int i = 0; i < g_sd_matches.size(); ++ i) {
+	  res[3]->Fill(g_sd_matches[i].structure_of<SD>().symmetry(), p_sd_matches[i].structure_of<SD>().symmetry(),  mc_weight);
+	  res[4]->Fill(g_sd_matches[i].structure_of<SD>().delta_R(), p_sd_matches[i].structure_of<SD>().delta_R(),  mc_weight);	  
+	  res[5]->Fill(g_sd_matches[i].pt(), p_sd_matches[i].pt(), mc_weight);
+	  res[6]->Fill(g_sd_matches[i].m(), p_sd_matches[i].m(), mc_weight);
+	  res[7]->Fill(g_sd_matches[i].structure_of<SD>().symmetry(), g_matches[i].pt(), p_sd_matches[i].structure_of<SD>().symmetry(), p_matches[i].pt(), mc_weight);
+	  res[8]->Fill(g_sd_matches[i].structure_of<SD>().delta_R(), g_matches[i].pt(), p_sd_matches[i].structure_of<SD>().delta_R(), p_matches[i].pt(), mc_weight);
+	  res[9]->Fill(g_sd_matches[i].pt(), g_matches[i].pt(), p_sd_matches[i].pt(), p_matches[i].pt(), mc_weight);
+	  res[10]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), mc_weight);
+	
+	  g_tree[2].push_back(g_sd_matches[i].structure_of<SD>().symmetry());
+	  g_tree[3].push_back(g_sd_matches[i].structure_of<SD>().delta_R());
+	  g_tree[4].push_back(g_sd_matches[i].pt());
+	  g_tree[5].push_back(g_sd_matches[i].m());
+	  
+	  p_tree[2].push_back(p_sd_matches[i].structure_of<SD>().symmetry());
+	  p_tree[3].push_back(p_sd_matches[i].structure_of<SD>().delta_R());
+	  p_tree[4].push_back(p_sd_matches[i].pt());
+	  p_tree[5].push_back(p_sd_matches[i].m());
+	}
+	
+      }
+    }
+
+    //fake rate                                                
+    if (g_Jets.size() != 0) {
+      g_matches.clear(); p_matches.clear(); g_sd_matches.clear(); p_sd_matches.clear(); fakes.clear(); sd_fakes.clear();
+      sd_match_indices.clear(); sd_fake_indices.clear();
+      MatchJets(p_Jets, g_Jets, p_matches, g_matches);
+      if (g_matches.size() != p_matches.size()) {std::cerr << "Somehow we have different-sized match vectors. This should never happen!" <<std::endl; exit(1);}
+      if (p_matches.size() < g_Jets.size()) { //then we have fakes
+	sd_fake_indices = FakesandMisses(g_matches, g_Jets, fakes);
+	for (int i = 0; i < fakes.size(); ++ i) {
+	  res[0]->Fake(fakes[i].pt(), mc_weight);
+	  res[1]->Fake(fakes[i].m(), mc_weight);
+	  res[2]->Fake(fakes[i].m(), fakes[i].pt(), mc_weight);
+	  //nFakes ++; nEntries ++;
+	  //std::cout << "FAKE " << fakes[i].pt() << " " << std::endl;
+	}
+	for (int i = 0; i < sd_fake_indices.size(); ++ i) {
+	  res[3]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().symmetry(), mc_weight);
+	  res[4]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().delta_R(), mc_weight);
+	  res[5]->Fake(g_Groomed[sd_fake_indices[i]].pt(), mc_weight);
+	  res[6]->Fake(g_Groomed[sd_fake_indices[i]].m(), mc_weight);
+	  res[7]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().symmetry(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	  res[8]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().delta_R(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	  res[9]->Fake(g_Groomed[sd_fake_indices[i]].pt(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	  res[10]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	}
+      }
+    }
+    return;
+  }
+  
+  
+  void FillResponses(RooUnfoldResponse & pt_res_coarse, RooUnfoldResponse & pt_response, RooUnfoldResponse & m_response, RooUnfoldResponse & pt_m_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const double mc_weight) {
     pt_res_coarse.Fill(g_jet.pt(), p_jet.pt(), mc_weight);
     pt_response.Fill(g_jet.pt(), p_jet.pt(), mc_weight);
     m_response.Fill(g_jet.m(), p_jet.m(), mc_weight);
@@ -262,7 +464,7 @@ namespace Analysis {
     return;
   }
   
-  void ConstructResponsesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_response, RooUnfoldResponse & mg_response, RooUnfoldResponse & pt_zg_response, RooUnfoldResponse & pt_rg_response, RooUnfoldResponse & pt_ptg_response, RooUnfoldResponse & pt_mg_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const fastjet::PseudoJet g_ungroom, const fastjet::PseudoJet p_ungroom, const double mc_weight) {
+  void FillResponsesSD(RooUnfoldResponse & zg_response, RooUnfoldResponse & rg_response, RooUnfoldResponse & ptg_response, RooUnfoldResponse & mg_response, RooUnfoldResponse & pt_zg_response, RooUnfoldResponse & pt_rg_response, RooUnfoldResponse & pt_ptg_response, RooUnfoldResponse & pt_mg_response, const fastjet::PseudoJet g_jet, const fastjet::PseudoJet p_jet, const fastjet::PseudoJet g_ungroom, const fastjet::PseudoJet p_ungroom, const double mc_weight) {
     zg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), p_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry(), mc_weight);
     rg_response.Fill(g_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), p_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R(), mc_weight);
     ptg_response.Fill(g_jet.pt(), p_jet.pt(), mc_weight);
@@ -377,6 +579,33 @@ namespace Analysis {
     // Initialize the reader
     reader.Init( nEvents ); //runs through all events with -1
   }
+  
+  //discards events on the grounds of them having jets of pT > double the high end of the pT-hat bin from which they came. Both the Py & Py+Ge event will be thrown out.
+  bool DiscardEvent(const TString Filename, const std::vector<fastjet::PseudoJet> p_Jets, const std::vector<fastjet::PseudoJet> g_Jets) {
+    bool bad_event = 0;
+    std::string tail = ((std::string) Filename).substr(((std::string) Filename).size() - 10);
+    std::string upstring = tail.substr(0,2);
+    std::string upstring_copy = upstring;
+    if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = upstring.substr(0,1);}}
+    int upbin = std::stoi(upstring);
+    if (p_Jets.size() != 0) {
+      if ((p_Jets[0].pt() > 2*upbin) && upstring_copy != "-1") {
+	std::cout << "due to a pythia event from " << Filename << " removing event " /*<< p_EventID << " with weight " << mc_weight*/ << " and bad jet with pt, eta, phi, and m: " << p_Jets[0].pt() << " " << p_Jets[0].eta() << " " << p_Jets[0].phi() << " " << p_Jets[0].m() << std::endl;
+	bad_event = 1;
+      }
+    }
+    if (g_Jets.size() != 0) {
+      if ((g_Jets[0].pt() > 2*upbin) && upstring_copy != "-1") {
+	std::cout << "due to a geant event from " << Filename << " removing event " /*<< g_EventID << " with weight " << mc_weight*/ << " and bad jet with pt, eta, phi, and m: " << g_Jets[0].pt() << " " << g_Jets[0].eta() << " " << g_Jets[0].phi() << " " << g_Jets[0].m() << std::endl;
+	bad_event = 1;
+      }
+    }
+    
+    return bad_event;
+  }
+
+
+
   
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~FILL HISTS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
   

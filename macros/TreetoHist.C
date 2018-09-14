@@ -6,6 +6,27 @@
 
 using namespace std;
 
+void HistsFromTreeP8(TFile *file, std::vector<TH1D*> hists1D, std::vector<TH2D*> hists2D, const bool dataflag) {
+  vector<double> *Pt = 0; vector<double> *M = 0;
+  double weight = 1; double n_jets = 0;
+  
+  TTree *t = (TTree*) file->Get("ResultTree");
+  
+  t->SetBranchAddress("jetpT",&Pt); t->SetBranchAddress("jetM",&M);
+  if (dataflag == 0) {t->SetBranchAddress("mcweight",&weight);}
+  
+  cout << t->GetEntries() << endl;
+  for (int i = 0; i < t->GetEntries(); ++ i) {
+    if (i % 1000000 == 0) { cout << "still chuggin. " << i << endl;}
+    t->GetEntry(i);
+    for (int j = 0; j < Pt->size(); ++ j) { //all vectors of doubles in the branches should have the same size      
+      hists2D[0]->Fill(M->at(j), Pt->at(j), weight);
+    }
+  }
+  t->ResetBranchAddresses();
+  return;
+}
+
 void HistsFromTree(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> hists2D, const bool dataflag) {
   vector<double> *Pt = 0; vector<double> *Eta = 0; vector<double> *Phi = 0;
   vector<double> *M = 0; vector<double> *zg = 0; vector<double> *rg = 0; vector<double> *mg = 0;
@@ -21,6 +42,7 @@ void HistsFromTree(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> h
   t->SetBranchAddress("mcd",&mcd);
   if (dataflag == 0) {t->SetBranchAddress("weight", &weight);}
   
+  cout << t->GetEntries() << endl;
   for (int i = 0; i < t->GetEntries(); ++ i) {
     t->GetEntry(i);
     //Filling 1Ds
@@ -62,13 +84,13 @@ void HistsFromTree(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> h
       //Filling 2Ds!
       hists2D[0]->Fill(M->at(j), Pt->at(j), weight);
       hists2D[1]->Fill(ch_e_frac->at(j), Pt->at(j), weight);
-      if (zg->at(j) >= 0.1) {
+      //      if (zg->at(j) >= 0.1) {
 	hists2D[2]->Fill(zg->at(j), Pt->at(j), weight);
 	hists2D[3]->Fill(rg->at(j), Pt->at(j), weight);
 	hists2D[4]->Fill(mg->at(j), Pt->at(j), weight);
 	hists2D[5]->Fill(ptg->at(j), Pt->at(j), weight);
 	hists2D[6]->Fill(ptg->at(j) / (double) Pt->at(j), Pt->at(j), weight);
-      }
+	//}
       hists2D[7]->Fill(mcd->at(j), Pt->at(j), weight);
     }
   }
@@ -118,7 +140,7 @@ void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<T
 	hists1D[11]->Fill(geMg->at(j) / (double) pyMg->at(j), weight);
       } 
       //PYTHIA
-      //if (pyPt->at(j) > 15) { //inclusive pT plots now must be of jets with pT > 15 GeV
+      if (pyPt->at(j) > 15) { //inclusive pT plots now must be of jets with pT > 15 GeV
 	hists1D[12]->Fill(pyPt->at(j), weight);
 	hists1D[13]->Fill(pyM->at(j), weight);
 	if (pyZg->at(j) >= 0.1) { //only fill softdrop'd pythia jet info if the zg > 0.1
@@ -127,9 +149,9 @@ void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<T
 	  hists1D[16]->Fill(pyPtg->at(j), weight);
 	  hists1D[17]->Fill(pyMg->at(j), weight);
 	}
-	//}
+      }
       //GEANT
-      //if (gePt->at(j) > 15) { //inclusive pT plots now must be of jets with pT > 15 GeV
+      if (gePt->at(j) > 15) { //inclusive pT plots now must be of jets with pT > 15 GeV
 	hists1D[18]->Fill(gePt->at(j), weight);
 	hists1D[19]->Fill(geM->at(j), weight);
 	if (geZg->at(j) >= 0.1) { //only fill softdrop'd geant jet info if the zg > 0.1
@@ -138,7 +160,7 @@ void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<T
 	  hists1D[22]->Fill(gePtg->at(j), weight);
 	  hists1D[23]->Fill(geMg->at(j), weight);
 	}
-	//}
+      }
       hists2D[0]->Fill(pyPt->at(j),(gePt->at(j) - pyPt->at(j)) / (double) pyPt->at(j), weight);
       hists2D[1]->Fill(gePt->at(j) / (double) pyPt->at(j), pyPt->at(j), weight);
       hists2D[2]->Fill(pyPt->at(j),(geM->at(j) - pyM->at(j)) / (double) pyM->at(j), weight);
@@ -265,6 +287,7 @@ void TreetoHist() {
   string dir = "~/jetmass/";
   string matchin = "out/matching/";
   string pyin = "out/sim/py/";
+  string p8in = "out/sim/py8/";
   string gein = "out/sim/ge/";
   string datain = "out/data/";
   string file = "full.root";
@@ -275,6 +298,7 @@ void TreetoHist() {
   TFile* pyFile = new TFile( (dir + pyin + file).c_str(), "READ");
   TFile* geFile = new TFile( (dir + gein +file).c_str(), "READ");
   TFile* dataFile = new TFile( (dir + datain + file).c_str(), "READ");
+  TFile* p8File = new TFile( (dir + p8in + file).c_str(), "READ");
   
   //making variable bin size histogram
   const int nBins_pt = 8;
@@ -284,8 +308,8 @@ void TreetoHist() {
   TH1D* pt_d_var_bin = new TH1D("pt_d_var_bin","",nBins_pt,edges);
   TH1D* pt_g_var_bin = new TH1D("pt_g_var_bin","",nBins_pt,edges);
   TH1D* pt_p_var_bin = new TH1D("pt_p_var_bin","",nBins_pt,edges);
-  TH1D* pt_d = new TH1D("pt_d","",9,15,60);
-  TH1D* pt_g = new TH1D("pt_g","",9,15,60);
+  TH1D* pt_d = new TH1D("pt_d","",15,5,80);
+  TH1D* pt_g = new TH1D("pt_g","",15,5,80);
   TH1D* pt_p = new TH1D("pt_p","",15,5,80);
   TH1D* eta_d = new TH1D("eta_d","",50,-1,1);
   TH1D* eta_g = new TH1D("eta_g","",50,-1,1);
@@ -311,8 +335,8 @@ void TreetoHist() {
   TH1D* mg_d = new TH1D("mg_d","",20,0,10);
   TH1D* mg_g = new TH1D("mg_g","",20,0,10);
   TH1D* mg_p = new TH1D("mg_p","",20,0,10);
-  TH1D* ptg_d = new TH1D("ptg_d","",9,15,60);
-  TH1D* ptg_g = new TH1D("ptg_g","",9,15,60);
+  TH1D* ptg_d = new TH1D("ptg_d","",15,5,80);
+  TH1D* ptg_g = new TH1D("ptg_g","",15,5,80);
   TH1D* ptg_p = new TH1D("ptg_p","",15,5,80);
   TH1D* ratio_ptg_pt_d = new TH1D("ratio_ptg_pt_d","",21,0,2);
   TH1D* ratio_ptg_pt_g = new TH1D("ratio_ptg_pt_g","",21,0,2);
@@ -322,9 +346,9 @@ void TreetoHist() {
   TH1D* mcd_p = new TH1D("mcd_p","",20,0,5);
   
   //1D inclusives (for jets above pT = 15 GeV)
-  TH1D* pt_d_pt15 = new TH1D("pt_d_pt15","",15,5,80);
-  TH1D* pt_g_pt15 = new TH1D("pt_g_pt15","",15,5,80);
-  TH1D* pt_p_pt15 = new TH1D("pt_p_pt15","",15,5,80);
+  TH1D* pt_d_pt15 = new TH1D("pt_d_pt15","",9,15,60);
+  TH1D* pt_g_pt15 = new TH1D("pt_g_pt15","",9,15,60);
+  TH1D* pt_p_pt15 = new TH1D("pt_p_pt15","",9,15,60);
   TH1D* eta_d_pt15 = new TH1D("eta_d_pt15","",50,-1,1);
   TH1D* eta_g_pt15 = new TH1D("eta_g_pt15","",50,-1,1);
   TH1D* eta_p_pt15 = new TH1D("eta_p_pt15","",50,-1,1);
@@ -349,9 +373,9 @@ void TreetoHist() {
   TH1D* mg_d_pt15 = new TH1D("mg_d_pt15","",20,0,10);
   TH1D* mg_g_pt15 = new TH1D("mg_g_pt15","",20,0,10);
   TH1D* mg_p_pt15 = new TH1D("mg_p_pt15","",20,0,10);
-  TH1D* ptg_d_pt15 = new TH1D("ptg_d_pt15","",15,5,80);
-  TH1D* ptg_g_pt15 = new TH1D("ptg_g_pt15","",15,5,80);
-  TH1D* ptg_p_pt15 = new TH1D("ptg_p_pt15","",15,5,80);
+  TH1D* ptg_d_pt15 = new TH1D("ptg_d_pt15","",9,15,60);
+  TH1D* ptg_g_pt15 = new TH1D("ptg_g_pt15","",9,15,60);
+  TH1D* ptg_p_pt15 = new TH1D("ptg_p_pt15","",9,15,60);
   TH1D* ratio_ptg_pt_d_pt15 = new TH1D("ratio_ptg_pt_d_pt15","",20,0,20);
   TH1D* ratio_ptg_pt_g_pt15 = new TH1D("ratio_ptg_pt_g_pt15","",20,0,20);
   TH1D* ratio_ptg_pt_p_pt15 = new TH1D("ratio_ptg_pt_p_pt15","",20,0,20);
@@ -360,29 +384,30 @@ void TreetoHist() {
   TH1D* mcd_p_pt15 = new TH1D("mcd_p_pt15","",20,0,5);
   
   //2D hists mostly for slices in pT
-  TH2D* m_v_pt_d = new TH2D("m_v_pt_d","",20,0,10,15,5,80);
-  TH2D* m_v_pt_g = new TH2D("m_v_pt_g","",20,0,10,15,5,80);
+  TH2D* m_v_pt_d = new TH2D("m_v_pt_d","",20,0,10,9,15,60);
+  TH2D* m_v_pt_g = new TH2D("m_v_pt_g","",20,0,10,9,15,60);
   TH2D* m_v_pt_p = new TH2D("m_v_pt_p","",20,0,10,15,5,80);
-  TH2D* ch_frac_v_pt_d = new TH2D("ch_frac_v_pt_d","",10,0,1,15,5,80);
-  TH2D* ch_frac_v_pt_g = new TH2D("ch_frac_v_pt_g","",10,0,1,15,5,80);
+  TH2D* m_v_pt_p8 = new TH2D("m_v_pt_p8","",20,0,10,15,5,80);
+  TH2D* ch_frac_v_pt_d = new TH2D("ch_frac_v_pt_d","",10,0,1,9,15,60);
+  TH2D* ch_frac_v_pt_g = new TH2D("ch_frac_v_pt_g","",10,0,1,9,15,60);
   TH2D* ch_frac_v_pt_p = new TH2D("ch_frac_v_pt_p","",10,0,1,15,5,80);
-  TH2D* zg_v_pt_d = new TH2D("zg_v_pt_d","",20,0,1,15,5,80);
-  TH2D* zg_v_pt_g = new TH2D("zg_v_pt_g","",20,0,1,15,5,80);
+  TH2D* zg_v_pt_d = new TH2D("zg_v_pt_d","",20,0,1,9,15,60);
+  TH2D* zg_v_pt_g = new TH2D("zg_v_pt_g","",20,0,1,9,15,60);
   TH2D* zg_v_pt_p = new TH2D("zg_v_pt_p","",20,0,1,15,5,80);
-  TH2D* rg_v_pt_d = new TH2D("rg_v_pt_d","",20,0,1,15,5,80);
-  TH2D* rg_v_pt_g = new TH2D("rg_v_pt_g","",20,0,1,15,5,80);
+  TH2D* rg_v_pt_d = new TH2D("rg_v_pt_d","",20,0,1,9,15,60);
+  TH2D* rg_v_pt_g = new TH2D("rg_v_pt_g","",20,0,1,9,15,60);
   TH2D* rg_v_pt_p = new TH2D("rg_v_pt_p","",20,0,1,15,5,80);
-  TH2D* mg_v_pt_d = new TH2D("mg_v_pt_d","",20,0,10,15,5,80);
-  TH2D* mg_v_pt_g = new TH2D("mg_v_pt_g","",20,0,10,15,5,80);
+  TH2D* mg_v_pt_d = new TH2D("mg_v_pt_d","",20,0,10,9,15,60);
+  TH2D* mg_v_pt_g = new TH2D("mg_v_pt_g","",20,0,10,9,15,60);
   TH2D* mg_v_pt_p = new TH2D("mg_v_pt_p","",20,0,10,15,5,80);
-  TH2D* ptg_v_pt_d = new TH2D("ptg_v_pt_d","",9,15,60,15,5,80);
-  TH2D* ptg_v_pt_g = new TH2D("ptg_v_pt_g","",9,15,60,15,5,80);
+  TH2D* ptg_v_pt_d = new TH2D("ptg_v_pt_d","",9,15,60,9,15,60);
+  TH2D* ptg_v_pt_g = new TH2D("ptg_v_pt_g","",9,15,60,9,15,60);
   TH2D* ptg_v_pt_p = new TH2D("ptg_v_pt_p","",15,5,80,15,5,80);
-  TH2D* ratio_ptgpt_v_pt_d = new TH2D("ratio_ptgpt_v_pt_d","",21,0,2,15,5,80);
-  TH2D* ratio_ptgpt_v_pt_g = new TH2D("ratio_ptgpt_v_pt_g","",21,0,2,15,5,80);
+  TH2D* ratio_ptgpt_v_pt_d = new TH2D("ratio_ptgpt_v_pt_d","",21,0,2,9,15,60);
+  TH2D* ratio_ptgpt_v_pt_g = new TH2D("ratio_ptgpt_v_pt_g","",21,0,2,9,15,60);
   TH2D* ratio_ptgpt_v_pt_p = new TH2D("ratio_ptgpt_v_pt_p","",21,0,2,15,5,80);
-  TH2D* mcd_v_pt_d = new TH2D("mcd_v_pt_d","",20,0,5,15,5,80);
-  TH2D* mcd_v_pt_g = new TH2D("mcd_v_pt_g","",20,0,5,15,5,80);
+  TH2D* mcd_v_pt_d = new TH2D("mcd_v_pt_d","",20,0,5,9,15,60);
+  TH2D* mcd_v_pt_g = new TH2D("mcd_v_pt_g","",20,0,5,9,15,60);
   TH2D* mcd_v_pt_p = new TH2D("mcd_v_pt_p","",20,0,5,15,5,80);
   
   //matched hists (1D)
@@ -450,6 +475,8 @@ void TreetoHist() {
   
   vector<TH1D*> p_hists1D = {pt_p_var_bin,pt_p,eta_p,phi_p,e_p,m_p,ch_e_frac_p,zg_p,rg_p,mg_p,ptg_p,ratio_ptg_pt_p,mcd_p,pt_p_pt15,eta_p_pt15,phi_p_pt15,e_p_pt15,m_p_pt15,ch_e_frac_p_pt15,zg_p_pt15,rg_p_pt15,mg_p_pt15,ptg_p_pt15,ratio_ptg_pt_p_pt15,mcd_p_pt15};
   vector<TH2D*> p_hists2D = {m_v_pt_p,ch_frac_v_pt_p,zg_v_pt_p,rg_v_pt_p,mg_v_pt_p,ptg_v_pt_p,ratio_ptgpt_v_pt_p,mcd_v_pt_p};
+  
+  vector<TH1D*> p8_hists1D = {}; vector<TH2D*> p8_hists2D = {m_v_pt_p8};
 
   vector<TH1D*> m_hists1D = {deltaPt,deltaM,deltaZg,deltaRg,deltaPtg,deltaMg,ratioPt,ratioM,ratioZg,ratioRg,ratioPtg,ratioMg,pyPt,pyM,pyZg,pyRg,pyPtg,pyMg,gePt,geM,geZg,geRg,gePtg,geMg};
   vector<TH2D*> m_hists2D = {deltaPtvPyPt,ratioPtvPyPt,deltaMvPyPt,ratioMvPyPt,deltaZgvPyPt,ratioZgvPyPt,deltaRgvPyPt,ratioRgvPyPt,deltaPtgvPyPt,ratioPtgvPyPt,deltaMgvPyPt,ratioMgvPyPt};
@@ -460,6 +487,7 @@ void TreetoHist() {
   HistsFromTree(dataFile, d_hists1D, d_hists2D, 1);  
   HistsFromTree(geFile, g_hists1D, g_hists2D, 0);
   HistsFromTree(pyFile, p_hists1D, p_hists2D, 0);
+  HistsFromTreeP8(p8File, p8_hists1D, p8_hists2D, 0);
   HistsFromTreeMatched(matchFile, m_hists1D, m_hists2D);
   /*
   HistsForMCClosure(pyFile,c_hists1D_py);
@@ -468,7 +496,10 @@ void TreetoHist() {
   //HistsForMCClosure(matchFile, c_hists1D_py, c_hists1D_ge); //this function now uses the ~matched~ jets to create spectra
   
   TFile *fout = new TFile( ( out + "hists.root" ).c_str() ,"RECREATE");
-
+  
+  for (int i = 0; i < p8_hists2D.size(); ++ i) {
+    /* p8_hists1D[i]->Write();*/ p8_hists2D[i]->Write();
+  }
   for (int i = 0; i < d_hists1D.size(); ++ i) {
     // TCanvas * c = new TCanvas(((string) "c_" + (string) d_hists1D[i]->GetName()).c_str(),"",800,800);
     d_hists1D[i]->Write(); g_hists1D[i]->Write(); p_hists1D[i]->Write();

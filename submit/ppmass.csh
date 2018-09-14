@@ -15,10 +15,10 @@ if ($1 == 'data') then
     set base = /nfs/rhi/STAR/Data/ppJP2Run12/sum
      # Create the folder name for output
     if ($3 == 'ge') then
-	set outFile = data/
+	set outFile = data
     endif    
     if ($3 == 'py') then
-	set outFile = data/
+	set outFile = data
     endif
 endif
 if ($1 == 'sim') then

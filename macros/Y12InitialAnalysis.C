@@ -21,6 +21,8 @@ void JetQA (TFile* inFile, const string flag1, const string flag2, const string 
   vector<TH1D*> phis = {(TH1D*) inFile->Get("phi_p"), (TH1D*) inFile->Get("phi_g"), (TH1D*) inFile->Get("phi_d")};
   vector<TH1D*> ms = {(TH1D*) inFile->Get("m_p"), (TH1D*) inFile->Get("m_g"), (TH1D*) inFile->Get("m_d")};
 
+  std::cout << "NOTE: The JET QA histograms (pt, eta, phi, m) are all for pT > 5 GeV, rather than the typical pT > 15 GeV" << std::endl;
+  
   std::string ptyTitle = "arb.";
   pts[2]->Scale(1/(double)pts[2]->Integral()); pts[1]->Scale(1/(double)pts[1]->Integral());
   double rat_scale = pts[2]->GetBinContent(3) / (double) pts[0]->GetBinContent(3);
@@ -87,12 +89,12 @@ void Slices(TFile *inFile, const string out, const string filetype) {
   double pt_bins[nHists+1] = {2,3,4,5,7,11}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc.
   
   //plots slices in pT of jet observable resolutions
-  ObservablePtSlices (h_dummy, h_dummy, ratPt, out, filetype, "p_{T}^{det-jet} / p_{T}^{gen-jet}", 1, 0,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratM, out, filetype, "M_{jet}^{det} / M_{jet}^{gen}", 1, 0,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratZg, out, filetype, "z_{g}^{det} / z_{g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratRg, out, filetype, "R_{g}^{det} / R_{g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratPtg, out, filetype, "p_{T,g}^{det} / p_{T,g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratMg, out, filetype, "M_{g}^{det} / M_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratPt, h_dummy, out, filetype, "p_{T}^{det-jet} / p_{T}^{gen-jet}", 1, 0,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratM, h_dummy, out, filetype, "M_{jet}^{det} / M_{jet}^{gen}", 1, 0,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratZg, h_dummy, out, filetype, "z_{g}^{det} / z_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratRg, h_dummy, out, filetype, "R_{g}^{det} / R_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratPtg, h_dummy, out, filetype, "p_{T,g}^{det} / p_{T,g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratMg, h_dummy, out, filetype, "M_{g}^{det} / M_{g}^{gen}", 1, 1,pt_bins);
   
   return;
 }
@@ -120,7 +122,7 @@ void Resolutions(TFile *inFile, const string out, const string filetype) {
 
 //Plots jet observables! M, pT, zg, Rg
 void Observables(TFile *inFile, const string out, const string filetype) {
-  vector<TH2D*> mpt = {(TH2D*) inFile->Get("m_v_pt_d"), (TH2D*) inFile->Get("m_v_pt_p"), (TH2D*) inFile->Get("m_v_pt_g")};
+  vector<TH2D*> mpt = {(TH2D*) inFile->Get("m_v_pt_d"), (TH2D*) inFile->Get("m_v_pt_p"), (TH2D*) inFile->Get("m_v_pt_g"), (TH2D*) inFile->Get("m_v_pt_p8")};
   vector<TH2D*> chfracpt = {(TH2D*) inFile->Get("ch_frac_v_pt_d"), (TH2D*) inFile->Get("ch_frac_v_pt_p"), (TH2D*) inFile->Get("ch_frac_v_pt_g")};
   vector<TH2D*> zgpt = {(TH2D*) inFile->Get("zg_v_pt_d"), (TH2D*) inFile->Get("zg_v_pt_p"), (TH2D*) inFile->Get("zg_v_pt_g")};
   vector<TH2D*> rgpt = {(TH2D*) inFile->Get("rg_v_pt_d"), (TH2D*) inFile->Get("rg_v_pt_p"), (TH2D*) inFile->Get("rg_v_pt_g")};
@@ -129,38 +131,42 @@ void Observables(TFile *inFile, const string out, const string filetype) {
   vector<TH2D*> ptgptpt = {(TH2D*) inFile->Get("ratio_ptgpt_v_pt_d"), (TH2D*) inFile->Get("ratio_ptgpt_v_pt_p"), (TH2D*) inFile->Get("ratio_ptgpt_v_pt_g")};
   vector<TH2D*> mcdpt = {(TH2D*) inFile->Get("mcd_v_pt_d"), (TH2D*) inFile->Get("mcd_v_pt_p"), (TH2D*) inFile->Get("mcd_v_pt_g")};
   
+  TH2D* dummy;
+  
   const int nHists = 5;
   double det_pt_bins[nHists+1] = {0,1,2,3,5,9}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc.  
-  //plots the mass for various pT ranges
+  cout << "a" << endl;
+  ObservablePtSlices(dummy, mpt[1], dummy, mpt[3], out, filetype, "M [GeV/c^{2}]", 0,0,det_pt_bins);
+  cout << "b" << endl;
   /*
-  ObservablePtSlices(mpt[0], mpt[1], mpt[2], out, filetype, "M_{jet} [GeV/c^{2}]", 0, 0, det_pt_bins);
+  //plots the mass for various pT ranges
+  ObservablePtSlices(mpt[0], mpt[1], mpt[2], dummy, out, filetype, "M [GeV/c^{2}]", 0, 0, det_pt_bins);
   //plots the ch fraction for various pT ranges
-  ObservablePtSlices(chfracpt[0], chfracpt[1], chfracpt[2], out, filetype, "ch. frac.", 0, 0, det_pt_bins);
+  ObservablePtSlices(chfracpt[0], chfracpt[1], chfracpt[2], dummy, out, filetype, "ch. frac.", 0, 0, det_pt_bins);
   //plots the zg for various pT ranges
-  ObservablePtSlices(zgpt[0], zgpt[1], zgpt[2], out, filetype, "z_{g}", 0, 0, det_pt_bins);
+  ObservablePtSlices(zgpt[0], zgpt[1], zgpt[2], dummy, out, filetype, "z_{g} [", 0, 0, det_pt_bins);
   //plots the rg for various pT ranges
-  ObservablePtSlices(rgpt[0], rgpt[1], rgpt[2], out, filetype, "R_{g}", 0, 0, det_pt_bins);
+  ObservablePtSlices(rgpt[0], rgpt[1], rgpt[2], dummy, out, filetype, "R_{g} [", 0, 0, det_pt_bins);
   //plots the ptg for various pT ranges
-  ObservablePtSlices(ptgpt[0], ptgpt[1], ptgpt[2], out, filetype, "p_{T,g} [GeV/c]", 0, 0, det_pt_bins);
+  ObservablePtSlices(ptgpt[0], ptgpt[1], ptgpt[2], dummy, out, filetype, "p_{T,g} [GeV/c]", 0, 0, det_pt_bins);
   //plots the mg for various pT ranges
-  ObservablePtSlices(mgpt[0], mgpt[1], mgpt[2], out, filetype, "M_{g} [GeV/c^{2}]", 0, 0, det_pt_bins);  
-  */
+  ObservablePtSlices(mgpt[0], mgpt[1], mgpt[2], dummy, out, filetype, "M_{g} [GeV/c^{2}]", 0, 0, det_pt_bins);  
   //plots the groomed pt ratio with pt for various pt ranges
-  ObservablePtSlices(ptgptpt[0],ptgptpt[1],ptgptpt[2],out,filetype,"p_{T,g} / p_{T}", 0, 0, det_pt_bins);
+  ObservablePtSlices(ptgptpt[0],ptgptpt[1],ptgptpt[2], dummy, out,filetype,"p_{T,g} / p_{T}", 0, 0, det_pt_bins);
   //plots the collinear drop'd mass for various pT ranges
-  ObservablePtSlices(mcdpt[0], mcdpt[1], mcdpt[2], out, filetype, "M_{col. drop} [GeV/c^{2}]", 0, 0, det_pt_bins);
-  
+  ObservablePtSlices(mcdpt[0], mcdpt[1], mcdpt[2], dummy, out, filetype, "M_{CD} [GeV/c^{2}]", 0, 0, det_pt_bins);
+  */
   return;
 }
 
 
 void Responses(TFile* matchFile, TFile* inFile, const string out, const string filetype) {
-  TH1D* pt_p = (TH1D*) inFile->Get("pt_p"); TH1D* pt_g = (TH1D*) inFile->Get("pt_g");
-  TH1D* m_p = (TH1D*) inFile->Get("m_p"); TH1D* m_g = (TH1D*) inFile->Get("m_g");
-  TH1D* zg_p = (TH1D*) inFile->Get("zg_p"); TH1D* zg_g = (TH1D*) inFile->Get("zg_g");
-  TH1D* rg_p = (TH1D*) inFile->Get("rg_p"); TH1D* rg_g = (TH1D*) inFile->Get("rg_g");
-  TH1D* ptg_p = (TH1D*) inFile->Get("ptg_p"); TH1D* ptg_g = (TH1D*) inFile->Get("ptg_g");
-  TH1D* mg_p = (TH1D*) inFile->Get("mg_p"); TH1D* mg_g = (TH1D*) inFile->Get("mg_g");
+  TH1D* pt_p = (TH1D*) inFile->Get("pt_p_pt15"); TH1D* pt_g = (TH1D*) inFile->Get("pt_g_pt15");
+  TH1D* m_p = (TH1D*) inFile->Get("m_p_pt15"); TH1D* m_g = (TH1D*) inFile->Get("m_g_pt15");
+  TH1D* zg_p = (TH1D*) inFile->Get("zg_p_pt15"); TH1D* zg_g = (TH1D*) inFile->Get("zg_g_pt15");
+  TH1D* rg_p = (TH1D*) inFile->Get("rg_p_pt15"); TH1D* rg_g = (TH1D*) inFile->Get("rg_g_pt15");
+  TH1D* ptg_p = (TH1D*) inFile->Get("ptg_p_pt15"); TH1D* ptg_g = (TH1D*) inFile->Get("ptg_g_pt15");
+  TH1D* mg_p = (TH1D*) inFile->Get("mg_p_pt15"); TH1D* mg_g = (TH1D*) inFile->Get("mg_g_pt15");
 
   Response(matchFile, "pt_res_coarse", pt_p, pt_g, "p_{T} [GeV/c]", out, filetype,"pt");
   /*  Response(matchFile, "m_response", m_p, m_g, "M [GeV/c^{2}]", out, filetype, "mass");
@@ -200,10 +206,10 @@ void Y12InitialAnalysis () {
   //plots pT, eta, phi, and mass
   //  JetQA(inFile, flag1, flag2, out, filetype);
   //plots the pT response matrix and the simulation pT spectra for fine-grained and coarse-grained binning
-    Responses(matchFile, inFile, out, filetype);
-  //Observables(inFile, out, filetype); //plots jet observables: M, pT, zg, Rg, Ptg, Mg, M_cd
+  //  Responses(matchFile, inFile, out, filetype);
+  Observables(inFile, out, filetype); //plots jet observables: M, pT, zg, Rg, Ptg, Mg, M_cd
   //  Slices(inFile, out, filetype); //plots the resolution of the observables in bins of pT
-  //  Resolutions(inFile, out, filetype); //plots 2D observable resolution with pT and associated means & RMSs
+  //Resolutions(inFile, out, filetype); //plots 2D observable resolution with pT and associated means & RMSs
   
   return;
 }

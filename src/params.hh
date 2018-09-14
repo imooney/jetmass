@@ -98,7 +98,7 @@ namespace Analysis {
 
   //jet cuts                                                                                                                                                                      
   const double jet_ptmin = 5.0;           //jet pT >= 5.0 GeV                 
-  const double det_jet_ptmin = 5.0;      //detector-level jet pT >= 5 GeV
+  const double det_jet_ptmin = 15.0;      //detector-level jet pT >= 5 GeV
   const double jet_ptmax = 1000.0;        //DEBUG
   const double max_rap = max_track_rap-R; //|eta_jet| < 1-R
   const double NEF_max = 0.9;             //neutral energy fraction of jet must be < 90%                                                                                                                                                                                      

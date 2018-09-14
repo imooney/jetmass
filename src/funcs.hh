@@ -90,11 +90,16 @@ namespace Analysis {
 
   bool GetTriggerJet(std::vector<fastjet::PseudoJet> &, const std::vector<fastjet::PseudoJet>);
 
-  void MatchJets(const std::vector<fastjet::PseudoJet>, const fastjet::PseudoJet, int &);
+  //  void MatchJets(const std::vector<fastjet::PseudoJet>, const fastjet::PseudoJet, int &);
+  std::vector<int> MatchJets(const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<fastjet::PseudoJet> &, std::vector<fastjet::PseudoJet> &);
 
-  void ConstructResponses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
+  std::vector<int> FakesandMisses(const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<fastjet::PseudoJet> &);
+  
+  void ConstructResponses(std::vector<RooUnfoldResponse*>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<std::vector<double> > &, std::vector<std::vector<double> > &, const double/*, double &, double &, double &, double &*/);
+  
+  void FillResponses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
-  void ConstructResponsesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse&, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
+  void FillResponsesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse&, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
   void Misses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const double);
 
@@ -106,6 +111,8 @@ namespace Analysis {
   
   void InitReader(TStarJetPicoReader &, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const std::string, const std::string);
 
+  bool DiscardEvent(const TString, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>);
+  
   //HISTOGRAMS
   template<class Key, class H, class hash=std::hash<Key>>
     class Collection {

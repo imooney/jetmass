@@ -105,6 +105,7 @@ int main (int argc, const char ** argv) {
     eventTree->Branch("weight", &wt); eventTree->Branch("EventID", &EventID);
 
     //TEST
+    /*
     TH1D* pt23 = new TH1D("pt23","",80,0,80);
     TH1D* pt34 = new TH1D("pt34","",80,0,80);
     TH1D* pt45 = new TH1D("pt45","",80,0,80);
@@ -130,7 +131,7 @@ int main (int argc, const char ** argv) {
 
     TH1D* ptall = new TH1D("ptall","",80,0,80);
     TH1D* ptallw = new TH1D("ptallw","",80,0,80);
-
+    */
     //Creating SoftDrop grooming object
     contrib::SoftDrop sd(beta,z_cut,R0);
     cout << "SoftDrop groomer is: " << sd.description() << endl;
@@ -175,11 +176,11 @@ int main (int argc, const char ** argv) {
       //initializing variables to -9999                                                                                                                                                               
       n_jets = -9999; wt = -9999; EventID = -9999;
       
-      EventID = Reader.GetNOfCurrentEvent();
-      
       event = Reader.GetEvent();    header = event->GetHeader();
 
       EventID = Reader.GetNOfCurrentEvent();
+      //TEMP!!!!!!!!!
+      //if (EventID == 6868 || EventID == 8999 || EventID == 5290) { continue; }  
       
       Particles.clear();
       Jets.clear();
@@ -194,7 +195,7 @@ int main (int argc, const char ** argv) {
       Filename =  Reader.GetInputChain()->GetCurrentFile()->GetName();
 
       //TEST!!! REMOVE LATER IF THIS DOESN'T DO THE TRICK
-      if (((string) Filename).find("2_3_") != std::string::npos) {continue;}
+      //      if (((string) Filename).find("2_3_") != std::string::npos) {continue;}
     
       wt = LookupRun12Xsec( Filename );
 
@@ -215,7 +216,7 @@ int main (int argc, const char ** argv) {
       
       vector<PseudoJet> Jets;
       
-      //Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
+      //Implementing a neutral energy fraction cut of 90% on inclusive det-level jets                                            
       if (ge_or_py == 1) { //geant
 	ApplyNEFSelection(JetsInitial, Jets);
       }
@@ -225,13 +226,15 @@ int main (int argc, const char ** argv) {
       for (int i = 0; i < Jets.size(); ++ i) {
 	GroomedJets.push_back(sd(Jets[i]));
       }
+
+      if (DiscardEvent(Filename, Jets, Jets)) { counter_debug1 ++; continue; }      
       //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TREES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
       
       n_jets = Jets.size();
-      
+      /*   
       //TEST!
       for (int i = 0; i < Jets.size(); ++ i) {ptall->Fill(Jets[i].pt()); ptallw->Fill(Jets[i].pt(), wt);}
-      if (((string) Filename).find("2_3_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt23->Fill(Jets[i].pt()); pt23w->Fill(Jets[i].pt(), wt);}}
+      if (((string) Filename).find("2_3_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt23->Fill(Jets[i].pt()); pt23w->Fill(Jets[i].pt(), wt); if (Jets[i].pt() > 15) {cout << "ANSWER: " << EventID << endl;}}}
       if (((string) Filename).find("3_4_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt34->Fill(Jets[i].pt());pt34w->Fill(Jets[i].pt(), wt); }}
       if (((string) Filename).find("4_5_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt45->Fill(Jets[i].pt());pt45w->Fill(Jets[i].pt(), wt);}}
       if (((string) Filename).find("5_7_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt57->Fill(Jets[i].pt());pt57w->Fill(Jets[i].pt(), wt);}}
@@ -241,26 +244,7 @@ int main (int argc, const char ** argv) {
       if (((string) Filename).find("15_20_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt1520->Fill(Jets[i].pt());pt1520w->Fill(Jets[i].pt(), wt);}}
       if (((string) Filename).find("20_25_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt2025->Fill(Jets[i].pt());pt2025w->Fill(Jets[i].pt(), wt);}}
       if (((string) Filename).find("25_35_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt2535->Fill(Jets[i].pt());pt2535w->Fill(Jets[i].pt(), wt);}}
-      if (((string) Filename).find("35_-1_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt35plus->Fill(Jets[i].pt());pt35plusw->Fill(Jets[i].pt(), wt);}}      
-      //TEST!
-      /*
-      bool bad_event = 0;
-      std::string tail = ((string) Filename).substr(((string) Filename).size() - 10);
-      std::string upstring = tail.substr(0,2);
-      std::string upstring_copy = upstring;
-      if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = upstring.substr(0,1);}}
-      int upbin = std::stoi(upstring);
-      
-      for (int i = 0; i < n_jets; ++ i) {
-	//if (Jets[i].pt() > 24 && Jets[i].pt() < 26) {cout << Filename << " " << wt << " " << Jets[i].pt() << " " << Jets[i].eta() << " " << Jets[i].phi() << " " << Jets[i].m() << endl;}
-	if ((Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	  std::cout << "from " << Filename << " removing event " << EventID << " with weight " << wt << " and jet with pt, eta, phi, and m: " << Jets[i].pt() << " " << Jets[i].eta() << " " << Jets[i].phi() << " " << Jets[i].m() << std::endl;
-	  bad_event = 1;
-	}
-      }
-      if (bad_event == 1) { continue; }
-      if (bad_event == 1) {std::cout << "should never see this message" << std::endl;} 
-      */
+      if (((string) Filename).find("35_-1_") != std::string::npos) {for (int i = 0; i < Jets.size(); ++ i) {pt35plus->Fill(Jets[i].pt());pt35plusw->Fill(Jets[i].pt(), wt);}}      */
       NJets += Jets.size();               //  Save jet info and add jets to total
 
       for (int i = 0; i < n_jets; ++ i) {
@@ -294,10 +278,10 @@ int main (int argc, const char ** argv) {
     std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
    
     eventTree->Write();
-
+    /*
     pt23->Write(); pt34->Write(); pt45->Write(); pt57->Write(); pt79->Write(); pt911->Write(); pt1115->Write(); pt1520->Write(); pt2025->Write(); pt2535->Write(); pt35plus->Write();
     pt23w->Write(); pt34w->Write(); pt45w->Write(); pt57w->Write(); pt79w->Write(); pt911w->Write(); pt1115w->Write(); pt1520w->Write(); pt2025w->Write(); pt2535w->Write(); pt35plusw->Write();
-    ptall->Write(); ptallw->Write();
+    ptall->Write(); ptallw->Write();*/
     fout->Close();
     
     return 0;

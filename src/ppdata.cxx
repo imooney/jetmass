@@ -309,7 +309,7 @@ int main ( int argc, const char** argv) {
   fout->Close();
 
   cout << "In " << nEventsUsed << " events, found " << endl
-       << nJets << " jets above 15 GeV, with constituents above 0.2 GeV." << endl;  
+       << nJets << " jets above 5 GeV, with constituents above 0.2 GeV." << endl;  
 
   cout << "Wrote to " << fout->GetName() << endl;
   cout << "Bye :)" << endl;

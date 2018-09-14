@@ -90,7 +90,12 @@ int main (int argc, const char ** argv) {
   vector<double> pyPt; vector<double> pyM; vector<double> pyZg; vector<double> pyRg;
   vector<double> gePt; vector<double> geM; vector<double> geZg; vector<double> geRg;
   vector<double> pyPtg; vector<double> pyMg; vector<double> gePtg; vector<double> geMg;
+
+  vector<vector<double> > py_arr = {pyPt, pyM, pyZg, pyRg, pyPtg, pyMg};
+  vector<vector<double> > ge_arr = {gePt, geM, geZg, geRg, gePtg, geMg};
+  
   double mc_weight; int p_EventID;
+  vector<double> pyDummy; vector<double> geDummy;
   
   TTree *eventTree = new TTree("event", "event");
   //eventTree->Branch("deltaPt", &deltaPt); eventTree->Branch("deltaM", &deltaM); eventTree->Branch("deltaZg", &deltaZg); eventTree->Branch("deltaRg", &deltaRg);
@@ -100,16 +105,67 @@ int main (int argc, const char ** argv) {
   eventTree->Branch("pyPtg", &pyPtg); eventTree->Branch("pyMg", &pyMg); eventTree->Branch("gePtg", &gePtg); eventTree->Branch("geMg", &geMg);
   eventTree->Branch("weight", &mc_weight); eventTree->Branch("EventID", &p_EventID);
 
-  //temp hists
-    TH1D *pt_gen_odd = new TH1D("pt_gen_odd","",15,5,80); TH1D *pt_det_odd = new TH1D("pt_det_odd","",9,15,60);
+  double nAccepted_ge_even = 0; double nAccepted_py_even = 0; double nJets_ge_even = 0; double nJets_py_even = 0;
+  double nEntries_even = 0; double nFakes_even = 0; double nMisses_even = 0; double nMatches_even = 0;
+  double nAccepted_ge_odd = 0; double nAccepted_py_odd = 0; double nJets_ge_odd = 0; double nJets_py_odd = 0;
+  double nEntries_odd = 0; double nFakes_odd = 0; double nMisses_odd = 0; double nMatches_odd = 0;
+  
+  TTree *checks = new TTree("checks","checks");
+  checks->Branch("nAccepted_ge_even",&nAccepted_ge_even); checks->Branch("nAccepted_py_even",&nAccepted_py_even);
+  checks->Branch("nJets_ge_even",&nJets_ge_even); checks->Branch("nJets_py_even",&nJets_py_even); checks->Branch("nEntries_even",&nEntries_even);
+  checks->Branch("nFakes_even",&nFakes_even); checks->Branch("nMisses_even",&nMisses_even); checks->Branch("nMatches_even",&nMatches_even);
+  checks->Branch("nAccepted_ge_odd",&nAccepted_ge_odd); checks->Branch("nAccepted_py_odd",&nAccepted_py_odd);
+  checks->Branch("nJets_ge_odd",&nJets_ge_odd); checks->Branch("nJets_py_odd",&nJets_py_odd); checks->Branch("nEntries_odd",&nEntries_odd);
+  checks->Branch("nFakes_odd",&nFakes_odd); checks->Branch("nMisses_odd",&nMisses_odd); checks->Branch("nMatches_odd",&nMatches_odd);
+  
+  //hists
+  TH1D *pt_gen_odd = new TH1D("pt_gen_odd","",15,5,80); TH1D *pt_det_odd = new TH1D("pt_det_odd","",9,15,60);
+  TH1D *pt_gen_even = new TH1D("pt_gen_even","",15,5,80); TH1D *pt_det_even = new TH1D("pt_det_even","",9,15,60);
+  TH1D *m_gen = new TH1D("m_gen","",20,0,10); TH1D *m_det = new TH1D("m_det","",20,0,10);
+  TH1D *zg_gen = new TH1D("zg_gen","",20,0,1); TH1D *zg_det = new TH1D("zg_det","",20,0,1);
+  TH1D *rg_gen = new TH1D("rg_gen","",20,0,1); TH1D *rg_det = new TH1D("rg_det","",20,0,1);
+  TH1D *ptg_gen = new TH1D("ptg_gen","",15,5,80); TH1D *ptg_det = new TH1D("ptg_det","",9,15,60);
+  TH1D *mg_gen = new TH1D("mg_gen","",20,0,10); TH1D *mg_det = new TH1D("mg_det","",20,0,10);
+  
+  TH2D *pt_m_gen = new TH2D("pt_m_gen","",20,0,10,15,5,80); TH2D *pt_m_det = new TH2D("pt_m_det","",20,0,10,9,15,60);
+  TH2D *pt_zg_gen = new TH2D("pt_zg_gen","",20,0,1,15,5,80); TH2D *pt_zg_det = new TH2D("pt_zg_det","",20,0,1,9,15,60);
+  TH2D *pt_rg_gen = new TH2D("pt_rg_gen","",20,0,1,15,5,80); TH2D *pt_rg_det = new TH2D("pt_rg_det","",20,0,1,9,15,60);
+  TH2D *pt_ptg_gen = new TH2D("pt_ptg_gen","",15,5,80,15,5,80); TH2D *pt_ptg_det = new TH2D("pt_ptg_det","",9,15,60,9,15,60);
+  TH2D *pt_mg_gen = new TH2D("pt_mg_gen","",20,0,10,15,5,80); TH2D *pt_mg_det = new TH2D("pt_mg_det","",20,0,10,9,15,60);
+  
+  
+  //hists for use in responses
+  TH2D *pyMvPt = new TH2D("pyMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
+  TH2D *geMvPt = new TH2D("geMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,9,15,60);
+  TH2D *pyZgvPt = new TH2D("pyZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
+  TH2D *geZgvPt = new TH2D("geZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
+  TH2D *pyRgvPt = new TH2D("pyRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
+  TH2D *geRgvPt = new TH2D("geRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
+  TH2D *pyPtgvPt = new TH2D("pyPtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",15,5,80,15,5,80);
+  TH2D *gePtgvPt = new TH2D("gePtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",15,5,80,9,15,60);
+  TH2D *pyMgvPt = new TH2D("pyMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
+  TH2D *geMgvPt = new TH2D("geMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,9,15,60);
   
   //responses for MC Closure test
-  RooUnfoldResponse pt_odd(15,5,80,15,5,80,"pt_odd","");
-  RooUnfoldResponse pt_even(15,5,80,15,5,80,"pt_even","");
-  RooUnfoldResponse m_odd(20,0,10,20,0,10,"m_odd","");
-  RooUnfoldResponse m_even(20,0,10,20,0,10,"m_even","");
+  RooUnfoldResponse * pt_odd = new RooUnfoldResponse(9,15,60,15,5,80,"pt_odd","");
+  RooUnfoldResponse * pt_even = new RooUnfoldResponse(9,15,60,15,5,80,"pt_even",""); 
+  RooUnfoldResponse * m_res = new RooUnfoldResponse(20,0,10,20,0,10,"m_res",""); 
+  RooUnfoldResponse * zg_res = new RooUnfoldResponse(20,0,1,20,0,1,"zg_res",""); 
+  RooUnfoldResponse * rg_res = new RooUnfoldResponse(20,0,1,20,0,1,"rg_res",""); 
+  RooUnfoldResponse * ptg_res = new RooUnfoldResponse(9,15,60,15,5,80,"ptg_res",""); 
+  RooUnfoldResponse * mg_res = new RooUnfoldResponse(20,0,10,20,0,10,"mg_res",""); 
+
+  RooUnfoldResponse * pt_m_response = new RooUnfoldResponse(geMvPt, pyMvPt, "pt_m_response");
+  RooUnfoldResponse * pt_zg_response = new RooUnfoldResponse(geZgvPt, pyZgvPt, "pt_zg_response");
+  RooUnfoldResponse * pt_rg_response = new RooUnfoldResponse(geRgvPt, pyRgvPt, "pt_rg_response");
+  RooUnfoldResponse * pt_ptg_response = new RooUnfoldResponse(gePtgvPt, pyPtgvPt, "pt_ptg_response");
+  RooUnfoldResponse * pt_mg_response = new RooUnfoldResponse(geMgvPt, pyMgvPt, "pt_mg_response");
   
-  //Creating SoftDrop grooming object                                                                                                                                                        
+    
+  //vector of responses to make it easy to call ConstructResponses and fill all responses at the same time
+  std::vector<RooUnfoldResponse*> res = {pt_even, m_res, pt_m_response, zg_res, rg_res, ptg_res, mg_res, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response};
+  
+  //Creating SoftDrop grooming object
   contrib::SoftDrop sd(beta,z_cut,R0);
    
   //SELECTORS
@@ -139,31 +195,42 @@ int main (int argc, const char ** argv) {
   int counter_debug1 = 0, counter_debug2 = 0;
   double p_wt = -1, g_wt = -1; 
   // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  BEGIN EVEN EVENT LOOP!  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-  while ( GEANTReader.NextEvent() ) {      //    GEANTReader    P6Reader
+  for (int event = 0; event < P6Chain->GetEntries(); ++ event) {      //    GEANTReader    P6Reader
+    P6Reader.ReadEvent(event);
+    GEANTReader.ReadEvent(event);
+    //    if (GEANTReader.ReadEvent(event) == 0) { cout << "No Geant event! Should have only misses following this" << endl;}
+	
     //initialize values to -9999
     pyPt.clear(); pyM.clear(); pyZg.clear(); pyRg.clear();
     gePt.clear(); geM.clear(); geZg.clear(); geRg.clear();
     pyPtg.clear(); pyMg.clear(); gePtg.clear(); geMg.clear();
+    pyDummy.clear(); geDummy.clear();
+    for (int i = 0; i < py_arr.size(); ++ i) {py_arr[i].clear(); ge_arr[i].clear();}
     mc_weight = -9999;
     
     g_EventID = GEANTReader.GetNOfCurrentEvent();
+    p_EventID = P6Reader.GetNOfCurrentEvent();
     
-    if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
+    //    if (p_EventID == 5290 || p_EventID == 6868 || g_EventID == 8999) { continue; }
+    //could in reality use p_EventID both times, but this reminds me that the bad event in Pythia is 6868 and the bad event in Geant is 8999.        
     
+    //if ( p_EventID != g_EventID ) { cerr << endl << "ERROR: READING DIFFERENT EVENTS " << endl; exit(1);}
+    //if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
+
     p_Particles.clear(); g_Particles.clear();
     p_JetsInitial.clear(); g_JetsInitial.clear(); //clear all containers
     dummy.clear();
     
-    nEvents++;  P6Reader.PrintStatus(10);  GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
+    nEvents++;  P6Reader.PrintStatus(10); // GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
     
     p_event = P6Reader.GetEvent();       p_header = p_event->GetHeader();           // Get the PYTHIA header and event
     g_event = GEANTReader.GetEvent();    g_header = g_event->GetHeader();           // Get GEANT event header and event
-    
-    p_EventID = P6Reader.GetNOfCurrentEvent();
-    if ( p_EventID != g_EventID ) { cout << endl << "ERROR: READING DIFFERENT EVENTS " <<endl; }
-    
+       
     //BEGIN EVENS
     if (p_EventID % 2 == 0) { //even events will be used for the response
+      if (GEANTReader.ReadEvent(event) != 0) { nAccepted_ge_even ++; }
+      if (P6Reader.ReadEvent(event) != 0) {nAccepted_py_even ++; }
+      
       p_container = P6Reader.GetOutputContainer();      // Pythia container
       g_container = GEANTReader.GetOutputContainer();      // GEANT container
       
@@ -171,13 +238,13 @@ int main (int argc, const char ** argv) {
       geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();	
       
       //TEMP! CHANGE BACK IF DOESN'T WORK!
-      if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
+      //if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
       
-      if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
+      //  if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
       
       p_wt = LookupRun12Xsec( pythiaFilename );
       g_wt = LookupRun12Xsec( geantFilename );
-      if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
+      //if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
       mc_weight = p_wt;
       
       //  GATHER PARTICLES
@@ -190,70 +257,45 @@ int main (int argc, const char ** argv) {
       p_JetsInitial = sorted_by_pt(sjet_gen(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet_det(g_Cluster.inclusive_jets()));    // EXTRACT JETS
       vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
       
-      //Implementing a neutral energy fraction cut of 90% on inclusive jets
-      ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
+      //Implementing a neutral energy fraction cut of 90% on inclusive det-level jets
+      /*      ApplyNEFSelection(p_JetsInitial, p_Jets);*/ p_Jets = p_JetsInitial; ApplyNEFSelection(g_JetsInitial, g_Jets);
       
       vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
-      //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)                                                                              
+
+      if (DiscardEvent(pythiaFilename, p_Jets, g_Jets)) { counter_debug1 ++; continue; }
+
+      //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)                                    
+                                          
       for (int i = 0; i < p_Jets.size(); ++ i) {
 	p_GroomedJets.push_back(sd(p_Jets[i]));
       }
       for (int i = 0; i < g_Jets.size(); ++ i) {
 	g_GroomedJets.push_back(sd(g_Jets[i]));
       }
-      /*      
-      //TEST!
-      bool bad_event = 0;
-      std::string tail = ((string) pythiaFilename).substr(((string) pythiaFilename).size() - 10);
-      std::string upstring = tail.substr(0,2);
-      std::string upstring_copy = upstring;
-      if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = \
-	    upstring.substr(0,1);}}
-      int upbin = std::stoi(upstring);
+
+      nJets_py_even += p_Jets.size(); nJets_ge_even += g_Jets.size();
       
+      //unmatched filling
       for (int i = 0; i < p_Jets.size(); ++ i) {
-	if ((p_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	  std::cout << "from " << pythiaFilename << " removing pythia event " << p_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << p_Jets[i].pt() << " " << p_Jets[i].eta() << " " << p_Jets[i].phi() << " " << p_Jets[i].m() << std::endl;
-	  bad_event = 1;
-	}
+	pt_gen_even->Fill(p_Jets[i].pt(), mc_weight);
+	//cout << "PT_GEN_EVEN " << p_Jets[i].pt() << endl;
       }
       for (int i = 0; i < g_Jets.size(); ++ i) {
-	if ((g_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	  std::cout << "from " << pythiaFilename << " removing geant event " << g_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << g_Jets[i].pt() << " " << g_Jets[i].eta() << " " << g_Jets[i].phi() << " " << g_Jets[i].m() << std::endl;
-	  bad_event = 1;
-	}
+	pt_det_even->Fill(g_Jets[i].pt(), mc_weight);
+	//pt_det_even_pt15->Fill(g_Jets[i].pt(), mc_weight);
+	//cout << "PT_DET_EVEN " << g_Jets[i].pt() << endl;
       }
-      
-      if (bad_event == 1) {counter_debug1 ++; continue; }
-      if (bad_event == 1) {std::cout << "should never see this message" << std::endl;}
-      */
+      //      cout << "EVEN RESPONSE: " << endl;
       //constructing even population sample responses for the MC closure test
-      if (p_Jets.size() != 0) {
-	int position = -1; 
-	MatchJets(g_Jets, p_Jets[0], position);
-	if (position == -1) { //didn't find a match
-          pt_even.Miss(p_Jets[0].pt(), mc_weight);
-          m_even.Miss(p_Jets[0].m(), mc_weight);
-	}
-	else { //found a match
-          pt_even.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
-          m_even.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
-	}
-      }
-      
-      //fake rate  
-      if (g_Jets.size() != 0) {
-	int position = -1;
-	MatchJets(p_Jets, g_Jets[0], position);
-	if (position == -1) { //didn't find a match
-          pt_even.Fake(g_Jets[0].pt(), mc_weight);
-          m_even.Fake(g_Jets[0].m(), mc_weight);
-	}
-      }
+      ConstructResponses(res/*pt_even*/, g_Jets, p_Jets, g_GroomedJets, p_GroomedJets, ge_arr, py_arr, mc_weight/*, nEntries_even, nFakes_even, nMisses_even, nMatches_even*/);
+
     } //END EVENS
     
       //BEGIN ODDS
-    if (p_EventID % 2 != 0) { //odd events will be used for the 'data'
+    else if (p_EventID % 2 != 0) { //odd events will be used for the 'data'
+      if (GEANTReader.ReadEvent(event) != 0) { nAccepted_ge_odd ++; }
+      if (P6Reader.ReadEvent(event) != 0) {nAccepted_py_odd ++; }
+      
       p_container = P6Reader.GetOutputContainer();      // Pythia container
       g_container = GEANTReader.GetOutputContainer();      // GEANT container
       
@@ -261,13 +303,13 @@ int main (int argc, const char ** argv) {
       geantFilename =  GEANTReader.GetInputChain()->GetCurrentFile()->GetName();
       
       //TEMP! CHANGE BACK IF DOESN'T WORK!
-      if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
+      //if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue; }
       
-      if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
+      //if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
       
       p_wt = LookupRun12Xsec( pythiaFilename );
       g_wt = LookupRun12Xsec( geantFilename );
-      if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
+      // if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
       mc_weight = p_wt;
       
       //  GATHER PARTICLES
@@ -280,10 +322,13 @@ int main (int argc, const char ** argv) {
       p_JetsInitial = sorted_by_pt(sjet_gen(p_Cluster.inclusive_jets())); g_JetsInitial = sorted_by_pt(sjet_det(g_Cluster.inclusive_jets()));    // EXTRACT JETS
       vector<PseudoJet> p_Jets; vector<PseudoJet> g_Jets;
       
-      //Implementing a neutral energy fraction cut of 90% on inclusive jets
-      ApplyNEFSelection(p_JetsInitial, p_Jets); ApplyNEFSelection(g_JetsInitial, g_Jets);
+      //Implementing a neutral energy fraction cut of 90% on inclusive det-level jets
+      /*      ApplyNEFSelection(p_JetsInitial, p_Jets);*/ p_Jets = p_JetsInitial; ApplyNEFSelection(g_JetsInitial, g_Jets);
       
       vector<PseudoJet> p_GroomedJets; vector<PseudoJet> g_GroomedJets;
+
+      if (DiscardEvent(pythiaFilename, p_Jets, g_Jets)) { counter_debug1 ++; continue; }
+
       //loop over the jets which passed cuts, groom them, and add to a vector (sorted by pt of the original jet)
       for (int i = 0; i < p_Jets.size(); ++ i) {
 	p_GroomedJets.push_back(sd(p_Jets[i]));
@@ -291,86 +336,80 @@ int main (int argc, const char ** argv) {
       for (int i = 0; i < g_Jets.size(); ++ i) {
 	g_GroomedJets.push_back(sd(g_Jets[i]));
       }
-      /*
-      //TEST!
-      bool bad_event = 0;
-      std::string tail = ((string) pythiaFilename).substr(((string) pythiaFilename).size() - 10);
-      std::string upstring = tail.substr(0,2);
-      std::string upstring_copy = upstring;
-      if (upstring.find("_") != std::string::npos || upstring.find("-") != std::string::npos) { if (upstring.substr(1,1) != "_") {upstring = upstring.substr(1,1);} else {upstring = \
-	    upstring.substr(0,1);}}
-      int upbin = std::stoi(upstring);
       
-      for (int i = 0; i < p_Jets.size(); ++ i) {
-	if ((p_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	  std::cout << "from " << pythiaFilename << " removing pythia event " << p_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << p_Jets[i].pt() << " " << p_Jets[i].eta() << " " << p_Jets[i].phi() << " " << p_Jets[i].m() << std::endl;
-	  bad_event = 1;
-	}
-      }
-      for (int i = 0; i < g_Jets.size(); ++ i) {
-	if ((g_Jets[i].pt() > 2*upbin) && upstring_copy != "-1") {
-	  std::cout << "from " << pythiaFilename << " removing geant event " << g_EventID << " with weight " << mc_weight << " and jet with pt, eta, phi, and m: " << g_Jets[i].pt() << " " << g_Jets[i].eta() << " " << g_Jets[i].phi() << " " << g_Jets[i].m() << std::endl;
-	  bad_event = 1;
-	}
-      }
-      
-      if (bad_event == 1) {counter_debug1 ++; continue; }
-      if (bad_event == 1) {std::cout << "should never see this message" << std::endl;}
-      */
+      nJets_py_odd += p_Jets.size(); nJets_ge_odd += g_Jets.size();
       
       //unmatched filling
       for (int i = 0; i < p_Jets.size(); ++ i) {
 	pt_gen_odd->Fill(p_Jets[i].pt(), mc_weight);
+	m_gen->Fill(p_Jets[i].pt(), mc_weight);
+	zg_gen->Fill(p_GroomedJets[i].structure_of<SD>().symmetry(), mc_weight);
+	rg_gen->Fill(p_GroomedJets[i].structure_of<SD>().delta_R(), mc_weight);
+	ptg_gen->Fill(p_GroomedJets[i].pt(), mc_weight);
+	mg_gen->Fill(p_GroomedJets[i].m(), mc_weight);
+	
+	pt_m_gen->Fill(p_Jets[i].m(), p_Jets[i].pt(), mc_weight);
+	pt_zg_gen->Fill(p_GroomedJets[i].structure_of<SD>().symmetry(), p_Jets[i].pt(), mc_weight);
+	pt_rg_gen->Fill(p_GroomedJets[i].structure_of<SD>().delta_R(), p_Jets[i].pt(), mc_weight);
+	pt_ptg_gen->Fill(p_GroomedJets[i].pt(), p_Jets[i].pt(), mc_weight);
+	pt_mg_gen->Fill(p_GroomedJets[i].m(), p_Jets[i].m(), mc_weight);
+	
+	//cout << "PT_GEN_ODD " << p_Jets[i].pt() << endl;
       }
       for (int i = 0; i < g_Jets.size(); ++ i) {
 	pt_det_odd->Fill(g_Jets[i].pt(), mc_weight);
+	m_det->Fill(g_Jets[i].pt(), mc_weight);
+	zg_det->Fill(g_GroomedJets[i].structure_of<SD>().symmetry(), mc_weight);
+	rg_det->Fill(g_GroomedJets[i].structure_of<SD>().delta_R(), mc_weight);
+	ptg_det->Fill(g_GroomedJets[i].pt(), mc_weight);
+	mg_det->Fill(g_GroomedJets[i].m(), mc_weight);
+	
+	pt_m_det->Fill(g_Jets[i].m(), g_Jets[i].pt(), mc_weight);
+	pt_zg_det->Fill(g_GroomedJets[i].structure_of<SD>().symmetry(), g_Jets[i].pt(), mc_weight);
+	pt_rg_det->Fill(g_GroomedJets[i].structure_of<SD>().delta_R(), g_Jets[i].pt(), mc_weight);
+	pt_ptg_det->Fill(g_GroomedJets[i].pt(), g_Jets[i].pt(), mc_weight);
+	pt_mg_det->Fill(g_GroomedJets[i].pt(), g_Jets[i].pt(), mc_weight);
+	
+	//pt_det_odd_pt15->Fill(g_Jets[i].pt(), mc_weight);
+	//cout << "PT_DET_ODD " << g_Jets[i].pt() << endl;
       }
-      
+      //cout << "ODD RESPONSE: " << endl;
       //constructing odd population sample responses for the MC Closure test
-      if (p_Jets.size() != 0) {
-	int position = -1; 
-	MatchJets(g_Jets, p_Jets[0], position);
-	if (position == -1) { //didn't find a match
-          pt_odd.Miss(p_Jets[0].pt(), mc_weight);
-          m_odd.Miss(p_Jets[0].m(), mc_weight);
-	}
-	else { //found a match
-          pt_odd.Fill(g_Jets[position].pt(), p_Jets[0].pt(), mc_weight);
-          m_odd.Fill(g_Jets[position].m(), p_Jets[0].m(), mc_weight);
-	}
-      }
+      //ConstructResponses(/*pt_odd*/, g_Jets, p_Jets, geDummy, pyDummy, mc_weight, nEntries_odd, nFakes_odd, nMisses_odd, nMatches_odd);
       
-      //fake rate  
-      if (g_Jets.size() != 0) {
-	int position = -1;
-	MatchJets(p_Jets, g_Jets[0], position);
-	if (position == -1) { //didn't find a match
-          pt_odd.Fake(g_Jets[0].pt(), mc_weight);
-          m_odd.Fake(g_Jets[0].m(), mc_weight);
-	}
-      }
-      
-      p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total
+      p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total 
     } //END ODDS
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    
   }
-  
   //~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ END EVENT LOOP! ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+  
+  //nEntries_even = pt_even->Hresponse()->GetEntries(); nEntries_odd = pt_odd->Hresponse()->GetEntries();
+  checks->Fill();
+
   
   TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
   
   std::cout << std::endl << std::endl << "Of " << nEvents << " events" << std::endl;
-  std::cout << p_NJets << " gen jets have been found" << std::endl;
-  std::cout << g_NJets << " det jets have been found" << std::endl << std::endl;
+  std::cout << p_NJets << " gen jets have been found in sample of odds" << std::endl;
+  std::cout << g_NJets << " det jets have been found in sample of odds" << std::endl << std::endl;
   std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
   std::cout << "Discarded " << counter_debug1 << " events on grounds of the found jets being too much higher than the pT-hat range" << std::endl;
 
-  eventTree->Write("event");
+  eventTree->Write("event"); checks->Write("checks");
 
-  pt_odd.Write(); pt_even.Write(); m_odd.Write(); m_even.Write();
-
-  pt_gen_odd->Write(); pt_det_odd->Write();
+  pt_odd->Write(); pt_even->Write(); m_res->Write(); zg_res->Write(); rg_res->Write(); ptg_res->Write(); mg_res->Write();
+  
+  pt_m_response->Write(); pt_zg_response->Write(); pt_rg_response->Write();
+  pt_ptg_response->Write(); pt_mg_response->Write();
+  
+  pt_gen_odd->Write(); pt_det_odd->Write(); pt_gen_even->Write(); pt_det_even->Write();
+  m_gen->Write(); m_det->Write(); zg_gen->Write(); zg_det->Write();
+  rg_gen->Write(); rg_det->Write(); ptg_gen->Write(); ptg_det->Write();
+  mg_gen->Write(); mg_det->Write();
+  
+  pt_m_gen->Write(); pt_m_det->Write(); pt_zg_gen->Write(); pt_zg_det->Write(); pt_rg_gen->Write(); pt_rg_det->Write();
+  pt_ptg_gen->Write(); pt_ptg_det->Write(); pt_mg_gen->Write(); pt_mg_det->Write(); 
+  
   fout->Close();
 
   return 0;
