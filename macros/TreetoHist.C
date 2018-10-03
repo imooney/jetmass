@@ -98,20 +98,20 @@ void HistsFromTree(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> h
   return;
 }
 
-void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> hists2D) {
+void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<TH2D*> hists2D, std::vector<TH3D*> hists3D, const char * treeflag) {
   vector<double> *deltaPt = 0; vector<double> *deltaM = 0; vector<double> *deltaZg = 0; vector<double> *deltaRg = 0;
   vector<double> *ratioPt = 0; vector<double> *ratioM = 0; vector<double> *ratioZg = 0; vector<double> *ratioRg = 0;
-  vector<double> *pyPt = 0; vector<double> *pyM = 0;
+  vector<double> *pyPt = 0; vector<double> *pyEta = 0; vector<double> *pyM = 0;
   vector<double> *pyZg = 0; vector<double> *pyRg = 0; vector<double> *pyPtg = 0; vector<double> *pyMg = 0;
-  vector<double> *gePt = 0; vector<double> *geM = 0;
+  vector<double> *gePt = 0; vector<double> *geEta = 0; vector<double> *geM = 0;
   vector<double> *geZg = 0; vector<double> *geRg = 0; vector<double> *gePtg = 0; vector<double> *geMg = 0;
   double weight = 1;
 
-  TTree* t = (TTree*) file->Get("event");
+  TTree* t = (TTree*) file->Get(treeflag);
   
-  t->SetBranchAddress("pyPt",&pyPt); t->SetBranchAddress("pyM",&pyM); t->SetBranchAddress("pyZg", &pyZg); t->SetBranchAddress("pyRg", &pyRg);
+  t->SetBranchAddress("pyPt",&pyPt); t->SetBranchAddress("pyEta",&pyEta); t->SetBranchAddress("pyM",&pyM); t->SetBranchAddress("pyZg", &pyZg); t->SetBranchAddress("pyRg", &pyRg);
   t->SetBranchAddress("pyPtg",&pyPtg); t->SetBranchAddress("pyMg",&pyMg);
-  t->SetBranchAddress("gePt",&gePt); t->SetBranchAddress("geM",&geM); t->SetBranchAddress("geZg", &geZg); t->SetBranchAddress("geRg", &geRg);
+  t->SetBranchAddress("gePt",&gePt); t->SetBranchAddress("geEta",&geEta); t->SetBranchAddress("geM",&geM); t->SetBranchAddress("geZg", &geZg); t->SetBranchAddress("geRg", &geRg);
   t->SetBranchAddress("gePtg",&gePtg); t->SetBranchAddress("geMg",&geMg);
   t->SetBranchAddress("weight", &weight);
 
@@ -173,8 +173,11 @@ void HistsFromTreeMatched(TFile* file, std::vector<TH1D*> hists1D, std::vector<T
 	hists2D[8]->Fill(pyPt->at(j),(gePtg->at(j) - pyPtg->at(j)) / (double) pyPtg->at(j), weight);
 	hists2D[9]->Fill(gePtg->at(j) / (double) pyPtg->at(j), pyPt->at(j), weight);
 	hists2D[10]->Fill(pyPt->at(j),(geMg->at(j) - pyMg->at(j)) / (double) pyMg->at(j), weight);
-	hists2D[11]->Fill(geMg->at(j) / (double) pyMg->at(j), pyPt->at(j), weight);		
+	hists2D[11]->Fill(geMg->at(j) / (double) pyMg->at(j), pyPt->at(j), weight);
       }
+      if (geEta->at(j) < -0.2) {hists3D[0]->Fill(geM->at(j) / (double) pyM->at(j), geM->at(j), gePt->at(j), weight);}
+      else if (geEta->at(j) > -0.2 && geEta->at(j) < 0.2) {hists3D[1]->Fill(geM->at(j) / (double) pyM->at(j), geM->at(j), gePt->at(j), weight);} 
+      else if (geEta->at(j) > 0.2) {hists3D[2]->Fill(geM->at(j) / (double) pyM->at(j), geM->at(j), gePt->at(j), weight);}
     }
   }
   double percent_sd_loss = 100 * (double) count_sd_loss / (double) count_sd;
@@ -295,7 +298,7 @@ void TreetoHist() {
   string filetype = ".pdf";
 
   TFile* matchFile = new TFile( (dir + matchin + file).c_str(), "READ");
-  TFile* pyFile = new TFile( (dir + pyin + file).c_str(), "READ");
+  TFile* pyFile = new TFile( (dir + pyin + "full2025.root").c_str(), "READ");
   TFile* geFile = new TFile( (dir + gein +file).c_str(), "READ");
   TFile* dataFile = new TFile( (dir + datain + file).c_str(), "READ");
   TFile* p8File = new TFile( (dir + p8in + file).c_str(), "READ");
@@ -436,6 +439,26 @@ void TreetoHist() {
   TH1D* gePtg = new TH1D("gePtg","",9,15,60);
   TH1D* geMg = new TH1D("geMg","",20,0,10);
   
+  //corrected matched hists (1D)
+  TH1D* deltaPt_corr = new TH1D("deltaPt_corr","",220,-1,1);
+  TH1D* deltaM_corr = new TH1D("deltaM_corr","",220,-1,1);
+  TH1D* deltaZg_corr = new TH1D("deltaZg_corr","",220,-1,1);
+  TH1D* deltaRg_corr = new TH1D("deltaRg_corr","",220,-1,1);
+  TH1D* deltaPtg_corr = new TH1D("deltaPtg_corr","",220,-1,1);
+  TH1D* deltaMg_corr = new TH1D("deltaMg_corr","",220,-1,1);
+  TH1D* ratioPt_corr = new TH1D("ratioPt_corr","",51,0,2);
+  TH1D* ratioM_corr = new TH1D("ratioM_corr","",51,0,2);
+  TH1D* ratioZg_corr = new TH1D("ratioZg_corr","",51,0,2);
+  TH1D* ratioRg_corr = new TH1D("ratioRg_corr","",51,0,2);
+  TH1D* ratioPtg_corr = new TH1D("ratioPtg_corr","",51,0,2);
+  TH1D* ratioMg_corr = new TH1D("ratioMg_corr","",51,0,2);
+  TH1D* gePt_corr = new TH1D("gePt_corr","",9,15,60);
+  TH1D* geM_corr = new TH1D("geM_corr","",20,0,10);
+  TH1D* geZg_corr = new TH1D("geZg_corr","",20,0,1);
+  TH1D* geRg_corr = new TH1D("geRg_corr","",20,0,1);
+  TH1D* gePtg_corr = new TH1D("gePtg_corr","",9,15,60);
+  TH1D* geMg_corr = new TH1D("geMg_corr","",20,0,10);
+  
   const int nBins_m = 7;
   double edges_m[nBins_m + 1] = {5,10,15,20,25,30,40,60};
 
@@ -452,6 +475,32 @@ void TreetoHist() {
   TH2D *ratioPtgvPyPt = new TH2D("ratioPtgvPyPt",";p_{T,g}^{det} / p_{T,g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
   TH2D *deltaMgvPyPt = new TH2D("deltaMgvPyPt",";Gen. p^{jet}_{T} [GeV/c];#Delta M_{g} (Det - Gen) / M_{g}^{gen-jet}",11,5,60,220,-1,1);
   TH2D *ratioMgvPyPt = new TH2D("ratioMgvPyPt",";M_{g}^{det} / M_{g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+
+  //corrected matched hists (2D)
+  TH2D *deltaPtvPyPt_corr = new TH2D("deltaPtvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta p_{T}^{jet} (Corr - Gen) / p_{T}^{gen-jet}",11,5,60,220,-1,1);
+  TH2D *ratioPtvPyPt_corr = new TH2D("ratioPtvPyPt_corr",";p_{T}^{corr-jet} / p_{T}^{gen-jet};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+  TH2D *deltaMvPyPt_corr = new TH2D("deltaMvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta M_{jet} (Corr - Gen) / M^{gen}_{jet}",11,5,60,220,-1,1);
+  TH2D *ratioMvPyPt_corr = new TH2D("ratioMvPyPt_corr",";M^{corr}_{jet} / M^{gen}_{jet};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+  TH2D *deltaZgvPyPt_corr = new TH2D("deltaZgvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta z_{g} (Corr - Gen)",11,5,60,220,-1,1);
+  TH2D *ratioZgvPyPt_corr = new TH2D("ratioZgvPyPt_corr",";z_{g}^{corr} / z_{g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+  TH2D *deltaRgvPyPt_corr = new TH2D("deltaRgvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta R_{g} (Corr - Gen)",11,5,60,220,-1,1);
+  TH2D *ratioRgvPyPt_corr = new TH2D("ratioRgvPyPt_corr",";R_{g}^{corr} / R_{g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+  TH2D *deltaPtgvPyPt_corr = new TH2D("deltaPtgvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta p_{T,g} (Corr - Gen) / p_{T,g}^{gen-jet}",11,5,60,220,-1,1);
+  TH2D *ratioPtgvPyPt_corr = new TH2D("ratioPtgvPyPt_corr",";p_{T,g}^{corr} / p_{T,g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+  TH2D *deltaMgvPyPt_corr = new TH2D("deltaMgvPyPt_corr",";Gen. p^{jet}_{T} [GeV/c];#Delta M_{g} (Corr - Gen) / M_{g}^{gen-jet}",11,5,60,220,-1,1);
+  TH2D *ratioMgvPyPt_corr = new TH2D("ratioMgvPyPt_corr",";M_{g}^{corr} / M_{g}^{gen};Gen. p^{jet}_{T} [GeV/c]",51,0,2,nBins_m, edges_m);
+
+  //matched hists (3D)
+  TH3D *mass_res_v_py_m_pt_eta_lo = new TH3D("mass_res_v_py_m_pt_eta_lo","",51,0,2,20,0,10,9,15,60);
+  TH3D *mass_res_v_py_m_pt_eta_mid = new TH3D("mass_res_v_py_m_pt_eta_mid","",51,0,2,20,0,10,9,15,60);
+  TH3D *mass_res_v_py_m_pt_eta_hi = new TH3D("mass_res_v_py_m_pt_eta_hi","",51,0,2,20,0,10,9,15,60);
+  
+  //corrected matched hists (3D)
+  TH3D *mass_res_v_py_m_pt_eta_lo_corr = new TH3D("mass_res_v_py_m_pt_eta_lo_corr","",51,0,2,20,0,10,9,15,60);
+  TH3D *mass_res_v_py_m_pt_eta_mid_corr = new TH3D("mass_res_v_py_m_pt_eta_mid_corr","",51,0,2,20,0,10,9,15,60);
+  TH3D *mass_res_v_py_m_pt_eta_hi_corr = new TH3D("mass_res_v_py_m_pt_eta_hi_corr","",51,0,2,20,0,10,9,15,60);
+  
+  
   /*
   //hists to be split into evens and odds for MC Closure tests
   TH1D* pyPtEven = new TH1D("pyPtEven","",15,5,80); TH1D* pyPtOdd = new TH1D("pyPtOdd","",15,5,80);
@@ -480,6 +529,12 @@ void TreetoHist() {
 
   vector<TH1D*> m_hists1D = {deltaPt,deltaM,deltaZg,deltaRg,deltaPtg,deltaMg,ratioPt,ratioM,ratioZg,ratioRg,ratioPtg,ratioMg,pyPt,pyM,pyZg,pyRg,pyPtg,pyMg,gePt,geM,geZg,geRg,gePtg,geMg};
   vector<TH2D*> m_hists2D = {deltaPtvPyPt,ratioPtvPyPt,deltaMvPyPt,ratioMvPyPt,deltaZgvPyPt,ratioZgvPyPt,deltaRgvPyPt,ratioRgvPyPt,deltaPtgvPyPt,ratioPtgvPyPt,deltaMgvPyPt,ratioMgvPyPt};
+  vector<TH3D*> m_hists3D = {mass_res_v_py_m_pt_eta_lo, mass_res_v_py_m_pt_eta_mid, mass_res_v_py_m_pt_eta_hi};
+  
+  vector<TH1D*> m_corr1D = {deltaPt_corr,deltaM_corr,deltaZg_corr,deltaRg_corr,deltaPtg_corr,deltaMg_corr,ratioPt_corr,ratioM_corr,ratioZg_corr,ratioRg_corr,ratioPtg_corr,ratioMg_corr,pyPt,pyM,pyZg,pyRg,pyPtg,pyMg,gePt_corr,geM_corr,geZg_corr,geRg_corr,gePtg_corr,geMg_corr};
+  vector<TH2D*> m_corr2D = {deltaPtvPyPt_corr,ratioPtvPyPt_corr,deltaMvPyPt_corr,ratioMvPyPt_corr,deltaZgvPyPt_corr,ratioZgvPyPt_corr,deltaRgvPyPt_corr,ratioRgvPyPt_corr,deltaPtgvPyPt_corr,ratioPtgvPyPt_corr,deltaMgvPyPt_corr,ratioMgvPyPt_corr};
+  vector<TH3D*> m_corr3D = {mass_res_v_py_m_pt_eta_lo_corr, mass_res_v_py_m_pt_eta_mid_corr, mass_res_v_py_m_pt_eta_hi_corr};  
+
   /*
   vector<TH1D*> c_hists1D_py = {pyPtEven,pyPtOdd,pyMEven,pyMOdd,pyZgEven,pyZgOdd,pyRgEven,pyRgOdd,pyPtgEven,pyPtgOdd,pyMgEven,pyMgOdd};
   vector<TH1D*> c_hists1D_ge = {gePtEven,gePtOdd,geMEven,geMOdd,geZgEven,geZgOdd,geRgEven,geRgOdd,gePtgEven,gePtgOdd,geMgEven,geMgOdd};
@@ -487,8 +542,9 @@ void TreetoHist() {
   HistsFromTree(dataFile, d_hists1D, d_hists2D, 1);  
   HistsFromTree(geFile, g_hists1D, g_hists2D, 0);
   HistsFromTree(pyFile, p_hists1D, p_hists2D, 0);
-  HistsFromTreeP8(p8File, p8_hists1D, p8_hists2D, 0);
-  HistsFromTreeMatched(matchFile, m_hists1D, m_hists2D);
+  //  HistsFromTreeP8(p8File, p8_hists1D, p8_hists2D, 0);
+  HistsFromTreeMatched(matchFile, m_hists1D, m_hists2D, m_hists3D,"event");
+  HistsFromTreeMatched(matchFile, m_corr1D, m_corr2D, m_corr3D,"corrected");
   /*
   HistsForMCClosure(pyFile,c_hists1D_py);
   HistsForMCClosure(geFile,c_hists1D_ge);
@@ -518,9 +574,15 @@ void TreetoHist() {
   }
   for (int i = 0; i < m_hists1D.size(); ++ i) {
     m_hists1D[i]->Write();
+    m_corr1D[i]->Write();
   }
   for (int i = 0; i < m_hists2D.size(); ++ i) {
     m_hists2D[i]->Write();
+    m_corr2D[i]->Write();
+  }
+  for (int i = 0; i < m_hists3D.size(); ++ i) {
+    m_hists3D[i]->Write();
+    m_corr3D[i]->Write();
   }
   /*
   for (int i = 0; i < c_hists1D_py.size(); ++ i) {

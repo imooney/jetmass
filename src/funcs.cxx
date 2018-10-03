@@ -110,22 +110,18 @@ namespace Analysis {
       fastjet::PseudoJet current = fastjet::PseudoJet( *sv );
 
       // current.set_user_index( sv->GetCharge() );
-
       //      if (py == 1 && full == 1) {std::cout << "starting with charge: " << sv->GetCharge() << " for particle " << i << std::endl;}
       
-      if (sv->GetCharge() != 0 && py == 0) {
+      if (sv->GetCharge() != 0 /*&& py == 0*/) {
 	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), chPionMass); //assigning pion mass to charged particles
-      }
+      }/*
       if (py != 0) {
 	current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), current.m());
       }
-
+       */
       if ((sv->GetCharge() == 0) && (full == 0)) { continue; } // if we don't want full jets, skip neutrals
-
       current.set_user_index( sv->GetCharge() );
-      
       // if (py == 1 && full == 1) {std::cout << "ending with charge: " << current.user_index() << " for particle " << i << std::endl;}
-      
       Particles.push_back(current);
     }
     return;
@@ -395,10 +391,11 @@ namespace Analysis {
 	  //  nMatches ++; nEntries ++;
 	  g_tree[0].push_back(g_matches[i].pt());
 	  g_tree[1].push_back(g_matches[i].m());
-	  std::cout << g_tree[1][0] << std::endl;
+	  g_tree[6].push_back(g_matches[i].eta());
 	  
 	  p_tree[0].push_back(p_matches[i].pt());
 	  p_tree[1].push_back(p_matches[i].m()); 
+	  p_tree[6].push_back(p_matches[i].eta());
 	  //std::cout << "MATCH p:" << p_matches[i].pt() << " g:" << g_matches[i].pt() << std::endl;
 	}
 	for (int i = 0; i < g_sd_matches.size(); ++ i) {

@@ -38,29 +38,91 @@ void DivideCanvas(TCanvas *can, const std::string log_scale, const unsigned rows
     return;
 }
 
+//projects a 3D histogram in desired ranges and returns an array of the (2D) projections on desired axis
+//For 3D plots, have to use SetRange instead of SetRangeUser for some stupid reason. => pass bin numbers instead of bin values to the function 
+std::vector<TH2D*> Projection3D (TH3D * hist3D, const int nBins, int * ranges, const std::string axis) {
+  std::vector<TH2D*> proj2Ds;
+  for (int i = 0; i < nBins; ++ i) {
+    std::string low = std::to_string(ranges[i]);
+    std::string high = std::to_string(ranges[i+1]);
+    std::string low_rough = low.substr(0,2);
+    std::string high_rough = high.substr(0,2);
+    if (low_rough.substr(1,2) == ".") {low_rough = low_rough.substr(0,1);}
+    if (high_rough.substr(1,2) == ".") {high_rough = high_rough.substr(0,1);}
+    if (axis == "xy") {
+      hist3D->GetZaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else if (axis == "yx") {
+      hist3D->GetZaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else if (axis == "yz") {
+      hist3D->GetXaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else if (axis == "zy") {
+      hist3D->GetXaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else if (axis == "xz") {
+      hist3D->GetYaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else if (axis == "zx") {
+      hist3D->GetYaxis()->SetRange(ranges[i],ranges[i+1]);
+      proj2Ds.push_back((TH2D*) hist3D->Project3D((hist3D->GetName() + axis +"e"+ low_rough + high_rough).c_str()));
+    }
+    else {
+      std::cerr << "Improper axis given for projections. Exiting." << std::endl; exit(1);
+    }
+    proj2Ds[i]->SetTitle("");
+  }
+  return proj2Ds;
+}
+
+
 //projects a 2D histogram in desired ranges and returns an array of the (1D) projections on desired axis
 std::vector<TH1D*> Projection2D (TH2D * hist2D, const int nBins, double * ranges, const std::string axis) {
   std::vector<TH1D*> proj1Ds;
-    for (int i = 0; i < nBins; ++ i) {
-      std::string low = std::to_string(ranges[i]);
-      std::string high = std::to_string(ranges[i+1]);
-      std::string low_rough = low.substr(0,2);
-      std::string high_rough = high.substr(0,2);
-      if (low_rough.substr(1,2) == ".") {low_rough = low_rough.substr(0,1);}
-      if (high_rough.substr(1,2) == ".") {high_rough = high_rough.substr(0,1);}
-      if (axis == "x" || axis == "X" || axis == "1") {
-	proj1Ds.push_back(hist2D->ProjectionX((hist2D->GetName() + axis + low_rough + high_rough).c_str(),ranges[i],ranges[i+1]));
-      }
-      else if (axis == "y" || axis == "Y" || axis == "2") {
-	proj1Ds.push_back(hist2D->ProjectionY((hist2D->GetName() + axis + low_rough + high_rough).c_str(),ranges[i],ranges[i+1]));
-      }
-      else {
-	std::cerr << "Improper axis given for projections. Exiting." << std::endl; exit(1);
-      }
-      proj1Ds[i]->SetTitle("");
+  for (int i = 0; i < nBins; ++ i) {
+    std::string low = std::to_string(ranges[i]);
+    std::string high = std::to_string(ranges[i+1]);
+    std::string low_rough = low.substr(0,2);
+    std::string high_rough = high.substr(0,2);
+    if (low_rough.substr(1,2) == ".") {low_rough = low_rough.substr(0,1);}
+    if (high_rough.substr(1,2) == ".") {high_rough = high_rough.substr(0,1);}
+    if (axis == "x" || axis == "X" || axis == "1") {
+      proj1Ds.push_back(hist2D->ProjectionX((hist2D->GetName() + axis + low_rough + high_rough).c_str(),ranges[i],ranges[i+1]));
     }
-    return proj1Ds;
+    else if (axis == "y" || axis == "Y" || axis == "2") {
+      proj1Ds.push_back(hist2D->ProjectionY((hist2D->GetName() + axis + low_rough + high_rough).c_str(),ranges[i],ranges[i+1]));
+    }
+    else {
+      std::cerr << "Improper axis given for projections. Exiting." << std::endl; exit(1);
+    }
+    proj1Ds[i]->SetTitle("");
+  }
+  return proj1Ds;
 }
+
+//profiles a 2D histogram along an axis and returns the resulting TH1
+TProfile* Profile2D (TH2D * hist2D, const std::string axis) {
+  TProfile* prof1D;
+  if (axis == "x" || axis == "X" || axis == "1") {
+    prof1D = hist2D->ProfileX((hist2D->GetName() + axis).c_str());
+  }
+  else if (axis == "y" || axis == "Y" || axis == "2") {
+    prof1D = hist2D->ProfileY((hist2D->GetName() + axis).c_str());
+  }
+  else {
+    std::cerr << "Improper axis given for projections. Exiting." << std::endl; exit(1);
+  }
+  prof1D->SetTitle("");
+  
+  return prof1D;
+}
+
 
 //prettify 1D histogram
 void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
@@ -122,6 +184,23 @@ void PrettifyTGraph (TGraphErrors * gr, const Color_t markColor, const Style_t m
     }
     return;
 }
+
+//prettify TProfile
+void PrettifyTProfile (TProfile * pr, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
+		     const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
+  pr->SetMarkerColor(markColor); pr->SetMarkerStyle(markStyle); pr->SetMarkerSize(markSize); pr->SetLineColor(lineColor);
+    pr->SetTitle("");
+    pr->GetXaxis()->SetTitle((xTitle).c_str()); pr->GetYaxis()->SetTitle((yTitle).c_str());
+    pr->GetXaxis()->SetRangeUser(lowx, highx);
+    if (highx != -1) {
+        pr->GetXaxis()->SetRangeUser(lowx, highx);
+    }
+    if (highy != -1) {
+        pr->GetYaxis()->SetRangeUser(lowy, highy);
+    }
+    return;
+}
+
 
 //prettify 2D histogram
 void Prettify2D (TH2D * hist, const std::string xTitle, const std::string yTitle,
@@ -219,10 +298,10 @@ void Resolution (TH2D* DeltaObsvPt, const std::string out, const std::string fil
   return;
 }
 
-
-void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* ObsvPt_p8, const std::string out, const std::string filetype, std::string xTitle, const bool matched, const bool groom, double* pt_bins) {  
+void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const std::string out, const std::string filetype, std::string xTitle, const bool matched, const bool groom, double* pt_bins) {  
   //NOTE: this function is also used for the matched jet resolution for various observables, so "ObsvPt_ge" does not have the same meaning in this context. The other two 2Ds are unused.
-  ObsvPt_d->SetTitle(""); ObsvPt_py->SetTitle(""); ObsvPt_ge->SetTitle(""); ObsvPt_p8->SetTitle("");
+
+  ObsvPt_d->SetTitle(""); ObsvPt_py->SetTitle(""); ObsvPt_ge->SetTitle("");
   std::string kind = "";
   /*  if (matched == 1) {if (groom == 1) {kind = "gen-SD ";} else {*/kind = "gen-";//}}
   std::string cName = (std::string) "c" + (std::string) ObsvPt_ge->GetName();
@@ -235,19 +314,94 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* 
   double gen_pts[nHists+1] = {2,3,4,5,7,11};
   
   vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, gen_pts, "X");
-  //  vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
-  //  vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
-  vector<TH1D*> p8_projs = Projection2D (ObsvPt_p8, nHists, gen_pts, "X");
- 
+  vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
+  vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
+  
   double lox, hix, loy, hiy;
   
   if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
   
   if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
 
-  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 0.5; } 
+  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 1; } 
   
   if (xTitle.find("p_{T,g} / ") != std::string::npos) {hiy = 20;}
+  
+  std::string yTitle;
+
+  if (matched == 1) {hiy /= (double) 0.039; /*std::string sub = xTitle.substr(xTitle.find(' ')); yTitle = ("1/N_{pair} dN_{pair}/d" + sub.substr(1,sub.length())).c_str();*/ yTitle = "1/N_{pair} dN_{pair}/d(ratio)";}
+  else {
+    yTitle = ("1/N_{pair} dN_{pair}/d" + xTitle.substr(xTitle.find(' '))).c_str();
+  }
+
+  if (xTitle.find("z_") != std::string::npos || xTitle.find("R_") != std::string::npos) {xTitle = (xTitle.substr(0,5)).c_str(); hiy = 7;}
+  
+  for(int i = 0; i < nHists; ++ i) {
+    Prettify1DwLineStyle(py_projs[i], kGreen, kSolid, 5, xTitle, yTitle,lox, hix, loy, hiy);
+    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
+  }
+  
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
+  //TLegend *t = TitleLegend(0.1,0.15,0.8,0.8);
+  //TLatex *t = PanelTitle();
+  TLegend *pan_leg = new TLegend(0.1,0.15,0.8,0.45); pan_leg->SetBorderSize(0);
+  if (matched == 0) {
+    pan_leg->AddEntry(py_projs[0], "PYTHIA6", "l");
+    pan_leg->AddEntry(ge_projs[0], "PYTHIA6+GEANT", "p");
+    pan_leg->AddEntry(d_projs[0], "Raw data", "p");
+  }
+
+  TLegend *tslices[nHists];
+  for (int i = 0; i < nHists; ++ i) {
+    tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{" + kind + "jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.9,0.95);
+  }
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                 
+  c->cd(1); TLatex *t = PanelTitle(); if(matched==0) { pan_leg->Draw(); }
+  for (int i = 0; i < nHists; ++ i) {
+    c->cd(i+2);
+    if (matched == 0) {
+      py_projs[i]->Draw("C"); d_projs[i]->Draw("same");
+    }
+    ge_projs[i]->Draw("same"); tslices[i]->Draw("same");
+  }
+
+  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
+  return;
+}
+
+//overloaded function: this one only compares an observable in pythia6 & pythia8
+void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, std::vector<TH1D*> & p8_projs, const std::string out, const std::string filetype, std::string xTitle, const bool matched, const bool groom, double* pt_bins) {  
+  //NOTE: this function is also used for the matched jet resolution for various observables, so "ObsvPt_ge" does not have the same meaning in this context. The other two 2Ds are unused.
+
+  /*ObsvPt_d->SetTitle("");*/ ObsvPt_py->SetTitle(""); /*ObsvPt_ge->SetTitle("");*/
+  std::string kind = "";
+  /*  if (matched == 1) {if (groom == 1) {kind = "gen-SD ";} else {*/kind = "gen-";//}}
+  std::string cName = (std::string) "c" + (std::string) ObsvPt_py->GetName();
+  TCanvas * c = MakeCanvas(cName,"0",800,600);
+  DivideCanvas(c,"0",3,2);
+  
+  const int nHists = 5;
+  //double gen_pt_bins[nHists+1] = {pt_bins[0] + 2,pt_bins[1] + 2,pt_bins[2] + 2,pt_bins[3] + 2, pt_bins[4] + 2,pt_bins[5] + 2}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc. 
+  double corresp_pts[nHists+1] ={15,20,25,30,40,60};
+  double gen_pts[nHists+1] = {2,3,4,5,7,11};
+  
+  vector<TH1D*> py_projs = Projection2D (ObsvPt_py, nHists, gen_pts, "X");
+  //  vector<TH1D*> ge_projs = Projection2D (ObsvPt_ge, nHists, pt_bins, "X");
+  //  vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
+  //vector<TH1D*> p8_projs = Projection2D (ObsvPt_p8, nHists, gen_pts, "X");
+  
+  double lox, hix, loy, hiy;
+  
+  if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
+  
+  if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
+
+  if (xTitle.find(" / ") != std::string::npos) { hiy = 0.18; } else { hiy = 1; } 
+  
+  if (xTitle.find("p_{T,g} / ") != std::string::npos) {hiy = 20;}
+  
+  hiy = 1;
   
   std::string yTitle;
 
@@ -264,7 +418,7 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* 
     //Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
     Prettify1DwLineStyle(p8_projs[i], kGreen, kDashed, 5, xTitle, yTitle, lox, hix, loy, hiy);
   }
-
+  
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
   //TLegend *t = TitleLegend(0.1,0.15,0.8,0.8);
   //TLatex *t = PanelTitle();
@@ -281,7 +435,6 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* 
     tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{" + kind + "jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.9,0.95);
   }
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                 
-  
   c->cd(1); TLatex *t = PanelTitle(); if(matched==0) { pan_leg->Draw(); }
   for (int i = 0; i < nHists; ++ i) {
     c->cd(i+2);
@@ -290,8 +443,8 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, TH2D* 
     }
     /*ge_projs[i]->Draw("same");*/ tslices[i]->Draw("same");
   }
-  cout << "vi" << endl;
-  //  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
+
+  //c->SaveAs((out + ObsvPt_py->GetName()  + "_slices" + filetype).c_str());
   return;
 }
 
@@ -306,7 +459,7 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
   
   double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
   if (flag != "pt") {loy = 0; hiy = 7;}
-  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (flag == "pt") {loy = -1; hiy = -1;} else {lox = 0; hix = 0.5;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 1;} else if (flag == "pt") {loy = -1; hiy = -1;} else {lox = 0; hix = 0.5;}
   
   //if (xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) { lox = -1; hix = -1; } else {lox = 0; hix = 0.5;}
 

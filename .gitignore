@@ -68,3 +68,7 @@ log
 
 # condor files
 CondorFile
+
+# RIVET stuff
+*.yoda
+*.hepmc

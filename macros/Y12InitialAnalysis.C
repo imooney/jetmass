@@ -79,6 +79,7 @@ void JetQA (TFile* inFile, const string flag1, const string flag2, const string 
 //Plots jet observable resolutions in slices of pT! M, pT, zg, Rg
 void Slices(TFile *inFile, const string out, const string filetype) {
   TH2D * h_dummy = new TH2D("h_dummy","",1,0,1,1,0,1);
+  vector<TH1D*> v_dummy;
   TH2D *ratPt = (TH2D*) inFile->Get("ratioPtvPyPt");
   TH2D *ratM = (TH2D*) inFile->Get("ratioMvPyPt");
   TH2D *ratZg = (TH2D*) inFile->Get("ratioZgvPyPt");
@@ -89,12 +90,12 @@ void Slices(TFile *inFile, const string out, const string filetype) {
   double pt_bins[nHists+1] = {2,3,4,5,7,11}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc.
   
   //plots slices in pT of jet observable resolutions
-  ObservablePtSlices (h_dummy, h_dummy, ratPt, h_dummy, out, filetype, "p_{T}^{det-jet} / p_{T}^{gen-jet}", 1, 0,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratM, h_dummy, out, filetype, "M_{jet}^{det} / M_{jet}^{gen}", 1, 0,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratZg, h_dummy, out, filetype, "z_{g}^{det} / z_{g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratRg, h_dummy, out, filetype, "R_{g}^{det} / R_{g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratPtg, h_dummy, out, filetype, "p_{T,g}^{det} / p_{T,g}^{gen}", 1, 1,pt_bins);
-  ObservablePtSlices (h_dummy, h_dummy, ratMg, h_dummy, out, filetype, "M_{g}^{det} / M_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratPt, out, filetype, "p_{T}^{det-jet} / p_{T}^{gen-jet}", 1, 0,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratM, out, filetype, "M_{jet}^{det} / M_{jet}^{gen}", 1, 0,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratZg, out, filetype, "z_{g}^{det} / z_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratRg, out, filetype, "R_{g}^{det} / R_{g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratPtg, out, filetype, "p_{T,g}^{det} / p_{T,g}^{gen}", 1, 1,pt_bins);
+  ObservablePtSlices (h_dummy, h_dummy, ratMg, out, filetype, "M_{g}^{det} / M_{g}^{gen}", 1, 1,pt_bins);
   
   return;
 }
@@ -121,8 +122,9 @@ void Resolutions(TFile *inFile, const string out, const string filetype) {
 
 
 //Plots jet observables! M, pT, zg, Rg
-void Observables(TFile *inFile, const string out, const string filetype) {
-  vector<TH2D*> mpt = {(TH2D*) inFile->Get("m_v_pt_d"), (TH2D*) inFile->Get("m_v_pt_p"), (TH2D*) inFile->Get("m_v_pt_g"), (TH2D*) inFile->Get("m_v_pt_p8")};
+void Observables(TFile *inFile, TFile *p8File, const string out, const string filetype) {
+  vector<TH2D*> mpt = {(TH2D*) inFile->Get("m_v_pt_d"), (TH2D*) inFile->Get("m_v_pt_p"), (TH2D*) inFile->Get("m_v_pt_g")/*, (TH2D*) inFile->Get("m_v_pt_p8")*/};
+  vector<TH1D*> p8_mpt = {(TH1D*) p8File->Get("hGen_M_ptbin_0"), (TH1D*) p8File->Get("hGen_M_ptbin_1"), (TH1D*) p8File->Get("hGen_M_ptbin_2"), (TH1D*) p8File->Get("hGen_M_ptbin_3"), (TH1D*) p8File->Get("hGen_M_ptbin_4")};
   vector<TH2D*> chfracpt = {(TH2D*) inFile->Get("ch_frac_v_pt_d"), (TH2D*) inFile->Get("ch_frac_v_pt_p"), (TH2D*) inFile->Get("ch_frac_v_pt_g")};
   vector<TH2D*> zgpt = {(TH2D*) inFile->Get("zg_v_pt_d"), (TH2D*) inFile->Get("zg_v_pt_p"), (TH2D*) inFile->Get("zg_v_pt_g")};
   vector<TH2D*> rgpt = {(TH2D*) inFile->Get("rg_v_pt_d"), (TH2D*) inFile->Get("rg_v_pt_p"), (TH2D*) inFile->Get("rg_v_pt_g")};
@@ -135,9 +137,9 @@ void Observables(TFile *inFile, const string out, const string filetype) {
   
   const int nHists = 5;
   double det_pt_bins[nHists+1] = {0,1,2,3,5,9}; //pT is usually 11 5 GeV bins from 5 to 60 GeV, so e.g. bin 0 = 5, bin 1 = 10, etc.  
-  cout << "a" << endl;
-  ObservablePtSlices(dummy, mpt[1], dummy, mpt[3], out, filetype, "M [GeV/c^{2}]", 0,0,det_pt_bins);
-  cout << "b" << endl;
+  cout << "1" << endl;
+  ObservablePtSlices(dummy, mpt[1], dummy, p8_mpt, out, filetype, "M [GeV/c^{2}]", 0,0,det_pt_bins);
+  cout << "2" << endl;
   /*
   //plots the mass for various pT ranges
   ObservablePtSlices(mpt[0], mpt[1], mpt[2], dummy, out, filetype, "M [GeV/c^{2}]", 0, 0, det_pt_bins);
@@ -168,13 +170,13 @@ void Responses(TFile* matchFile, TFile* inFile, const string out, const string f
   TH1D* ptg_p = (TH1D*) inFile->Get("ptg_p_pt15"); TH1D* ptg_g = (TH1D*) inFile->Get("ptg_g_pt15");
   TH1D* mg_p = (TH1D*) inFile->Get("mg_p_pt15"); TH1D* mg_g = (TH1D*) inFile->Get("mg_g_pt15");
 
-  Response(matchFile, "pt_res_coarse", pt_p, pt_g, "p_{T} [GeV/c]", out, filetype,"pt");
-  /*  Response(matchFile, "m_response", m_p, m_g, "M [GeV/c^{2}]", out, filetype, "mass");
-  Response(matchFile, "zg_response", zg_p, zg_g, "z_{g}", out, filetype,"");
-  Response(matchFile, "rg_response", rg_p, rg_g, "R_{g}", out, filetype,"");
-  Response(matchFile, "ptg_response", ptg_p, ptg_g, "p_{T,g} [GeV/c]", out, filetype,"pt");
+  //  Response(matchFile, "pt_res_coarse", pt_p, pt_g, "p_{T} [GeV/c]", out, filetype,"pt");
+  Response(matchFile, "m_response", m_p, m_g, "M [GeV/c^{2}]", out, filetype, "mass");
+  //Response(matchFile, "zg_response", zg_p, zg_g, "z_{g}", out, filetype,"");
+  //Response(matchFile, "rg_response", rg_p, rg_g, "R_{g}", out, filetype,"");
+  //Response(matchFile, "ptg_response", ptg_p, ptg_g, "p_{T,g} [GeV/c]", out, filetype,"pt");
   Response(matchFile, "mg_response", mg_p, mg_g, "M_{g} [GeV/c^{2}]", out, filetype,"mass");
-  */
+  
   return;
 }
 
@@ -186,30 +188,33 @@ void Y12InitialAnalysis () {
   string dir = "~/jetmass/";
   string gein = "out/sim/ge/";
   string pyin = "out/sim/py/";
+  string p8in = "production/Results/";//"macros/Results/";
   string datain = "out/data/";
   string matchin = "out/matching/";
   string in = "macros/hists/";
   string infile = "hists.root";
   string file = "full.root";
+  string p8file = "pythia8_recSD_histograms_R04.root";
   string out = "~/jetmass/plots/Y12ResolutionsandResponses/";
   string filetype = ".pdf";
   string flag1 = "full";
   string flag2 = "incl";
   
   //  TFile* pyFile = new TFile( (dir + pyin + file).c_str(), "READ");
+  TFile* p8File = new TFile( (dir + p8in + p8file).c_str(), "READ");
   //TFile* geFile = new TFile( (dir + gein + file).c_str(), "READ");
   //TFile* dataFile = new TFile( (dir + datain + file).c_str(), "READ");
   TFile* matchFile = new TFile( (dir + matchin + file).c_str(), "READ");
   TFile* inFile = new TFile( (dir + in + infile).c_str(), "READ");
-  
+
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
   //plots pT, eta, phi, and mass
-  //  JetQA(inFile, flag1, flag2, out, filetype);
+  //    JetQA(inFile, flag1, flag2, out, filetype);
   //plots the pT response matrix and the simulation pT spectra for fine-grained and coarse-grained binning
-  //  Responses(matchFile, inFile, out, filetype);
-  Observables(inFile, out, filetype); //plots jet observables: M, pT, zg, Rg, Ptg, Mg, M_cd
-  //  Slices(inFile, out, filetype); //plots the resolution of the observables in bins of pT
-  //Resolutions(inFile, out, filetype); //plots 2D observable resolution with pT and associated means & RMSs
+  // Responses(matchFile, inFile, out, filetype);
+    Observables(inFile, p8File, out, filetype); //plots jet observables: M, pT, zg, Rg, Ptg, Mg, M_cd
+  //    Slices(inFile, out, filetype); //plots the resolution of the observables in bins of pT
+  //  Resolutions(inFile, out, filetype); //plots 2D observable resolution with pT and associated means & RMSs
   
   return;
 }

@@ -94,17 +94,30 @@ int main (int argc, const char ** argv) {
   vector<double> pyPt; vector<double> pyM; vector<double> pyZg; vector<double> pyRg;
   vector<double> gePt; vector<double> geM; vector<double> geZg; vector<double> geRg;
   vector<double> pyPtg; vector<double> pyMg; vector<double> gePtg; vector<double> geMg;
+  vector<double> pyEta; vector<double> geEta;
+  vector<double> gePt_corr; vector<double> geM_corr; vector<double> geZg_corr; vector<double> geRg_corr;
+  vector<double> gePtg_corr; vector<double> geMg_corr; vector<double> geEta_corr;
   double mc_weight; int p_EventID;
 
   //vector of vector of the doubles which will fill the branches to make it easier to pass all of them to the function
-  vector<vector<double> > py_arr = {pyPt, pyM, pyZg, pyRg, pyPtg, pyMg};
-  vector<vector<double> > ge_arr = {gePt, geM, geZg, geRg, gePtg, geMg};
+  vector<vector<double> > py_arr = {pyPt, pyM, pyZg, pyRg, pyPtg, pyMg, pyEta};
+  vector<vector<double> > ge_arr = {gePt, geM, geZg, geRg, gePtg, geMg, geEta};
+  vector<vector<double> > ge_corr = {gePt_corr, geM_corr, geZg_corr, geRg_corr, gePtg_corr, geMg_corr, geEta_corr};
 
   TTree *eventTree = new TTree("event", "event");
   eventTree->Branch("pyPt", &py_arr[0]); eventTree->Branch("pyM", &py_arr[1]); eventTree->Branch("pyZg", &py_arr[2]); eventTree->Branch("pyRg", &py_arr[3]);
   eventTree->Branch("gePt", &ge_arr[0]); eventTree->Branch("geM", &ge_arr[1]); eventTree->Branch("geZg", &ge_arr[2]); eventTree->Branch("geRg", &ge_arr[3]);
   eventTree->Branch("pyPtg", &py_arr[4]); eventTree->Branch("pyMg", &py_arr[5]); eventTree->Branch("gePtg", &ge_arr[4]); eventTree->Branch("geMg", &ge_arr[5]);
+  eventTree->Branch("pyEta", &py_arr[6]); eventTree->Branch("geEta",&ge_arr[6]);
   eventTree->Branch("weight", &mc_weight); eventTree->Branch("EventID", &p_EventID);
+  
+  TTree *correctedTree = new TTree("corrected", "corrected");
+  correctedTree->Branch("pyPt", &py_arr[0]); correctedTree->Branch("pyM", &py_arr[1]); correctedTree->Branch("pyZg", &py_arr[2]); correctedTree->Branch("pyRg", &py_arr[3]);
+  correctedTree->Branch("gePt", &ge_corr[0]); correctedTree->Branch("geM", &ge_corr[1]); correctedTree->Branch("geZg", &ge_corr[2]); correctedTree->Branch("geRg", &ge_corr[3]);
+  correctedTree->Branch("pyPtg", &py_arr[4]); correctedTree->Branch("pyMg", &py_arr[5]); correctedTree->Branch("gePtg", &ge_corr[4]); correctedTree->Branch("geMg", &ge_corr[5]);
+  correctedTree->Branch("pyEta", &py_arr[6]); correctedTree->Branch("geEta",&ge_corr[6]);
+  correctedTree->Branch("weight", &mc_weight); correctedTree->Branch("EventID", &p_EventID);
+  
   
   //Hists for use in responses
   TH2D *pyMvPt = new TH2D("pyMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
@@ -137,6 +150,25 @@ int main (int argc, const char ** argv) {
 
   //vector of responses to make it easy to call ConstructResponses and fill all responses at the same time
   std::vector<RooUnfoldResponse*> res = {pt_res_coarse, m_response, pt_m_response, zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response};
+  
+  //detector response fits from file
+  TFile * funcs_in = new TFile("~/jetmass/macros/funcs/funcs.root","READ");
+  TF1 * res_lo_0 = (TF1*) funcs_in->Get("res_lo_0");
+  TF1 * res_lo_1 = (TF1*) funcs_in->Get("res_lo_1");
+  TF1 * res_lo_2 = (TF1*) funcs_in->Get("res_lo_2");
+  TF1 * res_lo_3 = (TF1*) funcs_in->Get("res_lo_3");
+  TF1 * res_lo_4 = (TF1*) funcs_in->Get("res_lo_4");
+  TF1 * res_mid_0 = (TF1*) funcs_in->Get("res_mid_0");
+  TF1 * res_mid_1 = (TF1*) funcs_in->Get("res_mid_1");
+  TF1 * res_mid_2 = (TF1*) funcs_in->Get("res_mid_2");
+  TF1 * res_mid_3 = (TF1*) funcs_in->Get("res_mid_3");
+  TF1 * res_mid_4 = (TF1*) funcs_in->Get("res_mid_4");
+  TF1 * res_hi_0 = (TF1*) funcs_in->Get("res_hi_0");
+  TF1 * res_hi_1 = (TF1*) funcs_in->Get("res_hi_1");
+  TF1 * res_hi_2 = (TF1*) funcs_in->Get("res_hi_2");
+  TF1 * res_hi_3 = (TF1*) funcs_in->Get("res_hi_3");
+  TF1 * res_hi_4 = (TF1*) funcs_in->Get("res_hi_4");
+  
   
   
   //Creating SoftDrop grooming object         
@@ -178,7 +210,10 @@ int main (int argc, const char ** argv) {
     pyPt.clear(); pyM.clear(); pyZg.clear(); pyRg.clear();
     gePt.clear(); geM.clear(); geZg.clear(); geRg.clear();
     pyPtg.clear(); pyMg.clear(); gePtg.clear(); geMg.clear();
-    for (int i = 0; i < py_arr.size(); ++ i) {py_arr[i].clear(); ge_arr[i].clear();}
+    pyEta.clear(); geEta.clear();
+    gePt_corr.clear(); geM_corr.clear(); geZg_corr.clear(); geRg_corr.clear();
+    gePtg_corr.clear(); geMg_corr.clear(); geEta_corr.clear();
+    for (int i = 0; i < py_arr.size(); ++ i) {py_arr[i].clear(); ge_arr[i].clear(); ge_corr[i].clear();}
     mc_weight = -9999;
     
     g_EventID = GEANTReader.GetNOfCurrentEvent();
@@ -239,9 +274,66 @@ int main (int argc, const char ** argv) {
     if (DiscardEvent(pythiaFilename, p_Jets, g_Jets)) { counter_debug1 ++; continue; }
 
     ConstructResponses(res, g_Jets, p_Jets, g_GroomedJets, p_GroomedJets, ge_arr, py_arr, mc_weight);
-
+    
+    ge_corr = ge_arr;
+    
     if (ge_arr[1].size() != 0) { //found at least one match. Should be equivalent to asking if pyPt.size() != 0 (& <=> to asking about any other observable)
       eventTree->Fill();
+      //do geant correction
+      for (int i = 0; i < ge_arr[1].size(); ++ i) {
+	if (ge_arr[6][i] < -0.2) {
+	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
+	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
+	    ge_corr[1][i] /= (double) res_lo_1->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
+	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
+	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
+	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	  }
+	}
+	if (ge_arr[6][i] > -0.2 && ge_arr[6][i] < 0.2) {
+	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
+	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
+	    ge_corr[1][i] /= (double) res_mid_1->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
+	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
+	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
+	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	  }
+	}
+	if (ge_arr[6][i] > 0.2) {
+	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
+	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
+	    ge_corr[1][i] /= (double) res_hi_1->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
+	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
+	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	  }
+	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
+	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	  }
+	}
+      }
+      correctedTree->Fill();
     }
     /*
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -292,6 +384,7 @@ int main (int argc, const char ** argv) {
   std::cout << "Discarded " << counter_debug1 << " events on grounds of the found jets being too much higher than the pT-hat range" << std::endl;
 
   eventTree->Write("event");
+  correctedTree->Write("corrected");
   
   pt_res_coarse->Write(); pt_m_response->Write();
   /*pt_response.Write();*/ m_response->Write(); zg_response->Write(); rg_response->Write();

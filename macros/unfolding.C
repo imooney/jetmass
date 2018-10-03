@@ -30,7 +30,7 @@ void UnfoldedObs(TFile* matchFile, TH1D* raw, TH1D* gen, TH1D* det/*, TH1D* raw1
   TH1D * reco2 = (TH1D*) unfolded_4iter->Hreco((RooUnfold::ErrorTreatment) 2);
   double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
   if (log != "Y") {loy = 0; hiy = 7;}
-  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {lox = 15; hix = 60; loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 1;} else if (log == "Y") {lox = 15; hix = 60; loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
   
   Prettify1D(raw, kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox,hix,loy, hiy);
   Prettify1DwLineStyle(gen, kGreen, kDashed, 5, xTitle, yTitle,lox,hix,loy, hiy);
@@ -100,7 +100,7 @@ void Unfold4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const string lo
   double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
 
   if (log != "Y") {loy = 0; hiy = 7;}
-  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 1;} else if (log == "Y") {loy = 4e-7; hiy = 400;} else {lox = 0; hix = 0.5;}
 
   
   Prettify1D(rawXs[0], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix,loy,hiy);
@@ -138,7 +138,7 @@ void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const st
   else {yTitle = ("1/N_{j} dN_{j}/d" + xTitle.substr(0,xTitle.find(' '))).c_str();}
 
   RooUnfoldBayes *unfold4D_4iter = new RooUnfoldBayes(res4D, raw, 4, false, ((string) "unfold4D_4iter" + (string) raw->GetName()).c_str(),"");
-  TH2D *reco = (TH2D*) unfold4D_4iter->Hreco((RooUnfold::ErrorTreatment) 2);
+  TH2D *reco = (TH2D*) unfold4D_4iter->Hreco((RooUnfold::ErrorTreatment) 3);
   
   const unsigned nBins = 5;
   double ranges[nBins+1] = {2,3,4,5,7,11};
@@ -169,7 +169,7 @@ void SliceUnfolded4D(TFile *matchFile, TH2D* raw, TH2D* gen, TH2D* det, const st
   double lox = -2; double hix = -2; double loy = -2; double hiy = -2;
   
   if (log != "Y") {loy = 0; hiy = 7;}
-  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 2;} else if (log == "Y") {loy = 0.001; hiy = 50;} else {lox = 0; hix = 0.5;}
+  if (flag == "mass") {lox = -1; hix = -1; loy = 0; hiy = 1;} else if (log == "Y") {loy = 0.001; hiy = 50;} else {lox = 0; hix = 0.5;}
   
 
   for(int i = 0; i < nBins; ++ i) { 
@@ -241,7 +241,7 @@ void Draw4DResponse(TFile* matchFile, const std::string resName, const std::stri
   
   res_matrix->Draw("colz");
 
-  c4res->SaveAs((out+"4D_"+resName+filetype).c_str());
+  //  c4res->SaveAs((out+"4D_"+resName+filetype).c_str());
 
   return;
 }
@@ -465,14 +465,14 @@ void unfolding () {
   Unfold4D(matchFile, ptg2d[0], ptg2d[1], ptg2d[2], "Y", out, filetype, "p_{T,g} [GeV/c]", "pt_ptg_response", "pt");
   Unfold4D(matchFile, mg2d[0], mg2d[1], mg2d[2], "0", out, filetype, "M_{g} [GeV/c^{2}]", "pt_mg_response", "mass");
   */
-  
-  SliceUnfolded4D(matchFile, m2d[0], m2d[1], m2d[2], "0", out, filetype, "M_{jet} [GeV/c^{2}]", "pt_m_response", "mass");
+    
+  SliceUnfolded4D(matchFile, m2d[0], m2d[1], m2d[2], "0", out, filetype, "M [GeV/c^{2}]", "pt_m_response", "mass");
   SliceUnfolded4D(matchFile, zg2d[0], zg2d[1], zg2d[2], "0", out, filetype, "z_{g}", "pt_zg_response", "");
   SliceUnfolded4D(matchFile, rg2d[0], rg2d[1], rg2d[2], "0", out, filetype, "R_{g}", "pt_rg_response", "");
-  SliceUnfolded4D(matchFile, ptg2d[0], ptg2d[1], ptg2d[2], "Y", out, filetype, "p_{T,g}", "pt_ptg_response", "pt");
-  SliceUnfolded4D(matchFile, mg2d[0], mg2d[1], mg2d[2], "0", out, filetype, "R_{g}", "pt_mg_response", "mass");
+  SliceUnfolded4D(matchFile, ptg2d[0], ptg2d[1], ptg2d[2], "Y", out, filetype, "p_{T,g} [GeV/c]", "pt_ptg_response", "pt");
+  SliceUnfolded4D(matchFile, mg2d[0], mg2d[1], mg2d[2], "0", out, filetype, "M_{g} [GeV/c^{2}]", "pt_mg_response", "mass");
   
-  /*
+  /*  
   Draw4DResponse(matchFile, "pt_m_response", out, filetype, 20, 20);
   Draw4DResponse(matchFile, "pt_zg_response", out, filetype, 20, 20);
   Draw4DResponse(matchFile, "pt_rg_response", out, filetype, 20, 20);
