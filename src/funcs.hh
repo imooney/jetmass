@@ -41,6 +41,8 @@
 #include "TStarJetPicoTriggerInfo.h"
 #include "TStarJetPicoUtils.h"
 
+#include "TDatabasePDG.h"
+
 //#include "ktTrackEff.hh"
 #include <string>
 #include <utility>      // std::pair
@@ -78,7 +80,7 @@ namespace Analysis {
 
   void AnalysisSummary(int, int, int, int, int, int, int, std::string);
   
-  void GatherParticles (TStarJetVectorContainer<TStarJetVector> *, TStarJetVector*, std::vector<fastjet::PseudoJet> &, const bool, const bool);
+  void GatherParticles (TStarJetVectorContainer<TStarJetVector> *, TStarJetVector*, std::vector<fastjet::PseudoJet> &, const bool, const bool, TDatabasePDG*);
 
   void ApplyNEFSelection (const std::vector<fastjet::PseudoJet>, std::vector<fastjet::PseudoJet> &);
   
@@ -95,7 +97,9 @@ namespace Analysis {
 
   std::vector<int> FakesandMisses(const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<fastjet::PseudoJet> &);
   
-  void ConstructResponses(std::vector<RooUnfoldResponse*>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<std::vector<double> > &, std::vector<std::vector<double> > &, const double/*, double &, double &, double &, double &*/);
+  void ConstructResponses(std::vector<RooUnfoldResponse*>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, std::vector<std::vector<double> > &, std::vector<std::vector<double> > &, const double, std::vector<RooUnfoldResponse*>, TH1D*, TH1D*);
+
+  void ConstructSystematicsResponses(std::vector<RooUnfoldResponse*>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>, const double, TH2D*, TH2D*, TH1D*, TH1D*, const int);
   
   void FillResponses(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);
 
@@ -109,9 +113,13 @@ namespace Analysis {
 
   void FakesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);  
   
-  void InitReader(TStarJetPicoReader &, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const std::string, const std::string);
+  void InitReader(TStarJetPicoReader &, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const double, const bool, const std::string, const std::string);
 
   bool DiscardEvent(const TString, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>);
+
+  void DropLowStatsBins(RooUnfoldResponse *, RooUnfoldResponse *);
+  void DropLowStatsBins(TH1D *, TH1D *);
+  void DropLowStatsBins(TH2D *, TH2D *);
   
   //HISTOGRAMS
   template<class Key, class H, class hash=std::hash<Key>>

@@ -9,112 +9,140 @@
 
 using namespace std;
 
-void p6res(TH3D* res_m_pt_p6, const std::string out, const std::string filetype, const std::string flag, TFile* funcs, const bool fitting) {
-  TLine * one = new TLine (0,1,10,1); one->SetLineStyle(kDashed);
+TF1* fit_funcs(TProfile* mres_profy, const std::string flag, TFile* funcs, const int i, const bool groom) {
+  std::string groomstring; if (groom) {groomstring = "groom_";} else {groomstring = "";}
+  std::string fit_name = (groomstring+"scale_"+flag+"_"+to_string(i)).c_str();
+  
+  TF1 *res; 
+  //ungroomed!
+  if (!groom && flag == "lo" && i == 2) {
+    res = new TF1(fit_name.c_str(),"[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x",1,10);
+    res->SetParameters(4.31806e-01,6.15115e-01,-2.26141e-01,3.62100e-02,-2.05147e-03);
+  }
+  else if (!groom && flag == "hi" && i == 3) { res = new TF1(fit_name.c_str(),"pol6",1,10);}
+  else if (!groom) { res = new TF1(fit_name.c_str(), "pol4",1,10);}
+
+  //groomed!
+  if (groom && flag == "hi" && (i == 2 || i == 3)) {
+    res = new TF1(fit_name.c_str(),"[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x",0,10);
+    res->SetParameters(5.47610e-01,4.33022e-01,-1.30284e-01,1.71122e-02,-7.80361e-04);
+  }
+  else if (groom && flag == "lo" && i == 1) {
+    res = new TF1(fit_name.c_str(),"pol9",0,10);
+  }
+  else if (groom) { res = new TF1(fit_name.c_str(), "pol4",0,10);}
+  //TF1 *res = new TF1(fit_name.c_str(),"[0]*TMath::ATan([1]*x + [2])+[3]",0,10);
+
+  //if (flag == "lo" && i == 2) {mres_profy->Fit("chebyshev9","MEI");}
+  mres_profy->Fit(fit_name.c_str(),"MEI");
+  res->Draw("same");
+  
   funcs->cd();
+  res->Write();
   
-  TCanvas *cres = MakeCanvas(((string) "cres"+ (string) res_m_pt_p6->GetName()).c_str(),"0",1200,800);
-  DivideCanvas(cres, "0", 3, 2);
+  return res;
+}
+
+
+void p6res(TH3D* res_m_pt_p6, TH3D* res_gen_m_pt_p6, const std::string out, const std::string filetype, const std::string flag, TFile* funcs, const bool fitting, const bool groom) {
+  TLine * one = new TLine (0,1,10,1); one->SetLineStyle(kDashed);
+  TLine * fivepercent = new TLine (0,1.05,10,1.05); fivepercent->SetLineStyle(kDashed);
+  TLine * minusfivepercent = new TLine (0,0.95,10,0.95); minusfivepercent->SetLineStyle(kDashed);
+  // funcs->cd();
   
-  const int nBins_z = 5; const int nBins_y = 20;
+  TCanvas *cscale = MakeCanvas(((string) "cscale"+ (string) res_m_pt_p6->GetName()).c_str(),"0",1200,800);
+  DivideCanvas(cscale, "0", 3, 2);
+
+  TCanvas *cres;
+  if (!fitting) {
+    cres = MakeCanvas(((string) "cres"+ (string) res_m_pt_p6->GetName()).c_str(),"0",1200,800);
+    DivideCanvas(cres, "0", 4, 2);
+  }
+  
+  const int nBins_z = 5; const int nBins_z_gen = 7; const int nBins_y = 10;
   //reminder: ranges is full of bin NUMBERS not VALUES
-  int ranges_z[nBins_z+1] = {1,2,3,4,6,10}; 
+  int ranges_z[nBins_z+1] = {1,2,3,4,6,10};
+  int ranges_z_gen[nBins_z_gen+1] = {1,2,3,4,5,6,8,12};
   double corresp_pts[nBins_z+1] = {15,20,25,30,40,60}; 
-  double ranges_y[nBins_y+1] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-  double masses[nBins_y+1] = {0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75,8.25,8.75,9.25,9.75};
+  double corresp_pts_gen[nBins_z_gen+1] = {5,10,15,20,25,30,40,60};
+  double ranges_y[nBins_y+1] = {1,2,3,4,5,6,7,8,9,10};
+  double masses[nBins_y+1] = {0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5};
   double mass_err[nBins_y+1] = {};
   
   std::vector<TH2D*> mres_v_m = Projection3D (res_m_pt_p6, nBins_z, ranges_z, "yx");  
-
-  TLegend *tslices[nBins_z];
+  std::vector<TH2D*> mres_v_m_gen = Projection3D(res_gen_m_pt_p6, nBins_z_gen, ranges_z_gen, "yx");
+  
+  TLegend *tslices[nBins_z]; TLegend *tslices_gen[nBins_z];
   for (int i = 0; i < nBins_z; ++ i) {
     tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{det} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.2,0.15,0.9,0.3);
+  }
+  for (int i = 0; i < nBins_z_gen; ++i) {
+    tslices_gen[i] = SliceLegend(((to_string(corresp_pts_gen[i])).substr(0,2) + " < p_{T}^{gen} < " + (to_string(corresp_pts_gen[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.2,0.75,0.9,0.85);
   }
   
   string eta_low = "-0.6"; string eta_high = "0.6";
   if (((string)res_m_pt_p6->GetName()).find("lo") != string::npos) {eta_high = "-0.2";}
   else if (((string)res_m_pt_p6->GetName()).find("mid") != string::npos) {eta_low = "-0.2"; eta_high = "0.2";}
   else {eta_low = "0.2";}
-  cres->cd(1); TLatex *t = new TLatex();
+  cscale->cd(1); TLatex *t = new TLatex();
   t->SetTextAlign(11);
   //  t->SetTextFont(63);                                                                                                                           
   t->SetTextSizePixels(26);
-  t->DrawLatex(0.1,0.9, "pp 200 GeV run12 MinBias");
+  t->DrawLatex(0.1,0.9, "pp 200 GeV run12 JP2");
   t->DrawLatex(0.1,0.75, "anti-k_{T}, R = 0.4");
   t->DrawLatex(0.1,0.6, ("Ch+Ne jets, " + eta_low + " < #eta < " + eta_high).c_str());
   
+  if (!fitting) {
+    cres->cd(1);
+    t->DrawLatex(0.1,0.9, "pp 200 GeV run12 JP2");
+    t->DrawLatex(0.1,0.75, "anti-k_{T}, R = 0.4");
+    t->DrawLatex(0.1,0.6, ("Ch+Ne jets, " + eta_low + " < #eta < " + eta_high).c_str());
+  }
+  
   for(int i = 0; i < mres_v_m.size(); ++ i) {
     TProfile* mres_profy = Profile2D(mres_v_m[i], "y");
-    PrettifyTProfile(mres_profy,kBlue,kFullCircle,1,kBlue,"M^{det} [GeV/c^{2}]","M^{det} / M^{gen}", -1,-1,0,2);
-    cres->cd(i+2);
+    PrettifyTProfile(mres_profy,kBlue,kFullCircle,1,kBlue,"M^{det} [GeV/c^{2}]","<M^{det} / M^{gen}>", -1,-1,0.5,1.5);
+    cscale->cd(i+2);
     mres_profy->Draw();
     tslices[i]->Draw("same");
-    one->Draw("same");
+    one->Draw("same"); fivepercent->Draw("same"); minusfivepercent->Draw("same");
     
     if (fitting) {
-      std::string fit_name = ("res_"+flag+"_"+to_string(i)).c_str();
-      
-      TF1 *res = new TF1(fit_name.c_str(),"[0]*TMath::ATan([1]*x + [2])+[3]",0,10);
-      if (flag == "lo") {
-	if      (i == 0) {res->SetParameters(3.06080e-01, 1.46152e+00,0, 7.18850e-01);
-			  
-			  res->FixParameter(0,1.32872e+01);res->FixParameter(1,8.35957e+00);res->FixParameter(2,2.34800e+01);res->FixParameter(3,-1.95327e+01);}
-	else if (i == 1) {res->SetParameters(9.77184e-01, 3.48758e+00,0, -3.30133e-01);
-	
-	  res->FixParameter(0,9.79988e-01);res->FixParameter(1,1.46052e+00);res->FixParameter(2,1.52811e+00);res->FixParameter(3,-3.28350e-01);}
-	else if (i == 2) {res->SetParameters(1.05,10,0.12,-0.5);
-	  res->FixParameter(0,1.05);res->FixParameter(2,1.2e-01); res->FixParameter(3,-5e-01);res->FixParameter(1,10);
-	  res->FixParameter(0,1.05000e+00);res->FixParameter(1,1.00000e+01);res->FixParameter(2,1.20000e-01);res->FixParameter(3,-5.00000e-01);}
-	else if (i == 3) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(0,0.75);
-	  res->FixParameter(0,7.50000e-01);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-6.33119e+00);res->FixParameter(3,-9.28106e-02);}
-	else if (i == 4) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(2,-2);
-	  res->FixParameter(0,1.11611e+00);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-6.38040e-01);}
-      }
-      else if (flag == "mid") {
-	if      (i == 0) {res->SetParameters(3.06080e-01, 1.46152e+00,0, 7.18850e-01);
-	  
-	  res->FixParameter(0,3.12410e-01);res->FixParameter(1,4.04520e-01);res->FixParameter(2,3.31368e-01);res->FixParameter(3,7.45250e-01);}
-	else if (i == 1) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(2,-2);
-	  res->FixParameter(0,8.22198e-01);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-2.41397e-01);}
-	else if (i == 2) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(2,-2);
-	  res->FixParameter(0,7.02658e-01);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-3.82504e-02);}
-	else if (i == 3) {res->SetParameters(4.29, 3.28,-1, -5.62);
-	  res->FixParameter(0,4.29);res->FixParameter(1,3.28);
-	  res->FixParameter(0,4.29000e+00);res->FixParameter(1,3.28000e+00);res->FixParameter(2,2.77480e+00);res->FixParameter(3,-5.45843e+00);}
-	else if (i == 4) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,3);res->FixParameter(2,-2);
-	  res->FixParameter(0,8.65640e-01);res->FixParameter(1,3.00000e+00);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-1.71121e-01);}
-      }
-      else if (flag == "hi") {
-	if      (i == 0) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(2,-2);
-	  res->FixParameter(0,8.35238e-01);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-2.20800e-01);}
-	else if (i == 1) {res->SetParameters(0.2, 1, 0, 0.75);
-	  res->FixParameter(0,0.2); res->FixParameter(1,1); res->FixParameter(2,0); res->FixParameter(3,0.75);
-	  res->FixParameter(0,2.00000e-01);res->FixParameter(1,1.00000e+00);res->FixParameter(2,0.00000e+00);res->FixParameter(3,7.50000e-01);}
-	else if (i == 2) {res->SetParameters(0.4, 1.5, 0, 0.6);
-	  res->FixParameter(1,1.5); res->FixParameter(2,0); res->FixParameter(3,0.6);
-	  res->FixParameter(0,2.99066e-01);res->FixParameter(1,1.50000e+00);res->FixParameter(2,0.00000e+00);res->FixParameter(3,6.00000e-01);}
-	else if (i == 3) {res->SetParameters(0.6, 1.5,0, 0.25);
-	  res->FixParameter(0,0.6);res->FixParameter(1,2);res->FixParameter(2,0); res->FixParameter(3,0.15);
-	  res->FixParameter(0,6.00000e-01);res->FixParameter(1,2.00000e+00);res->FixParameter(2,0.00000e+00);res->FixParameter(3,1.50000e-01);}
-	else if (i == 4) {res->SetParameters(9.77184e-01, 10,-2, 0);
-	  res->FixParameter(1,10);res->FixParameter(2,-2);
-	  res->FixParameter(0,1.63914e+00);res->FixParameter(1,1.00000e+01);res->FixParameter(2,-2.00000e+00);res->FixParameter(3,-1.48141e+00);}
-      }
-      mres_profy->Fit(fit_name.c_str(),"MI");
-      res->Draw("same");
-      
-      res->Write();
+      fit_funcs(mres_profy,flag,funcs,i, groom);
     }
   }
   
-  cres->SaveAs((out+res_m_pt_p6->GetName()+filetype).c_str());
-  return;
+   if (!fitting) {//i.e. we've already done the jet energy scale correction
+     for(int i = 0; i < mres_v_m_gen.size(); ++ i) {
+       std::vector<TH1D*> mres_projxs = Projection2D(mres_v_m_gen[i], nBins_y, ranges_y, "x");
+       double sigmameans[nBins_y+1]; double errs[nBins_y+1];
+       for (int j = 0; j < mres_projxs.size(); ++ j) {
+	 sigmameans[j] = mres_projxs[j]->GetRMS() / (double) mres_projxs[j]->GetMean();
+	 double rel_mean_err = mres_projxs[j]->GetMeanError() / (double) mres_projxs[j]->GetMean();
+	 double rel_rms_err = mres_projxs[j]->GetRMSError() / (double) mres_projxs[j]->GetRMS();
+	 errs[j] = sqrt((rel_mean_err*rel_mean_err) + (rel_rms_err*rel_rms_err));
+       }
+       
+       TGraphErrors *m_v_res = new TGraphErrors(nBins_y,masses,sigmameans,mass_err,errs); m_v_res->SetTitle("");
+       PrettifyTGraph(m_v_res, kBlue, kFullCircle, 1, kBlue, "M^{gen} [GeV/c^{2}]", "#sigma/#mu (M^{det} / M^{gen})", -1,-1,0,0.5);
+       cres->cd(i+2);
+       m_v_res->Draw("AP");
+       tslices_gen[i]->Draw("same");
+       
+       std::string fit_name = ("res_"+flag+"_"+to_string(i)).c_str();
+       TF1 *sigmafit = new TF1(fit_name.c_str(),"[0]"/*"sqrt([0]*[0]+([1]/sqrt(x))*([1]/sqrt(x))+([2]/x)*([2]/x))"*/,0,10);
+       m_v_res->Fit(fit_name.c_str(),"MI");
+       sigmafit->Draw("same");
+     }
+   }
+   
+   std::string filename;
+   if (groom && !fitting) {filename = "corrected_JMg";} else if (!fitting) {filename = "corrected_JM";}
+   if (groom && fitting) {filename = "JMg";} else if (fitting) {filename = "JM";}
+   
+   cscale->SaveAs((out+filename+"S"+flag+filetype).c_str());
+   if (!fitting){ cres->SaveAs((out+filename+"R"+flag+filetype).c_str()); }
+   return;
 }
 
 
@@ -134,21 +162,52 @@ void detector_mass_res () {
   TFile* inFile = new TFile( (dir + in + infile).c_str(), "READ");
   TFile* funcFile = new TFile( (dir + funcpath + funcs).c_str(), "RECREATE");
 
-  TH3D* res_m_pt_p6_lo = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_lo");
-  TH3D* res_m_pt_p6_mid = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_mid");
-  TH3D* res_m_pt_p6_hi = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_hi");
+  //MASS
+  TH3D* res_m_pt_p6_lo = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_lo");
+  TH3D* res_m_pt_p6_mid = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_mid");
+  TH3D* res_m_pt_p6_hi = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_hi");
   
-  TH3D* res_m_pt_p6_lo_corr = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_lo_corr");
-  TH3D* res_m_pt_p6_mid_corr = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_mid_corr");
-  TH3D* res_m_pt_p6_hi_corr = (TH3D*) inFile->Get("mass_res_v_py_m_pt_eta_hi_corr");
-
-  p6res(res_m_pt_p6_lo, out, filetype, "lo",funcFile, 1);
-  p6res(res_m_pt_p6_mid, out, filetype, "mid",funcFile, 1);
-  p6res(res_m_pt_p6_hi, out, filetype, "hi",funcFile, 1);
+  TH3D* res_m_pt_p6_lo_corr = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_lo_corr");
+  TH3D* res_m_pt_p6_mid_corr = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_mid_corr");
+  TH3D* res_m_pt_p6_hi_corr = (TH3D*) inFile->Get("mass_res_v_det_m_pt_eta_hi_corr");
+  
+  TH3D* res_gen_m_pt_p6_lo_corr = (TH3D*) inFile->Get("mass_res_v_gen_m_pt_eta_lo_corr");
+  TH3D* res_gen_m_pt_p6_mid_corr = (TH3D*) inFile->Get("mass_res_v_gen_m_pt_eta_mid_corr");
+  TH3D* res_gen_m_pt_p6_hi_corr = (TH3D*) inFile->Get("mass_res_v_gen_m_pt_eta_hi_corr");
+  
+  //GROOMED MASS
+  TH3D* res_mg_pt_p6_lo = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_lo");
+  TH3D* res_mg_pt_p6_mid = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_mid");
+  TH3D* res_mg_pt_p6_hi = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_hi");
+  
+  TH3D* res_mg_pt_p6_lo_corr = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_lo_corr");
+  TH3D* res_mg_pt_p6_mid_corr = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_mid_corr");
+  TH3D* res_mg_pt_p6_hi_corr = (TH3D*) inFile->Get("mg_res_v_det_mg_pt_eta_hi_corr");
+  
+  TH3D* res_gen_mg_pt_p6_lo_corr = (TH3D*) inFile->Get("mg_res_v_gen_mg_pt_eta_lo_corr");
+  TH3D* res_gen_mg_pt_p6_mid_corr = (TH3D*) inFile->Get("mg_res_v_gen_mg_pt_eta_mid_corr");
+  TH3D* res_gen_mg_pt_p6_hi_corr = (TH3D*) inFile->Get("mg_res_v_gen_mg_pt_eta_hi_corr");
+  
+  
+  TH3D* dummy = new TH3D("dummy","",1,0,1,1,0,1,1,0,1);
+  
+  
+  p6res(res_m_pt_p6_lo, dummy, out, filetype, "lo",funcFile, 1,0);
+  p6res(res_m_pt_p6_mid, dummy, out, filetype, "mid",funcFile, 1,0);
+  p6res(res_m_pt_p6_hi, dummy, out, filetype, "hi",funcFile, 1,0);
+  
+  p6res(res_m_pt_p6_lo_corr, res_gen_m_pt_p6_lo_corr, out, filetype, "lo",funcFile, 0,0);
+  p6res(res_m_pt_p6_mid_corr, res_gen_m_pt_p6_mid_corr, out, filetype, "mid",funcFile, 0,0);
+  p6res(res_m_pt_p6_hi_corr, res_gen_m_pt_p6_hi_corr, out, filetype, "hi",funcFile, 0,0);
+  
+  p6res(res_mg_pt_p6_lo, dummy, out, filetype, "lo",funcFile, 1,1);
+  p6res(res_mg_pt_p6_mid, dummy, out, filetype, "mid",funcFile, 1,1);
+  p6res(res_mg_pt_p6_hi, dummy, out, filetype, "hi",funcFile, 1,1);
     
-  p6res(res_m_pt_p6_lo_corr, out, filetype, "lo",funcFile, 0);
-  p6res(res_m_pt_p6_mid_corr, out, filetype, "mid",funcFile, 0);
-  p6res(res_m_pt_p6_hi_corr, out, filetype, "hi",funcFile, 0);
+  p6res(res_mg_pt_p6_lo_corr, res_gen_mg_pt_p6_lo_corr, out, filetype, "lo",funcFile, 0,1);
+  p6res(res_mg_pt_p6_mid_corr, res_gen_mg_pt_p6_mid_corr, out, filetype, "mid",funcFile, 0,1);
+  p6res(res_mg_pt_p6_hi_corr, res_gen_mg_pt_p6_hi_corr, out, filetype, "hi",funcFile, 0,1);
+  
   
   return;
 }

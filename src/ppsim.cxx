@@ -81,29 +81,39 @@ int main (int argc, const char ** argv) {
     
     //initialize the readers!
     if (ge_or_py == 0) {//pythia
-        InitReader(Reader, Chain, nEvents, truth_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, truth_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, sim_badTowers, sim_bad_run_list);
+      InitReader(Reader, Chain, nEvents, truth_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, truth_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, 0.9999, false, sim_badTowers, sim_bad_run_list);
     }
     if (ge_or_py == 1) {//geant
-        InitReader(Reader, Chain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, sim_badTowers, sim_bad_run_list);
+      InitReader(Reader, Chain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, 0.9999, false, sim_badTowers, sim_bad_run_list);
     }
     TStarJetPicoEventHeader* header;  TStarJetPicoEvent* event;
     TStarJetVectorContainer<TStarJetVector> * container;        TStarJetVector* sv;
                                       
     int EventID;
     double n_jets, wt;
+    vector<vector<double> > consDist; vector<vector<double> > consGirth;
+    vector<vector<double> > conspT;
+    vector<double> jetMult; vector<double> jetGirth;
     vector<double> Pt; vector<double> Eta; vector<double> Phi; vector<double> M; vector<double> E;
     vector<double> ch_e_frac;
     vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
     vector<double> mcd;
+    vector<double> tau0; vector<double> tau05; vector<double> tau_05; vector<double> tau_1;
+    vector<double> tau0_g; vector<double> tau05_g; vector<double> tau_05_g; vector<double> tau_1_g;
     
     TTree *eventTree = new TTree("event","event");
     eventTree->Branch("n_jets", &n_jets);
+    eventTree->Branch("conspT",&conspT);
+    eventTree->Branch("consDist", &consDist); eventTree->Branch("consGirth",&consGirth);
+    eventTree->Branch("jetGirth",&jetGirth); eventTree->Branch("jetMult",&jetMult);
     eventTree->Branch("Pt", &Pt); eventTree->Branch("Eta",&Eta); eventTree->Branch("Phi",&Phi); eventTree->Branch("M",&M); eventTree->Branch("E",&E);
     eventTree->Branch("ch_e_frac", &ch_e_frac);
     eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
     eventTree->Branch("mcd",&mcd);
+    eventTree->Branch("tau0",&tau0); eventTree->Branch("tau05",&tau05); eventTree->Branch("tau_05",&tau_05); eventTree->Branch("tau_1",&tau_1);
+    eventTree->Branch("tau0_g",&tau0_g); eventTree->Branch("tau05_g",&tau05_g); eventTree->Branch("tau_05_g",&tau_05_g); eventTree->Branch("tau_1_g",&tau_1_g);
     eventTree->Branch("weight", &wt); eventTree->Branch("EventID", &EventID);
-
+    
     //TEST
     /*
     TH1D* pt23 = new TH1D("pt23","",80,0,80);
@@ -133,7 +143,7 @@ int main (int argc, const char ** argv) {
     TH1D* ptallw = new TH1D("ptallw","",80,0,80);
     */
     //Creating SoftDrop grooming object
-    contrib::SoftDrop sd(beta,z_cut,R0);
+    contrib::SoftDrop sd(Beta,z_cut,R0);
     cout << "SoftDrop groomer is: " << sd.description() << endl;
     
     //SELECTORS
@@ -147,14 +157,18 @@ int main (int argc, const char ** argv) {
     // Jet candidate selectors
     // -----------------------
     Selector select_jet_rap     = fastjet::SelectorAbsRapMax(max_rap);
-    
+    Selector select_jet_m_min;
     Selector select_jet_pt_min;
     if (ge_or_py == 0) {//pythia
       select_jet_pt_min  = fastjet::SelectorPtMin( jet_ptmin );
+      select_jet_m_min = fastjet::SelectorMassMin( 0.0 );
     }
-    else { select_jet_pt_min = fastjet::SelectorPtMin( det_jet_ptmin ); }
+    else {
+      select_jet_pt_min = fastjet::SelectorPtMin( det_jet_ptmin );
+      select_jet_m_min = fastjet::SelectorMassMin( mass_min );
+    }
     Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
-    Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
+    Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max && select_jet_m_min;
     
     JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
     TString Filename;
@@ -165,14 +179,21 @@ int main (int argc, const char ** argv) {
     //1=inclusive, 2=lead
     int counter_debug1 = 0, counter_debug2 = 0;
 
+    //for later use looking up PDG masses using particle PID
+    TDatabasePDG *pdg = new TDatabasePDG();
+    
+    
     // LOOP!
     
     while ( Reader.NextEvent() ) {
       
-      //clearing vectors                                                                                                                                                                              
+      //clearing vectors
+      conspT.clear(); consDist.clear(); consGirth.clear(); jetMult.clear(); jetGirth.clear();
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
       ch_e_frac.clear(); mcd.clear();
+      tau0.clear(); tau05.clear(); tau_05.clear(); tau_1.clear();
+      tau0_g.clear(); tau05_g.clear(); tau_05_g.clear(); tau_1_g.clear();
       //initializing variables to -9999                                                                                                                                                               
       n_jets = -9999; wt = -9999; EventID = -9999;
       
@@ -200,7 +221,9 @@ int main (int argc, const char ** argv) {
       wt = LookupRun12Xsec( Filename );
 
       //  GATHER PARTICLES
-      GatherParticles ( container, sv, Particles, 1, ge_or_py);    // first bool flag: 0 signifies charged-only, 1 = ch+ne;  particles: second bool flag: pythia = 1,  = 0
+      bool py = 0;
+      if (ge_or_py == 0) { py = 1;}//pythia
+      GatherParticles ( container, sv, Particles, 1, py, pdg);    // first bool flag: 0 signifies charged-only, 1 = ch+ne;  particles: second bool flag: pythia = 0, ge = 1
       
       vector<PseudoJet> cut_Particles = spart(Particles); //applying constituent cuts
       
@@ -211,7 +234,7 @@ int main (int argc, const char ** argv) {
 	JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets()));    // EXTRACT JETS
       }
       else {
-	JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets())); //apply jet cuts in Geant (not Pythia!)
+	JetsInitial = sorted_by_pt(sjet(Cluster.inclusive_jets())); //apply jet cuts in Geant
       }
       
       vector<PseudoJet> Jets;
@@ -248,6 +271,27 @@ int main (int argc, const char ** argv) {
       NJets += Jets.size();               //  Save jet info and add jets to total
 
       for (int i = 0; i < n_jets; ++ i) {
+	double jet_girth = 0;
+        vector<double> cons_girth;
+        vector<double> cons_dist;
+        vector<double> cons_pt;
+	for (int j = 0; j < Jets[i].constituents().size(); ++ j) {
+	  const PseudoJet cons = Jets[i].constituents()[j];
+	  cons_pt.push_back(cons.pt());
+	  double consR = fabs(cons.delta_R(Jets[i]));
+          cons_dist.push_back(consR);
+          double part_girth = consR * cons.pt() / (double) Jets[i].pt();
+          cons_girth.push_back(part_girth);
+          jet_girth += part_girth;
+        }
+	
+	conspT.push_back(cons_pt);
+	consDist.push_back(cons_dist);
+        consGirth.push_back(cons_girth);
+        jetGirth.push_back(jet_girth);
+        jetMult.push_back(Jets[i].constituents().size());
+	
+
 	Pt.push_back(Jets[i].pt()); Eta.push_back(Jets[i].eta()); Phi.push_back(Jets[i].phi());
 	M.push_back(Jets[i].m()); E.push_back(Jets[i].e());
 	zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
@@ -255,13 +299,17 @@ int main (int argc, const char ** argv) {
 	double m2 = (Jets[i].m())*(Jets[i].m()); double gm2 = (GroomedJets[i].m())*(GroomedJets[i].m());
 	double m_cd = (double) sqrt(m2 - gm2); if ((m2 - gm2) < 10e-10) {m_cd = 0;}
 	mcd.push_back(m_cd);
-	double ch_e = 0; double tot_e = 0;
+	double ch_e = 0; double tot_e = 0;//names are misnomers here since we use pT, not E.
 	vector<PseudoJet> cons = Jets[i].constituents();
 	for (int j = 0; j < cons.size(); ++ j) {
-	  if (cons[j].user_index() != 0) {ch_e += cons[j].e();}
-	  tot_e += cons[j].e();
+	  if (cons[j].user_index() != 0) {ch_e += cons[j].pt();}
+	  tot_e += cons[j].pt();
 	}
 	ch_e_frac.push_back(ch_e/(double)tot_e);
+	
+	//to be filled with actual values later
+	tau0.push_back(0); tau05.push_back(0); tau_05.push_back(0); tau_1.push_back(0);
+	tau0_g.push_back(0); tau05_g.push_back(0); tau_05_g.push_back(0); tau_1_g.push_back(0);
       }
       if (Jets.size() != 0) {
 	eventTree->Fill();

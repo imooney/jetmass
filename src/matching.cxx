@@ -62,8 +62,6 @@ int main (int argc, const char ** argv) {
   }
   }
 
-
-
   //  Initialize readers and provide chains
   TStarJetPicoReader P6Reader;      TChain* P6Chain = new TChain( "JetTreeMc" );    //  PURE PYTHIA DATA  (particle)
   TStarJetPicoReader GEANTReader;   TChain* GEANTChain = new TChain( "JetTree" );     //  CORRESPONDING GEANT DATA  (detector)
@@ -81,14 +79,51 @@ int main (int argc, const char ** argv) {
   else { __ERR("data file is not recognized type: .root or .txt only.") return -1; }
 
   //initialize the readers!
-  InitReader(P6Reader, P6Chain, nEvents, truth_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, truth_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, sim_badTowers, sim_bad_run_list);
-  InitReader(GEANTReader, GEANTChain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, sim_badTowers, sim_bad_run_list);
+  InitReader(P6Reader, P6Chain, nEvents, truth_triggerString, truth_absMaxVz, truth_vZDiff, truth_evPtMax, truth_evEtMax, truth_evEtMin, truth_DCA, truth_NFitPts, truth_FitOverMaxPts, sim_maxEtTow, 0.9999, false, sim_badTowers, sim_bad_run_list);
+  InitReader(GEANTReader, GEANTChain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, sim_maxEtTow, 0.9999, false, det_badTowers, dat_bad_run_list/*sim_badTowers, sim_bad_run_list*/);
   
   TStarJetPicoEventHeader* p_header;  TStarJetPicoEvent* p_event;  TStarJetPicoEventHeader* g_header;  TStarJetPicoEvent* g_event;
   TStarJetVectorContainer<TStarJetVector> * p_container;         TStarJetVector* p_sv;
   TStarJetVectorContainer<TStarJetVector> * g_container;        TStarJetVector* g_sv;
-
-  //note: there is only one match per event, so none of these vectors should have more than one entry. It is only done for later convenience.
+  
+  //detector response fits from file
+  TFile * funcs_in = new TFile("~/jetmass/macros/funcs/funcs.root","READ");
+  
+  TF1 * scale_lo_0 = (TF1*) funcs_in->Get("scale_lo_0");
+  TF1 * scale_lo_1 = (TF1*) funcs_in->Get("scale_lo_1");
+  TF1 * scale_lo_2 = (TF1*) funcs_in->Get("scale_lo_2");
+  TF1 * scale_lo_3 = (TF1*) funcs_in->Get("scale_lo_3");
+  TF1 * scale_lo_4 = (TF1*) funcs_in->Get("scale_lo_4");
+  TF1 * scale_mid_0 = (TF1*) funcs_in->Get("scale_mid_0");
+  TF1 * scale_mid_1 = (TF1*) funcs_in->Get("scale_mid_1");
+  TF1 * scale_mid_2 = (TF1*) funcs_in->Get("scale_mid_2");
+  TF1 * scale_mid_3 = (TF1*) funcs_in->Get("scale_mid_3");
+  TF1 * scale_mid_4 = (TF1*) funcs_in->Get("scale_mid_4");
+  TF1 * scale_hi_0 = (TF1*) funcs_in->Get("scale_hi_0");
+  TF1 * scale_hi_1 = (TF1*) funcs_in->Get("scale_hi_1");
+  TF1 * scale_hi_2 = (TF1*) funcs_in->Get("scale_hi_2");
+  TF1 * scale_hi_3 = (TF1*) funcs_in->Get("scale_hi_3");
+  TF1 * scale_hi_4 = (TF1*) funcs_in->Get("scale_hi_4");
+  
+  TF1 * groom_scale_lo_0 = (TF1*) funcs_in->Get("groom_scale_lo_0");
+  TF1 * groom_scale_lo_1 = (TF1*) funcs_in->Get("groom_scale_lo_1");
+  TF1 * groom_scale_lo_2 = (TF1*) funcs_in->Get("groom_scale_lo_2");
+  TF1 * groom_scale_lo_3 = (TF1*) funcs_in->Get("groom_scale_lo_3");
+  TF1 * groom_scale_lo_4 = (TF1*) funcs_in->Get("groom_scale_lo_4");
+  TF1 * groom_scale_mid_0 = (TF1*) funcs_in->Get("groom_scale_mid_0");
+  TF1 * groom_scale_mid_1 = (TF1*) funcs_in->Get("groom_scale_mid_1");
+  TF1 * groom_scale_mid_2 = (TF1*) funcs_in->Get("groom_scale_mid_2");
+  TF1 * groom_scale_mid_3 = (TF1*) funcs_in->Get("groom_scale_mid_3");
+  TF1 * groom_scale_mid_4 = (TF1*) funcs_in->Get("groom_scale_mid_4");
+  TF1 * groom_scale_hi_0 = (TF1*) funcs_in->Get("groom_scale_hi_0");
+  TF1 * groom_scale_hi_1 = (TF1*) funcs_in->Get("groom_scale_hi_1");
+  TF1 * groom_scale_hi_2 = (TF1*) funcs_in->Get("groom_scale_hi_2");
+  TF1 * groom_scale_hi_3 = (TF1*) funcs_in->Get("groom_scale_hi_3");
+  TF1 * groom_scale_hi_4 = (TF1*) funcs_in->Get("groom_scale_hi_4");
+  
+  
+  TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
+  fout->cd();  
   //  vector<double> deltaPt; vector<double> deltaM; vector<double> deltaZg; vector<double> deltaRg;
   // vector<double> ratioPt; vector<double> ratioM; vector<double> ratioZg; vector<double> ratioRg;
   vector<double> pyPt; vector<double> pyM; vector<double> pyZg; vector<double> pyRg;
@@ -117,62 +152,58 @@ int main (int argc, const char ** argv) {
   correctedTree->Branch("pyPtg", &py_arr[4]); correctedTree->Branch("pyMg", &py_arr[5]); correctedTree->Branch("gePtg", &ge_corr[4]); correctedTree->Branch("geMg", &ge_corr[5]);
   correctedTree->Branch("pyEta", &py_arr[6]); correctedTree->Branch("geEta",&ge_corr[6]);
   correctedTree->Branch("weight", &mc_weight); correctedTree->Branch("EventID", &p_EventID);
-  
+
+  //TEST HISTS
+  TH1D* misses = new TH1D("misses","",15,5,80); TH1D* misses_cts = new TH1D("misses_cts","",15,5,80);
   
   //Hists for use in responses
-  TH2D *pyMvPt = new TH2D("pyMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
-  TH2D *geMvPt = new TH2D("geMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,9,15,60);
+  TH2D *pyMvPt = new TH2D("pyMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,15,5,80);
+  TH2D *geMvPt = new TH2D("geMvPt",";M [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,9,15,60);
+  TH2D *pyMvPt_counts = new TH2D("pyMvPt_counts",";M [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,15,5,80);
+  TH2D *geMvPt_counts = new TH2D("geMvPt_counts",";M [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,9,15,60);
   TH2D *pyZgvPt = new TH2D("pyZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
   TH2D *geZgvPt = new TH2D("geZgvPt", ";z_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
   TH2D *pyRgvPt = new TH2D("pyRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,15,5,80);
   TH2D *geRgvPt = new TH2D("geRgvPt", ";R_{g};p_{T} [GeV/c]",20,0,1,9,15,60);
   TH2D *pyPtgvPt = new TH2D("pyPtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",15,5,80,15,5,80);
   TH2D *gePtgvPt = new TH2D("gePtgvPt", ";p_{T,g} [GeV/c];p_{T} [GeV/c]",9,15,60,9,15,60);
-  TH2D *pyMgvPt = new TH2D("pyMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,15,5,80);
-  TH2D *geMgvPt = new TH2D("geMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",20,0,10,9,15,60);
-  
+  TH2D *pyMgvPt = new TH2D("pyMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,15,5,80);
+  TH2D *geMgvPt = new TH2D("geMgvPt", ";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,9,15,60);
+  TH2D *pyMgvPt_counts = new TH2D("pyMgvPt_counts",";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,15,5,80);
+  TH2D *geMgvPt_counts = new TH2D("geMgvPt_counts",";M_{g} [GeV/c^{2}];p_{T} [GeV/c]",14,0,14,9,15,60);
   
   // Responses
-  RooUnfoldResponse *pt_response = new RooUnfoldResponse(60,0,60,80,0,80,"pt_response","");
-  RooUnfoldResponse *m_response = new RooUnfoldResponse(20,0,10,20,0,10,"m_response","");
+  RooUnfoldResponse *pt_response = new RooUnfoldResponse(15,5,80,15,5,80,"pt_response","");
+  RooUnfoldResponse *m_response = new RooUnfoldResponse(14,0,14,14,0,14,"m_response","");
   RooUnfoldResponse *zg_response = new RooUnfoldResponse(20,0,1,20,0,1, "zg_response","");
   RooUnfoldResponse *rg_response = new RooUnfoldResponse(20,0,1,20,0,1, "rg_response","");
   RooUnfoldResponse *ptg_response = new RooUnfoldResponse(9,15,60,15,5,80, "ptg_response","");
-  RooUnfoldResponse *mg_response = new RooUnfoldResponse(20,0,10,20,0,10, "mg_response","");
+  RooUnfoldResponse *mg_response = new RooUnfoldResponse(14,0,14,14,0,14, "mg_response","");
   
   RooUnfoldResponse *pt_res_coarse = new RooUnfoldResponse(9,15,60,15,5,80,"pt_res_coarse","");
   
   RooUnfoldResponse *pt_m_response = new RooUnfoldResponse(geMvPt, pyMvPt, "pt_m_response");
+  RooUnfoldResponse *pt_m_response_counts = new RooUnfoldResponse(geMvPt_counts, pyMvPt_counts, "pt_m_response_counts");
   RooUnfoldResponse *pt_zg_response = new RooUnfoldResponse(geZgvPt, pyZgvPt, "pt_zg_response");
   RooUnfoldResponse *pt_rg_response = new RooUnfoldResponse(geRgvPt, pyRgvPt, "pt_rg_response");
   RooUnfoldResponse *pt_ptg_response = new RooUnfoldResponse(gePtgvPt, pyPtgvPt, "pt_ptg_response");
   RooUnfoldResponse *pt_mg_response = new RooUnfoldResponse(geMgvPt, pyMgvPt, "pt_mg_response");
+  RooUnfoldResponse *pt_mg_response_counts = new RooUnfoldResponse(geMgvPt_counts, pyMgvPt_counts, "pt_mg_response_counts");
 
+
+  RooUnfoldResponse *m_response1520 = new RooUnfoldResponse(14,0,14,14,0,14,"m_response1520","");
+  RooUnfoldResponse *m_response2025 = new RooUnfoldResponse(14,0,14,14,0,14,"m_response2025","");
+  RooUnfoldResponse *m_response2530 = new RooUnfoldResponse(14,0,14,14,0,14,"m_response2530","");
+  RooUnfoldResponse *m_response3040 = new RooUnfoldResponse(14,0,14,14,0,14,"m_response3040","");
+  RooUnfoldResponse *m_response4060 = new RooUnfoldResponse(14,0,14,14,0,14,"m_response4060","");
+  
+  vector<RooUnfoldResponse*> m_response_ptbinned = {m_response1520, m_response2025, m_response2530, m_response3040, m_response4060};
+  
   //vector of responses to make it easy to call ConstructResponses and fill all responses at the same time
-  std::vector<RooUnfoldResponse*> res = {pt_res_coarse, m_response, pt_m_response, zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response};
-  
-  //detector response fits from file
-  TFile * funcs_in = new TFile("~/jetmass/macros/funcs/funcs.root","READ");
-  TF1 * res_lo_0 = (TF1*) funcs_in->Get("res_lo_0");
-  TF1 * res_lo_1 = (TF1*) funcs_in->Get("res_lo_1");
-  TF1 * res_lo_2 = (TF1*) funcs_in->Get("res_lo_2");
-  TF1 * res_lo_3 = (TF1*) funcs_in->Get("res_lo_3");
-  TF1 * res_lo_4 = (TF1*) funcs_in->Get("res_lo_4");
-  TF1 * res_mid_0 = (TF1*) funcs_in->Get("res_mid_0");
-  TF1 * res_mid_1 = (TF1*) funcs_in->Get("res_mid_1");
-  TF1 * res_mid_2 = (TF1*) funcs_in->Get("res_mid_2");
-  TF1 * res_mid_3 = (TF1*) funcs_in->Get("res_mid_3");
-  TF1 * res_mid_4 = (TF1*) funcs_in->Get("res_mid_4");
-  TF1 * res_hi_0 = (TF1*) funcs_in->Get("res_hi_0");
-  TF1 * res_hi_1 = (TF1*) funcs_in->Get("res_hi_1");
-  TF1 * res_hi_2 = (TF1*) funcs_in->Get("res_hi_2");
-  TF1 * res_hi_3 = (TF1*) funcs_in->Get("res_hi_3");
-  TF1 * res_hi_4 = (TF1*) funcs_in->Get("res_hi_4");
-  
-  
+  std::vector<RooUnfoldResponse*> res = {pt_res_coarse, m_response, pt_m_response, zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, pt_m_response_counts, pt_mg_response_counts, pt_response};
   
   //Creating SoftDrop grooming object         
-  contrib::SoftDrop sd(beta,z_cut,R0);
+  contrib::SoftDrop sd(Beta,z_cut,R0);
    
   //SELECTORS
   // Constituent selectors                                                                                                                                                     
@@ -188,15 +219,21 @@ int main (int argc, const char ** argv) {
   Selector select_det_jet_pt_min  = fastjet::SelectorPtMin( det_jet_ptmin );
   Selector select_gen_jet_pt_min = fastjet::SelectorPtMin( jet_ptmin );
   Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
-  Selector sjet_gen = select_jet_rap && select_gen_jet_pt_min && select_jet_pt_max;
-  Selector sjet_det = select_jet_rap && select_det_jet_pt_min && select_jet_pt_max;
+  Selector select_det_jet_m_min = fastjet::SelectorMassMin( mass_min );
+  Selector select_gen_jet_m_min = fastjet::SelectorMassMin( 0.0 );
+  
+  Selector sjet_gen = select_jet_rap && select_gen_jet_pt_min && select_jet_pt_max && select_gen_jet_m_min;
+  Selector sjet_det = select_jet_rap && select_det_jet_pt_min && select_jet_pt_max && select_det_jet_m_min;
   
   JetDefinition jet_def(antikt_algorithm, R);     //  JET DEFINITION
   TString geantFilename, pythiaFilename;
+
+  //for later use looking up PDG masses using particle PID                                                                            
+  TDatabasePDG *pdg = new TDatabasePDG();
   
   // Particle containers & counters
   vector<PseudoJet> p_Particles, g_Particles, p_JetsInitial, g_JetsInitial, dummy;
-  int nEvents = 0;   int p_NJets = 0;  int g_NJets = 0;  /*int p_EventID; see above for declaration*/   int g_EventID;
+  int n_accepted = 0;   int p_NJets = 0;  int g_NJets = 0;  /*int p_EventID; see above for declaration*/   int g_EventID;
   //1=inclusive, 2=lead
   int counter_debug1 = 0, counter_debug2 = 0;
   double p_wt = -1, g_wt = -1; 
@@ -218,9 +255,10 @@ int main (int argc, const char ** argv) {
     
     g_EventID = GEANTReader.GetNOfCurrentEvent();
     p_EventID = P6Reader.GetNOfCurrentEvent();
-    
-    //if ( P6Reader.ReadEvent( g_EventID ) != 1 ) continue;   //  ENSURES BOTH DATASETS HAVE AN EVENT
-    //if ( p_EventID != g_EventID ) { cout << endl << "ERROR: READING DIFFERENT EVENTS " <<endl; }
+    //cout <<"b4 potential skip" << endl;
+    if ( GEANTReader.ReadEvent(p_EventID) != 1 ) {/*cout << "no corresponding geant event...skipping."<<endl;*/ continue;}   //  ENSURES BOTH DATASETS HAVE AN EVENT
+    //cout <<"after potential skip" << endl;
+    if ( p_EventID != g_EventID ) { cout << endl << "ERROR: READING DIFFERENT EVENTS " <<endl; }
     //if (p_EventID == 6868 || p_EventID == 5290 || g_EventID == 8999) { continue; }
     //could in reality use p_EventID both times, but this reminds me that the bad event in Pythia is 6868 and the bad event in Geant is 8999.
 
@@ -228,7 +266,7 @@ int main (int argc, const char ** argv) {
     p_JetsInitial.clear(); g_JetsInitial.clear(); //clear all containers
     dummy.clear();
     
-    nEvents++;  P6Reader.PrintStatus(10);  GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
+    n_accepted++;  P6Reader.PrintStatus(10);  GEANTReader.PrintStatus(10);     // Print out reader status every 10 seconds
     
     p_event = P6Reader.GetEvent();       p_header = p_event->GetHeader();           // Get the PYTHIA header and event
     g_event = GEANTReader.GetEvent();    g_header = g_event->GetHeader();           // Get GEANT event header and event
@@ -242,16 +280,16 @@ int main (int argc, const char ** argv) {
     //TEMP! CHANGE BACK IF DOESN'T FIX THINGS
     //if (((string) pythiaFilename).find("2_3_") != std::string::npos) {continue;}
  
-    //if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
+    if (pythiaFilename != geantFilename) {std::cerr << "NOT WHAT I EXPECTED" << std::endl; exit(1);}
     
     p_wt = LookupRun12Xsec( pythiaFilename );
     g_wt = LookupRun12Xsec( geantFilename );
-    // if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
+    if (p_wt != g_wt) {std::cerr << "WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl; exit(1);}
     mc_weight = p_wt;
 
     //  GATHER PARTICLES
-    GatherParticles ( p_container, p_sv, p_Particles, full,1);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
-    GatherParticles ( g_container, g_sv, g_Particles, full,0);    //  GEANT particles
+    GatherParticles ( p_container, p_sv, p_Particles, full,1, pdg);    //  Pythia particles. full = 0 signifies charged-only, 1 signifies ch+ne
+    GatherParticles ( g_container, g_sv, g_Particles, full,0, pdg);    //  GEANT particles
     
     vector<PseudoJet> p_cut_Particles = spart(p_Particles); vector<PseudoJet> g_cut_Particles = spart(g_Particles); //applying constituent cuts
     
@@ -273,111 +311,98 @@ int main (int argc, const char ** argv) {
 
     if (DiscardEvent(pythiaFilename, p_Jets, g_Jets)) { counter_debug1 ++; continue; }
 
-    ConstructResponses(res, g_Jets, p_Jets, g_GroomedJets, p_GroomedJets, ge_arr, py_arr, mc_weight);
+    ConstructResponses(res, g_Jets, p_Jets, g_GroomedJets, p_GroomedJets, ge_arr, py_arr, mc_weight, m_response_ptbinned, misses, misses_cts);
     
     ge_corr = ge_arr;
     
     if (ge_arr[1].size() != 0) { //found at least one match. Should be equivalent to asking if pyPt.size() != 0 (& <=> to asking about any other observable)
+      
       eventTree->Fill();
+      
       //do geant correction
       for (int i = 0; i < ge_arr[1].size(); ++ i) {
 	if (ge_arr[6][i] < -0.2) {
 	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
-	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_lo_0->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_lo_0->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
-	    ge_corr[1][i] /= (double) res_lo_1->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_lo_1->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_lo_1->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
-	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_lo_2->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_lo_2->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
-	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_lo_3->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_lo_3->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
-	    ge_corr[1][i] /= (double) res_lo_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_lo_4->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_lo_4->Eval(ge_arr[5][i]);
 	  }
 	}
 	if (ge_arr[6][i] > -0.2 && ge_arr[6][i] < 0.2) {
 	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
-	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_mid_0->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_mid_0->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
-	    ge_corr[1][i] /= (double) res_mid_1->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_mid_1->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_mid_1->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
-	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_mid_2->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_mid_2->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
-	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_mid_3->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_mid_3->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
-	    ge_corr[1][i] /= (double) res_mid_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_mid_4->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_mid_4->Eval(ge_arr[5][i]);
 	  }
 	}
 	if (ge_arr[6][i] > 0.2) {
 	  if (ge_arr[0][i] > 15 && ge_arr[0][i] < 20) {
-	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_hi_0->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_hi_0->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 20 && ge_arr[0][i] < 25) {
-	    ge_corr[1][i] /= (double) res_hi_1->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_hi_1->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_hi_1->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 25 && ge_arr[0][i] < 30) {
-	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_hi_2->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_hi_2->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 30 && ge_arr[0][i] < 40) {
-	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_hi_3->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_hi_3->Eval(ge_arr[5][i]);
 	  }
 	  if (ge_arr[0][i] > 40 && ge_arr[0][i] < 60) {
-	    ge_corr[1][i] /= (double) res_hi_0->Eval(ge_arr[1][i]);
+	    ge_corr[1][i] /= (double) scale_hi_4->Eval(ge_arr[1][i]);
+	    ge_corr[5][i] /= (double) groom_scale_hi_4->Eval(ge_arr[5][i]);
 	  }
 	}
       }
       correctedTree->Fill();
     }
-    /*
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    //matching leading Pythia jet to Pythia+Geant jet
-    if (p_Jets.size() != 0) {
-      int position = -1;
-      MatchJets(g_Jets, p_Jets[0], position); //MatchJets returns with position = -1 if there is no geant jet to match in this event
-      if (position == -1) {//didn't find a match
-	Misses(pt_res_coarse, pt_response, m_response, pt_m_response, p_Jets[0], mc_weight);
-	MissesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, p_GroomedJets[0], p_Jets[0], mc_weight);
-      }
-      else { //found a match
-	FillResponses(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[position], p_Jets[0], mc_weight);	
-	FillResponsesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, g_GroomedJets[position], p_GroomedJets[0], g_Jets[position], p_Jets[0], mc_weight);
-	pyPt.push_back(p_Jets[0].pt()); pyM.push_back(p_Jets[0].m()); pyZg.push_back(p_GroomedJets[0].structure_of<SD>().symmetry()); pyRg.push_back(p_GroomedJets[0].structure_of<SD>().delta_R());
-	gePt.push_back(g_Jets[position].pt()); geM.push_back(g_Jets[position].m()); geZg.push_back(g_GroomedJets[position].structure_of<SD>().symmetry()); geRg.push_back(g_GroomedJets[position].structure_of<SD>().delta_R());
-	pyPtg.push_back(p_GroomedJets[0].pt()); pyMg.push_back(p_GroomedJets[0].m());
-	gePtg.push_back(g_GroomedJets[position].pt()); geMg.push_back(g_GroomedJets[position].m());
-	
-	eventTree->Fill();
-	
-      }
-    }
     
-    //NEED TO ALSO LOOP OVER THE GEANT JETS TO GET THE FAKE RATE
-    if (g_Jets.size() != 0) {
-      int position = -1;
-      MatchJets(p_Jets, g_Jets[0], position);
-      if (position == -1) {
-	Fakes(pt_res_coarse, pt_response, m_response, pt_m_response, g_Jets[0], mc_weight);
-	FakesSD(zg_response, rg_response, ptg_response, mg_response, pt_zg_response, pt_rg_response, pt_ptg_response, pt_mg_response, g_GroomedJets[0], g_Jets[0], mc_weight);
-      }
-    }
-    */
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
     p_NJets += p_Jets.size(); g_NJets += g_Jets.size();               //  Save jet info and add jets to total
     
   }
-
+  
+  //DROPPING STATISTICS-LIMITED BINS FROM THE RESPONSE!!!
+  //  DropLowStatsBins(pt_m_response, pt_m_response_counts);
+  // DropLowStatsBins(pt_mg_response, pt_mg_response_counts);
+  
   //~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ END EVENT LOOP! ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
-  TFile *fout = new TFile( ( outputDir + outFileName ).c_str() ,"RECREATE");
-
-  std::cout << std::endl << std::endl << "Of " << nEvents << " events" << std::endl;
+  std::cout << std::endl << std::endl << "Of " << n_accepted << " events" << std::endl;
   std::cout << p_NJets << " gen jets have been found" << std::endl;
   std::cout << g_NJets << " det jets have been found" << std::endl << std::endl;
   std::cout <<std::endl << "Writing to:  " << fout->GetName() << std::endl << std::endl;
@@ -385,12 +410,17 @@ int main (int argc, const char ** argv) {
 
   eventTree->Write("event");
   correctedTree->Write("corrected");
-  
+
+  misses->Write(); misses_cts->Write();
+
   pt_res_coarse->Write(); pt_m_response->Write();
-  /*pt_response.Write();*/ m_response->Write(); zg_response->Write(); rg_response->Write();
+  pt_response->Write(); m_response->Write(); zg_response->Write(); rg_response->Write();
   ptg_response->Write(); mg_response->Write();
   pt_zg_response->Write(); pt_rg_response->Write(); pt_ptg_response->Write(); pt_mg_response->Write();
-    
+  m_response1520->Write(); m_response2025->Write(); m_response2530->Write(); m_response3040->Write(); m_response4060->Write();  
+
+  pt_m_response_counts->Write(); pt_mg_response_counts->Write();
+  
   fout->Close();
 
   return 0;

@@ -13,7 +13,7 @@
 //constructs canvas
 //second argument is: 0 = no log, 1 = logx, 2 = logy, 3 = logz (or combinations thereof)
 TCanvas * MakeCanvas(const std::string can_name, const std::string log_scale, const double xdim, const double ydim) {
-  TCanvas * can = new TCanvas ((can_name).c_str(),(can_name).c_str(),800,800);
+  TCanvas * can = new TCanvas ((can_name).c_str(),(can_name).c_str(),xdim,ydim);
     //set desired axes' log scales
     
   if (log_scale.find("1") != std::string::npos || log_scale.find("x") != std::string::npos || log_scale.find("X") != std::string::npos) {can->SetLogx();}
@@ -39,7 +39,7 @@ void DivideCanvas(TCanvas *can, const std::string log_scale, const unsigned rows
 }
 
 //projects a 3D histogram in desired ranges and returns an array of the (2D) projections on desired axis
-//For 3D plots, have to use SetRange instead of SetRangeUser for some stupid reason. => pass bin numbers instead of bin values to the function 
+//For 3D plots, have to use SetRange instead of SetRangeUser for some stupid reason.
 std::vector<TH2D*> Projection3D (TH3D * hist3D, const int nBins, int * ranges, const std::string axis) {
   std::vector<TH2D*> proj2Ds;
   for (int i = 0; i < nBins; ++ i) {
@@ -126,15 +126,20 @@ TProfile* Profile2D (TH2D * hist2D, const std::string axis) {
 
 //prettify 1D histogram
 void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
-		 const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  if (yTitle.find("arb") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
+		 const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {  
+  if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {                                   
     hist->Scale(1/(double)hist->Integral());
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
+  }
+  else if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") != std::string::npos) {
     double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
     hist->Scale(1/(double)binwidth);
   }
   else {
     cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
   }
+  
   hist->SetMarkerColor(markColor); hist->SetMarkerStyle(markStyle); hist->SetMarkerSize(markSize); hist->SetLineColor(lineColor);
   hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
   if (highx != -1) {
@@ -149,14 +154,19 @@ void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, 
 //prettify 1D histogram to be drawn as line with "C" option
 void Prettify1DwLineStyle(TH1D * hist, const Color_t lineColor, const Style_t lineStyle, const double lineWidth,
 			  const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  if (yTitle.find("arb") == std::string::npos) {
+  if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {                                   
     hist->Scale(1/(double)hist->Integral());
     double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
     hist->Scale(1/(double)binwidth);
   }
-  else {
-    std::cout << "Not scaling by histogram " << hist->GetName() << "'s integral! If this is not a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing 'prob' or 'arb'" << std::endl;
+  else if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") != std::string::npos) {
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
   }
+  else {
+    cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
+  }
+
   hist->SetLineColor(lineColor); hist->SetLineStyle(lineStyle); hist->SetLineWidth(lineWidth);
   hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
   if (highx != -1) {
@@ -231,11 +241,10 @@ TLegend * TitleLegend(const double xlow, const double ylow, const double xhigh, 
 TLatex * PanelTitle() {
   TLatex *t = new TLatex();
   t->SetTextAlign(11);
-  //  t->SetTextFont(63);
-  t->SetTextSizePixels(26);
-  t->DrawLatex(0.1,0.9, "pp 200 GeV run12 JP2");
-  t->DrawLatex(0.1,0.75, "anti-k_{T}, R = 0.4");
-  t->DrawLatex(0.1,0.6, "Ch+Ne jets, |#eta| < 0.6");
+  t->SetTextSize(0.07);
+  t->DrawLatexNDC(0.2,0.65, "pp 200 GeV run12 JP2");
+  t->DrawLatexNDC(0.2,0.55, "anti-k_{T}, R = 0.4");
+  t->DrawLatexNDC(0.2,0.45, "Ch+Ne jets, |#eta| < 0.6");
   return t;
 }
 
@@ -254,11 +263,12 @@ void Resolution (TH2D* DeltaObsvPt, const std::string out, const std::string fil
   std::string kind = "";
   if (groom == 1) {kind = "SD ";}
   std::string cName = (std::string) "c" + (std::string) DeltaObsvPt->GetName();
-  TCanvas * cres = MakeCanvas(cName, "z", 600,800);
-  DivideCanvas(cres,"z",1,3);
+  TCanvas * cres = MakeCanvas(cName, "z", 1000,1000);
+  TCanvas * cm = MakeCanvas((cName+"_mean").c_str(),"0",1000,1000);
+  TCanvas * csm = MakeCanvas((cName+"_sigmamean").c_str(),"0",1000,1000);
 
   const int nDeltas = 11;
-  double ranges_delta[nDeltas+1] = {0,1,2,3,4,5,6,7,8,9,10,11};
+  double ranges_delta[nDeltas+1] = {1,2,3,4,5,6,7,8,9,10,11,12};
   vector<TH1D*> delta_projs = Projection2D(DeltaObsvPt, nDeltas, ranges_delta, "Y");
   double means[nDeltas]; double rms[nDeltas]; double meanerr[nDeltas]; double rmserr[nDeltas];
   for (int i = 0; i < nDeltas; ++ i) {
@@ -280,20 +290,30 @@ void Resolution (TH2D* DeltaObsvPt, const std::string out, const std::string fil
 
   double yrms[nDeltas] = {rms[0],rms[1],rms[2],rms[3],rms[4],rms[5],rms[6],rms[7],rms[8],rms[9],rms[10]};
   double yerrrms[nDeltas] = {rmserr[0],rmserr[1],rmserr[2],rmserr[3],rmserr[4],rmserr[5],rmserr[6],rmserr[7],rmserr[8],rmserr[9],rmserr[10]};
-
+  double yrmsmean[nDeltas];
+  double yerrrmsmean[nDeltas];
+  for (int i = 0; i < nDeltas; ++ i) {
+    yrmsmean[i] = yrms[i] /(double) ymean[i];
+    double rel_err = sqrt((yerrmean[i]*yerrmean[i]/(double)(ymean[i]*ymean[i])) + (yerrrms[i]*yerrrms[i]/(double)(yrms[i]*yrms[i])));
+    yerrrmsmean[i] = yrmsmean[i]*rel_err;
+  }
+  
   TGraphErrors *mean = new TGraphErrors(nDeltas,x,ymean,xerr,yerrmean);
   TGraphErrors *sigma = new TGraphErrors(nDeltas,x,yrms,xerr,yerrrms);
+  //TGraphErrors *sigmamean = new TGraphErrors(nDeltas,x,yrmsmean,xerr,yerrrmsmean);
   
-  PrettifyTGraph(mean, kRed, kFullCircle, 1, kBlack, "Gen. p^{jet}_{T} [GeV/c]", "#mu", 5, 60, -2, 2);
-  PrettifyTGraph(sigma, kRed, kFullCircle, 1, kBlack, "Gen. p^jet}_{T} [GeV/c]","#sigma",5,60,0,0.5);
+  PrettifyTGraph(mean, kRed, kFullCircle, 1, kBlack, "Gen. p^{jet}_{T} [GeV/c]", "#mu", 5, 60, -1, 1);
+  PrettifyTGraph(sigma, kRed, kFullCircle, 1, kBlack, "Gen. p^{jet}_{T} [GeV/c]","#sigma",5,60,0,0.5);
   
-  Prettify2D(DeltaObsvPt, "Gen. p^{jet}_{T} [GeV/c]", yTitle, 5,60,-1,-1,1e-11,1e-3);
+  Prettify2D(DeltaObsvPt, "Gen. p^{jet}_{T} [GeV/c]", yTitle, 5,60,-1,-1,/*1e-10,1);*/1e-11,1e-6);
 
-  cres->cd(1); DeltaObsvPt->Draw("colz");
-  cres->cd(2); mean->Draw("APZ");
-  cres->cd(3); sigma->Draw("APZ");
+  cres->cd(); DeltaObsvPt->Draw("colz");
+  cm->cd(); mean->Draw("APZ");
+  csm->cd(); sigma->Draw("APZ");
   
-  cres->SaveAs((out + DeltaObsvPt->GetName() + filetype).c_str()); 
+  cres->SaveAs((out + DeltaObsvPt->GetName() +"_massless"+filetype).c_str()); 
+  cm->SaveAs((out + DeltaObsvPt->GetName()+ "_mean"+"_massless"+filetype).c_str()); 
+  csm->SaveAs((out + DeltaObsvPt->GetName() + "_sigma"+"_massless"+filetype).c_str()); 
   
   return;
 }
@@ -318,7 +338,7 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   vector<TH1D*> d_projs = Projection2D (ObsvPt_d, nHists, pt_bins, "X");
   
   double lox, hix, loy, hiy;
-  
+    
   if ((xTitle.find("z_") == std::string::npos && xTitle.find("r_") == std::string::npos && xTitle.find("Z_") == std::string::npos && xTitle.find("R_") == std::string::npos) || xTitle.find(" / ") != std::string::npos) {lox = -1; hix = -1;} else {lox = 0; hix = 0.5;}
   
   if (xTitle.find("M_{c") != std::string::npos) {lox = -0.5; hix = 5;}
@@ -337,12 +357,13 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
   if (xTitle.find("z_") != std::string::npos || xTitle.find("R_") != std::string::npos) {xTitle = (xTitle.substr(0,5)).c_str(); hiy = 7;}
   
   for(int i = 0; i < nHists; ++ i) {
-    Prettify1DwLineStyle(py_projs[i], kGreen, kSolid, 5, xTitle, yTitle,lox, hix, loy, hiy);
-    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix, 0, hiy);
-    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0, hiy);
+    Prettify1DwLineStyle(py_projs[i], kGreen, kSolid, 5, xTitle, yTitle,lox, hix, 0,3);//loy, hiy);
+    Prettify1D(ge_projs[i], kBlue, kOpenCircle, 1, kBlue, xTitle, yTitle,lox, hix,0,3);// 0, hiy);
+    Prettify1D(d_projs[i], kBlack, kFullStar, 2, kBlack, xTitle, yTitle,lox, hix, 0,3);//0, hiy);
   }
   
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                   
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                         
+  
   //TLegend *t = TitleLegend(0.1,0.15,0.8,0.8);
   //TLatex *t = PanelTitle();
   TLegend *pan_leg = new TLegend(0.1,0.15,0.8,0.45); pan_leg->SetBorderSize(0);
@@ -351,12 +372,14 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
     pan_leg->AddEntry(ge_projs[0], "PYTHIA6+GEANT", "p");
     pan_leg->AddEntry(d_projs[0], "Raw data", "p");
   }
-
+  
   TLegend *tslices[nHists];
   for (int i = 0; i < nHists; ++ i) {
-    tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{" + kind + "jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.9,0.95);
+    tslices[i] = SliceLegend(((to_string(corresp_pts[i])).substr(0,2) + " < p_{T}^{" + "jet} < " + (to_string(corresp_pts[i + 1])).substr(0,2) + " GeV/c").c_str(), 0.13,0.8,0.5,0.95);
   }
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                                                 
+  
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                        
+                                             
   c->cd(1); TLatex *t = PanelTitle(); if(matched==0) { pan_leg->Draw(); }
   for (int i = 0; i < nHists; ++ i) {
     c->cd(i+2);
@@ -365,8 +388,35 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, const 
     }
     ge_projs[i]->Draw("same"); tslices[i]->Draw("same");
   }
-
-  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
+    
+  //  c->SaveAs((out + ObsvPt_ge->GetName()  + "_slices" + filetype).c_str());
+  
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+  
+  TCanvas *cpile = MakeCanvas("cpile","0",1200,1200);
+  TLegend *ms = new TLegend(0.6,0.4,0.8,0.68); ms->SetBorderSize(0);
+  ms->AddEntry(ge_projs[0],"15 < p_{T} < 20 GeV/c", "p");
+  ms->AddEntry(ge_projs[1],"20 < p_{T} < 25 GeV/c", "p");
+  ms->AddEntry(ge_projs[2],"25 < p_{T} < 30 GeV/c", "p");
+  ms->AddEntry(ge_projs[3],"30 < p_{T} < 40 GeV/c", "p");
+  ms->AddEntry(ge_projs[4],"40 < p_{T} < 60 GeV/c", "p");
+									
+  TLegend *titl = TitleLegend(0.6,0.7,0.8,0.88);
+  
+  Prettify1D(ge_projs[0], kBlack, kOpenCircle, 1, kBlack, xTitle, yTitle,0,2,0,2);
+  Prettify1D(ge_projs[1], kRed, kFullCircle, 1, kRed, xTitle, yTitle,0,2,0,2);
+  Prettify1D(ge_projs[2], kBlue, kOpenSquare, 1, kBlue, xTitle, yTitle,0,2,0,2);
+  Prettify1D(ge_projs[3], kViolet, kFullSquare, 1, kViolet, xTitle, yTitle,0,2,0,2);
+  Prettify1D(ge_projs[4], kMagenta, kOpenStar, 1, kMagenta, xTitle, yTitle,0,2,0,2);
+  
+  cpile->cd();/* TLatex *p = PanelTitle();*/
+  for (int i = 0; i < nHists; ++ i) {
+    ge_projs[i]->Draw("same");
+  }
+  titl->Draw("same"); ms->Draw("same");
+  
+  cpile->SaveAs((out + ObsvPt_ge->GetName() + "_onepanel_chpion" + filetype).c_str());
+  
   return;
 }
 
@@ -448,7 +498,7 @@ void ObservablePtSlices(TH2D* ObsvPt_d, TH2D* ObsvPt_py, TH2D* ObsvPt_ge, std::v
   return;
 }
 
-void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype, const std::string flag) {
+void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* ObsGe, const std::string xTitle, const std::string out, const std::string filetype, const std::string flag, const double zlow, const double zhigh) {
   ObsPy->SetTitle(""); ObsGe->SetTitle("");
   std::string cresName = (std::string) "cres" + (std::string) resName;
   std::string cmesName = (std::string) "cmes" + (std::string) ObsGe->GetName();
@@ -480,7 +530,7 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
   double lor = -1; double hir = -1;
   if (flag == "pt") {lor = 15; hir = 60;}
   
-  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), lor,hir,-1,-1,1e-11,1e-4);
+  Prettify2D(hres, ("Det. " + xTitle).c_str(), ("Gen. " + xTitle).c_str(), lor,hir,-1,-1,/*1e-10,1e2);*/zlow,zhigh);//CHANGE BACK LATER!!!!!!!!
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TLEGEND~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//                                                  
   TLegend *tmes;
   if (xTitle.find("R_") != std::string::npos || xTitle.find("r_") != std::string::npos) {
@@ -494,8 +544,80 @@ void Response(TFile *matchFile, const std::string resName, TH1D* ObsPy, TH1D* Ob
   cmes->cd(); ObsPy->Draw(); ObsGe->Draw("same"); tmes->Draw("same");
 
   cres->SaveAs((out + resName + filetype).c_str());
-  cmes->SaveAs((out + ObsGe->GetName() + "_and_py" + filetype).c_str());
+  //  cmes->SaveAs((out + ObsGe->GetName() + "_and_py" + filetype).c_str());
   return;
 }
+/*
+void MultiPanel(TCanvas *c, const int nRows, const int nCols, TH2D* hist, const std::string xTitle, const std::string yTitle, const double *bins, const std::string axis, const int loy, const int hiy, const int markerstyle, const bool already_called) {
+  const int nBins = ( nRows * nCols ) - 1;
+  string pts[nBins+1]; if (nBins == 5) {pts = {"15","20","25","30","40","60"};} else if (nBins == 6) {pts = {"10","15","20","25","30","40","60"};}
+  else if (nBins == 7) {pts = {"5","10","15","20","25","30","40","60"};}
+  c->Divide(nCols,nRows,0,0);
+  TH1D* dummy = new TH1D("dummy",(";"+xTitle+";"+yTitle).c_str(),1,0,1);
+  
+  std::vector<TH1D*> projs = Projection2D (hist, nBins, bins, axis);
+  
+  if (markerstyle == 0) {//Pythia6 w/o decays
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1DwLineStyle(projs[i], kRed, kDashed, 5, xTitle, yTitle, -1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 1) {//Pythia6 w/ decays
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1DwLineStyle(projs[i], kRed, kSolid, 5, xTitle, yTitle, -1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 2) {//Pythia8 w/o decays
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1DwLineStyle(projs[i], kBlue, kDashed, 5, xTitle, yTitle, -1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 3) {//Pythia8 w/ decays
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1DwLineStyle(projs[i], kBlue, kSolid, 5, xTitle, yTitle, -1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 4) {//Herwig7 w/ decays
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1DwLineStyle(projs[i], kCyan, kSolid, 5, xTitle, yTitle, -1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 5) {//Pythia6+Geant
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1D (projs[i], kRed,kOpenCircle, 2, kRed,xTitle,yTitle,-1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 6) {//Raw Data
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1D (projs[i], kBlack, kOpenStar, 2.5, kBlack,xTitle,yTitle,-1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 7) {//Unfolded Data
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1D (projs[i], kMagenta, kOpenStar, 2.5, kBlack,xTitle,yTitle,-1,-1,loy,hiy);
+    }
+  }
+  else if (markerstyle == 7) {//Unfolded, corrected data
+    for (int i = 0; i < nBins; ++ i) {
+      Prettify1D (projs[i], kMagenta, kFullStar, 2.5, kBlack,xTitle,yTitle,-1,-1,loy,hiy);
+    }
+  }
 
+  TLatex *t = new TLatex(); t->SetTextAlign(11);
+  TLatex *s = new TLatex(); s->SetTextAlign(11);
+
+  if (!already_called) {
+    c->cd(1);
+    t->DrawLatex(0.1,0.9, "pp 200 GeV run12 JP2");
+    t->DrawLatex(0.1,0.75, "anti-k_{T}, R = 0.4");
+    t->DrawLatex(0.1,0.6, "Ch+Ne jets, |#eta| < 0.6");
+  }
+  
+  for (int i = 0; i < nBins; ++ i) {
+    c->cd(i+2); if (0 <= markerstyle && markerstyle <= 4) {projs[i]->Draw("C");} else{projs[i]->Draw();} s->DrawLatex(0.7,0.8,(pts[i]+" < p_{T} < "+pts[i+1]).c_str());
+  }
+
+  return;
+}
+*/
 #endif /* Plots_h */

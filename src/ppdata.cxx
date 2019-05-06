@@ -125,14 +125,15 @@ int main ( int argc, const char** argv) {
   // Build the event structure w/ cuts
   // ---------------------------------
   TStarJetPicoReader reader;
-  InitReader(reader, chain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, /*"dummy_badtows.list"*/det_badTowers, dat_bad_run_list);
+  InitReader(reader, chain, nEvents, det_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, 0.9999, false, /*"dummy_badtows.list"*/det_badTowers, dat_bad_run_list);
 
   // Data classes
   // ------------
   TStarJetVectorContainer<TStarJetVector>* container;
   TStarJetVector* sv; // TLorentzVector* would be sufficient
   TStarJetPicoEventHeader* header;
-
+  TStarJetPicoEvent* event;
+  
   // Histograms
   // ----------
   TH1::SetDefaultSumw2();
@@ -149,6 +150,8 @@ int main ( int argc, const char** argv) {
   vector<double> ch_e_frac;
   vector<double> zg; vector<double> rg; vector<double> mg; vector<double> ptg;
   vector<double> mcd;
+  vector<double> tau0; vector<double> tau05; vector<double> tau_05; vector<double> tau_1;
+  vector<double> tau0_g; vector<double> tau05_g; vector<double> tau_05_g; vector<double> tau_1_g;
   
   TTree *eventTree = new TTree("event","event");
   eventTree->Branch("n_jets", &n_jets);
@@ -156,7 +159,32 @@ int main ( int argc, const char** argv) {
   eventTree->Branch("ch_e_frac",&ch_e_frac);
   eventTree->Branch("zg", &zg); eventTree->Branch("rg", &rg); eventTree->Branch("mg", &mg); eventTree->Branch("ptg",&ptg);
   eventTree->Branch("mcd",&mcd);
+  eventTree->Branch("tau0",&tau0); eventTree->Branch("tau05",&tau05); eventTree->Branch("tau_05",&tau_05); eventTree->Branch("tau_1",&tau_1);
+  eventTree->Branch("tau0_g",&tau0_g); eventTree->Branch("tau05_g",&tau05_g); eventTree->Branch("tau_05_g",&tau_05_g); eventTree->Branch("tau_1_g",&tau_1_g);
   
+  double evt_vtx_JP2; double bbc_coinc_JP2;
+  double n_trks_JP2; double n_tows_JP2;
+  vector<double> trackPt_JP2; vector<double> trackEta_JP2; vector<double> trackPhi_JP2; vector<double> trackDCA_JP2;
+  vector<double> towerEt_JP2; vector<double> towerEta_JP2; vector<double> towerPhi_JP2; vector<double> towerId_JP2;
+
+
+  // ; towerEt vs towerID; average Et per event in towers vs luminosity;   ;trackDCA event_vertex  2D of z_vertex and bbc_coincidence.
+
+  TTree *QAJP2 = new TTree("QAJP2","QAJP2");
+  QAJP2->Branch("n_trks", &n_trks_JP2);
+  QAJP2->Branch("n_tows", &n_tows_JP2);
+  QAJP2->Branch("bbc_coinc", &bbc_coinc_JP2);
+  QAJP2->Branch("evt_vtx", &evt_vtx_JP2); //vpdvz
+  QAJP2->Branch("trackPt", &trackPt_JP2);
+  QAJP2->Branch("trackEta", &trackEta_JP2);
+  QAJP2->Branch("trackPhi", &trackPhi_JP2);
+  QAJP2->Branch("trackDCA", &trackDCA_JP2);
+  QAJP2->Branch("towerEta", &towerEta_JP2);
+  QAJP2->Branch("towerPhi", &towerPhi_JP2);
+  QAJP2->Branch("towerEt", &towerEt_JP2);
+  QAJP2->Branch("towerId", &towerId_JP2);
+
+
   // Helpers
   // -------
   vector<PseudoJet> particles;
@@ -175,7 +203,8 @@ int main ( int argc, const char** argv) {
   Selector select_jet_rap     = fastjet::SelectorAbsRapMax(max_rap);
   Selector select_jet_pt_min  = fastjet::SelectorPtMin( det_jet_ptmin );
   Selector select_jet_pt_max  = fastjet::SelectorPtMax( jet_ptmax );
-  Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max;
+  Selector select_jet_m_min = fastjet::SelectorMassMin( mass_min );
+  Selector sjet = select_jet_rap && select_jet_pt_min && select_jet_pt_max && select_jet_m_min;
   
   // Choose a jet and area definition
   // --------------------------------
@@ -190,7 +219,7 @@ int main ( int argc, const char** argv) {
   AreaDefinition  area_def = fastjet::AreaDefinition(fastjet::active_area_explicit_ghosts, area_spec);
 
   //Creating SoftDrop grooming object
-  contrib::SoftDrop sd(beta,z_cut,R0);
+  contrib::SoftDrop sd(Beta,z_cut,R0);
   cout << "SoftDrop groomer is: " << sd.description() << endl;
   
   cout << "Performing analysis." << endl;
@@ -198,10 +227,13 @@ int main ( int argc, const char** argv) {
   // --------------------  
   //int nEvents = -1;
   int nEventsUsed = 0;
-	
-  //initialize the reader
-  //  reader.Init( nEvents ); //runs through all events with -1
+
+  //for later use looking up PDG masses using particle PID                                                                                                                 
+  TDatabasePDG *pdg = new TDatabasePDG();
   
+  //initialize the reader
+  //reader.Init( nEvents ); //runs through all events with -1
+
   try{
     while ( reader.NextEvent() ) {
       
@@ -209,22 +241,57 @@ int main ( int argc, const char** argv) {
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
       ch_e_frac.clear(); mcd.clear();
+      tau0.clear(); tau05.clear(); tau_05.clear(); tau_1.clear();
+      tau0_g.clear(); tau05_g.clear(); tau_05_g.clear(); tau_1_g.clear();
       //initializing variables to -9999
       n_jets = -9999;
-      
+
+      n_trks_JP2 = -9999; n_tows_JP2 = -9999; bbc_coinc_JP2 = -9999; evt_vtx_JP2 = -9999;
+      trackPt_JP2.clear(); trackEta_JP2.clear(); trackPhi_JP2.clear(); trackDCA_JP2.clear();
+      towerEt_JP2.clear(); towerEta_JP2.clear(); towerPhi_JP2.clear(); towerId_JP2.clear();
+
       reader.PrintStatus(10);
       //get the event header
       
       header = reader.GetEvent()->GetHeader();
+      event = reader.GetEvent();
+      
       particles.clear();
       
       // Get the output container from the reader
       // ----------------------------------------
       container = reader.GetOutputContainer();
+
+      //what are the trigger IDs for pp Y12?
+      //JP2: 370621
       
+      // if it HAS the trigger, do the QA for the triggered events. This should ALWAYS be satisfied for pp, since I'm selecting the JP2 trigger!
+      if (header->HasTriggerId(370621)) {//!JP2 - only for ppY12! change if you change datasets! 
+	n_trks_JP2 = header->GetNOfTowers(); n_tows_JP2 = header->GetNOfPrimaryTracks(); bbc_coinc_JP2 = header->GetBbcCoincidenceRate(); evt_vtx_JP2 = header->GetPrimaryVertexZ();
+	
+	for (int i = 0; i < header->GetNOfPrimaryTracks(); ++ i) {
+	  trackDCA_JP2.push_back(event->GetPrimaryTrack(i)->GetDCA());
+	  trackPt_JP2.push_back(event->GetPrimaryTrack(i)->GetPt());
+	  trackEta_JP2.push_back(event->GetPrimaryTrack(i)->GetEta());
+	  trackPhi_JP2.push_back(event->GetPrimaryTrack(i)->GetPhi());
+	}
+	for (int i = 0; i < header->GetNOfTowers(); ++ i) {
+	  towerEta_JP2.push_back(event->GetTower(i)->GetEta());
+	  towerPhi_JP2.push_back(event->GetTower(i)->GetPhi());
+	  towerEt_JP2.push_back(event->GetTower(i)->GetEt());
+	  towerId_JP2.push_back(event->GetTower(i)->GetId());
+
+	}
+	QAJP2->Fill();
+	//continue;
+      }
+      else {
+	cerr << "You should never see this message! The JP2 trigger is selected, so should never have a case in which an event doesn't have that trigger ID!" << endl; exit(1);
+      }
+
       // Transform TStarJetVectors into (FastJet) PseudoJets
       // ----------------------------------------------------------
-      GatherParticles(container, sv, particles, full,0); //ch+ne
+      GatherParticles(container, sv, particles, full,0, pdg); //ch+ne
 
       // Analysis
       // --------
@@ -272,15 +339,41 @@ int main ( int argc, const char** argv) {
 	  M.push_back(LoResult[i].m()); E.push_back(LoResult[i].e());
 	  zg.push_back(GroomedJets[i].structure_of<SD>().symmetry()); rg.push_back(GroomedJets[i].structure_of<SD>().delta_R());
 	  mg.push_back(GroomedJets[i].m()); ptg.push_back(GroomedJets[i].pt());
+	  
 	  double m2 = (LoResult[i].m())*(LoResult[i].m()); double gm2 = (GroomedJets[i].m())*(GroomedJets[i].m());
 	  double m_cd = (double) sqrt(m2 - gm2); if ((m2 - gm2) < 10e-10) {m_cd = 0;}
 	  mcd.push_back(m_cd);
+	  
 	  double ch_e = 0; double tot_e = 0;
+	  double sum_tau0 = 0; double sum_tau05 = 0; double sum_tau_05 = 0; double sum_tau_1 = 0;
+	  double sum_tau0_g = 0; double sum_tau05_g = 0; double sum_tau_05_g = 0; double sum_tau_1_g = 0;
 	  vector<PseudoJet> cons = LoResult[i].constituents();
+	  vector<PseudoJet> cons_g = GroomedJets[i].constituents();
+	  //using pT, not energy, so some names are misnomers
 	  for (int j = 0; j < cons.size(); ++ j) {
-	    if (cons[j].user_index() != 0) {ch_e += cons[j].e();}
-	    tot_e += cons[j].e();
+	    if (cons[j].user_index() != 0) {ch_e += cons[j].pt();}
+	    tot_e += cons[j].pt();
+	    //angularity:
+	    sum_tau0 += (cons[j].pt()*pow(LoResult[i].delta_R(cons[j]), 2 - 0));
+	    sum_tau05 += (cons[j].pt()*pow(LoResult[i].delta_R(cons[j]), 2 - 0.5));
+	    sum_tau_05 += (cons[j].pt()*pow(LoResult[i].delta_R(cons[j]), 2 + 0.5));
+	    sum_tau_1 += (cons[j].pt()*pow(LoResult[i].delta_R(cons[j]), 2 + 1));
 	  }
+	  for (int j = 0; j < cons_g.size(); ++j) { 
+	    sum_tau0_g += (cons_g[j].pt()*pow(GroomedJets[i].delta_R(cons_g[j]), 2 - 0));
+	    sum_tau05_g += (cons_g[j].pt()*pow(GroomedJets[i].delta_R(cons_g[j]), 2 - 0.5));
+	    sum_tau_05_g += (cons_g[j].pt()*pow(GroomedJets[i].delta_R(cons_g[j]), 2 + 0.5));
+	    sum_tau_1_g += (cons_g[j].pt()*pow(GroomedJets[i].delta_R(cons_g[j]), 2 + 1));
+	  }
+	  tau0.push_back(sum_tau0 / (double) LoResult[i].pt());
+	  tau05.push_back(sum_tau05 / (double) LoResult[i].pt());
+	  tau_05.push_back(sum_tau_05 / (double) LoResult[i].pt());
+	  tau_1.push_back(sum_tau_1 / (double) LoResult[i].pt());
+	  tau0_g.push_back(sum_tau0_g / (double) GroomedJets[i].pt());
+	  tau05_g.push_back(sum_tau05_g / (double) GroomedJets[i].pt());
+	  tau_05_g.push_back(sum_tau_05_g / (double) GroomedJets[i].pt());
+	  tau_1_g.push_back(sum_tau_1_g / (double) GroomedJets[i].pt());
+
 	  ch_e_frac.push_back(ch_e/(double)tot_e);
 	}
       }
@@ -304,7 +397,7 @@ int main ( int argc, const char** argv) {
   // Close up shop
   // -------------
   eventTree->Write();
-  
+  QAJP2->Write();
   //fout->Write();
   fout->Close();
 

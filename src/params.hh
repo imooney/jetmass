@@ -58,17 +58,19 @@ namespace Analysis {
   const double Pi0Mass = 0.1349766;
   
   const double R = 0.4;                   //jet resolution parameter                                                                                                              
+  //CHANGE BACK BAD RUN LISTS LATER FOR DET LEVEL
+  
 
   //quality cuts                                
   const int refMultCut = 0;
   const double truth_evEtMin = -1;
   const double det_evEtMin = -1;
   const double sim_maxEtTow = 9999;
-  const double dat_maxEtTow = 100;
+  const double dat_maxEtTow = 9999;
   const std::string sim_badTowers = "src/dummy_tower_list.txt";
   const std::string sim_bad_run_list = "dummy_badrun.list";
-  const std::string dat_bad_run_list = "pp200Y12_badrun.list";
-  
+  const std::string dat_bad_run_list = "pp200Y12_badrun.list"; //!!!!! //CHANGE BACK LATER!!!!!!!!!!!!!!!!!!!!!!!
+    
   //truth 
   const std::string truth_triggerString = "All";
   const double truth_absMaxVz = 1000;           //|Vz|<=30 cm
@@ -79,29 +81,49 @@ namespace Analysis {
   const double truth_NFitPts = -1;
   const double truth_FitOverMaxPts = -1;
   // const std::string truth_badTowers = "src/dummy_tower_list.txt";
- 
+  /*
+  //TEMP detector cuts
+  const std::string det_triggerString = "ppJP2";
+  const double det_absMaxVz = 30;           //|Vz|<=30 cm
+  const double det_vZDiff = 1000;             //max diff between selected TPC vertex and most probable VPD vertex (in ppRun6, VPD vz = 0, so vZDiff should be > absMaxVz)
+  const double det_evPtMax = 30;
+  const double det_evEtMax = 30;
+  const double det_DCA = 1;
+  const double det_NFitPts = 20;
+  const double det_FitOverMaxPts = 0.52;
+  const std::string det_badTowers = "src/dummy_tower_list.txt";//"Combined_pp200Y12_badtower.list";//"src/y7_AuAu_HT_hot_list.txt"; !!!!!
+*/
+
   //detector
   
-  const std::string det_triggerString = "ppJP2";
+  const std::string det_triggerString = "ppJP2";//"ppJP2"; //CHANGE BACK LATER!!!!!!!!!!!!!!!!!!!!!!!!!
   const double det_absMaxVz = 30.0;           //|Vz|<=30 cm
-  const double det_vZDiff = 31.0;             //max diff between selected TPC vertex and most probable VPD vertex (in ppRun6, VPD vz = 0, so vZDiff should be > absMaxVz)
+  const double det_vZDiff = 1000.0;             //max diff between selected TPC vertex and most probable VPD vertex (in ppRun6, VPD vz = 0, so vZDiff should be > absMaxVz)
   const double det_evPtMax = 30.0;
   const double det_evEtMax = 30.0;
   const double det_DCA = 1.0;
   const double det_NFitPts = 20;
   const double det_FitOverMaxPts = 0.52;
-  const std::string det_badTowers = "Combined_pp200Y12_badtower.list";//"src/y7_AuAu_HT_hot_list.txt";
+  const std::string det_badTowers = "Combined_pp200Y12_badtower.list";//"src/y7_AuAu_HT_hot_list.txt"; !!!!! //CHANGE BACK LATER!!!!!!!!!!!!
+
+  //pAu-specific
+  const std::string pAu_triggerString = "All";
+  const std::string pAu_badTowers = "src/dummy_tower_list.txt";
+  const std::string pAu_bad_run_list = "dummy_badrun.list";
+
   //particle cuts                                                                                                                                                                 
   const double max_track_rap = 1.0;
   const double partMinPt = 0.2;           //30.0 GeV >= particle pT >= 0.2 GeV 
   const double partMaxPt = 30.0;         
 
   //jet cuts                                                                                                                                                                      
-  const double jet_ptmin = 5.0;           //jet pT >= 5.0 GeV                 
-  const double det_jet_ptmin = 15.0;      //detector-level jet pT >= 5 GeV
-  const double jet_ptmax = 1000.0;        //DEBUG
+  const double jet_ptmin = 5.0;//GeV      //gen-jet pT >= 5.0 GeV                 
+  const double det_jet_ptmin = 15.0;//CHANGE BACK TO 15 LATER!!!!!!!!!!!//15.0;//GeV //detector-level jet pT >= 15 GeV
+  const double jet_ptmax = 1000.0;//GeV   //DEBUG
   const double max_rap = max_track_rap-R; //|eta_jet| < 1-R
-  const double NEF_max = 0.9;             //neutral energy fraction of jet must be < 90%                                                                                                                                                                                      
+  const double NEF_max = 0.9;             //neutral energy fraction of jet must be < 90% (not used for PYTHIA) !!!!!
+  const double mass_min = 1.0;//GeV       //det-jet M >= 1.0 GeV !!!!!
+  
   //ghosts                                                                                                                                                                        
   const int ghost_repeat = 1;
   const double ghost_area = 0.01;
@@ -110,7 +132,7 @@ namespace Analysis {
   //softdrop params
   
   const double z_cut = 0.10;
-  const double beta = 0.0;
+  const double Beta = 0.0;
   const double R0 = 1.0;
 
 }

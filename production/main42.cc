@@ -22,7 +22,7 @@ using namespace Pythia8;
 int main(int argc, char* argv[]) {
 
   // Check that correct number of command-line arguments
-  if (argc != 3) {
+  if (argc != 4) {
     cerr << " Unexpected number of command-line arguments. \n You are"
          << " expected to provide one input and one output file name. \n"
          << " Program stopped! " << endl;
@@ -58,6 +58,33 @@ int main(int argc, char* argv[]) {
   int    nEvent    = pythia.mode("Main:numberOfEvents");
   int    nAbort    = pythia.mode("Main:timesAllowErrors");
 
+  std::string decay_switch;
+  if (strcmp(argv[3],"off") == 0) {cout << "Decays off!" << endl; decay_switch = "0";}
+  else if (strcmp(argv[3],"on") == 0) {cout << "Decays on!" << endl; decay_switch = "1";}
+  else {cerr << "Didn't receive a decay setting. Was given argument: " << argv[3] << ". Exiting." << endl; exit(1);}
+
+  double seed = pythia.parm("PhaseSpace:pTHatMin");
+  std::ostringstream sstream; sstream << seed; std::string seedstring = sstream.str();
+
+  //cout << seedstring << endl;
+  /*
+  pythia.readString("Random:setSeed = on");                                                 
+  pythia.readString(("Random:seed = " + seedstring).c_str()); //seed needs to change if looping over multiple pT hard-bins
+  */
+  pythia.readString(("111:mayDecay = " + decay_switch).c_str()); //pi0                                                               
+  pythia.readString(("211:mayDecay = " + decay_switch).c_str()); //pi+                                                             
+  pythia.readString(("221:mayDecay = " + decay_switch).c_str()); //eta                                                           
+  pythia.readString(("321:mayDecay = " + decay_switch).c_str()); //K+                                                             
+  pythia.readString(("310:mayDecay = " + decay_switch).c_str()); //Kshort                                                          
+  pythia.readString(("130:mayDecay = " + decay_switch).c_str()); //Klong                                                      
+  pythia.readString(("3122:mayDecay = " + decay_switch).c_str());//Lambda0                                                           
+  pythia.readString(("3212:mayDecay = " + decay_switch).c_str());//Sigma0                                                            
+  pythia.readString(("3112:mayDecay = " + decay_switch).c_str());//Sigma-                                                           
+  pythia.readString(("3222:mayDecay = " + decay_switch).c_str());//Sigma+                                                            
+  pythia.readString(("3312:mayDecay = " + decay_switch).c_str());//Xi-                                                              
+  pythia.readString(("3322:mayDecay = " + decay_switch).c_str());//Xi0                                                              
+  pythia.readString(("3334:mayDecay = " + decay_switch).c_str());//Omega-  
+
   // Initialization.
   pythia.init();
 
@@ -74,14 +101,17 @@ int main(int argc, char* argv[]) {
         cout << " Aborted since reached end of Les Houches Event File\n";
         break;
       }
-
+      
       // First few failures write off as "acceptable" errors, then quit.
       if (++iAbort < nAbort) continue;
       cout << " Event generation aborted prematurely, owing to error!\n";
       break;
-    
+      
     }
     
+    //cout << pythia.info.pTHat() << endl;
+    
+    /*  
     bool has_trig = 0;
     for (int i = 0; i < pythia.event.size(); ++ i) {
       //if it's a final-state pi0 with >= 5.4 GeV in the desired eta range, it's a trigger
@@ -90,7 +120,7 @@ int main(int argc, char* argv[]) {
       }
     }
     if (!has_trig) {continue;} else {++ iTrigs;}
-
+*/
     // Construct new empty HepMC event and fill it.
     // Units will be as chosen for HepMC build, but can be changed
     // by arguments, e.g. GenEvt( HepMC::Units::GEV, HepMC::Units::MM)

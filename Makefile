@@ -4,7 +4,7 @@ os = $(shell uname -s)
 INCFLAGS      = -I$(shell root-config --incdir) -I$(FASTJETDIR)/include -I$(STARPICOPATH) -I$(ROOUNFOLDPATH) -I/opt/local/include
 
 ifeq ($(os),Linux)
-CXXFLAGS      = -std=c++11
+CXXFLAGS      = -std=c++17
 else
 CXXFLAGS      = -O -fPIC -pipe -Wall -Wno-deprecated-writable-strings -Wno-unused-variable -Wno-unused-private-field -Wno-gnu-static-float-init -std=c++11
 ## for debugging:
@@ -27,7 +27,7 @@ CXX          = clang
 endif
 
 
-ROOTLIBS      = $(shell root-config --libs)
+ROOTLIBS      = $(shell root-config --evelibs)#evelibs is a superset of libs. need the extra libraries in root/montecarlo/eg for a lookup table for PID to PDG mass.
 FJLIBS	      = $(shell fastjet-config --libs)
 #PYTHIALIBS    = $(shell pythia8-config --ldflags)
 
@@ -63,11 +63,12 @@ $(BDIR)/%  : $(ODIR)/%.o
 ###############################################################################
 ############################# Main Targets ####################################
 ###############################################################################
-all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching $(BDIR)/closure $(BDIR)/testing_closure
+all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching $(BDIR)/systematics $(BDIR)/closure $(BDIR)/testing_closure
 
 data : $(BDIR)/ppdata
 sim : $(BDIR)/ppsim
 matching : $(BDIR)/matching
+systematics : $(BDIR)/systematics
 closure : $(BDIR)/closure
 testing_closure : $(BDIR)/testing_closure
 
@@ -81,6 +82,7 @@ $(ODIR)/funcs.o		: $(SDIR)/funcs.cxx $(SDIR)/funcs.hh
 $(ODIR)/ppsim.o		: $(SDIR)/ppsim.cxx
 $(ODIR)/ppdata.o	: $(SDIR)/ppdata.cxx
 $(ODIR)/matching.o	: $(SDIR)/matching.cxx
+$(ODIR)/systematics.o	: $(SDIR)/systematics.cxx
 $(ODIR)/closure.o	: $(SDIR)/closure.cxx
 $(ODIR)/testing_closure.o : $(SDIR)/testing_closure.cxx
 
@@ -88,6 +90,7 @@ $(ODIR)/testing_closure.o : $(SDIR)/testing_closure.cxx
 $(BDIR)/ppsim		: $(ODIR)/ppsim.o $(ODIR)/funcs.o #$(ODIR)/ktTrackEff.o $(ODIR)/dict.o
 $(BDIR)/ppdata		: $(ODIR)/ppdata.o $(ODIR)/funcs.o
 $(BDIR)/matching	: $(ODIR)/matching.o $(ODIR)/funcs.o
+$(BDIR)/systematics	: $(ODIR)/systematics.o $(ODIR)/funcs.o
 $(BDIR)/closure		: $(ODIR)/closure.o $(ODIR)/funcs.o
 $(BDIR)/testing_closure : $(ODIR)/testing_closure.o $(ODIR)/testing_closure.o
 ###############################################################################

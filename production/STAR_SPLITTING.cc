@@ -21,6 +21,7 @@
 #include "Rivet/Analysis.hh"
 #include "Rivet/AnalysisHandler.hh"
 #include "Rivet/Projections/FinalState.hh"
+#include "Rivet/Projections/FinalPartons.hh"
 #include "Rivet/Projections/FastJets.hh"
 #include "Rivet/Tools/Logging.hh"
 #include "Rivet/Tools/ParticleIdUtils.hh"
@@ -36,19 +37,26 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include "TDatabasePDG.h"
+
+#include <cmath>
+#include <iomanip>
+
+double m_chpion = 0.13957018; //GeV/c^2
+
 namespace Rivet {
 
-  class STAR_SPLITTING_max30 : public Analysis {
+  class STAR_SPLITTING : public Analysis {
   public:
-
+    
     /// Constructor
-    STAR_SPLITTING_max30(string name = "STAR_SPLITTING_max30")
+    STAR_SPLITTING(string name = "STAR_SPLITTING")
       : Analysis(name)
     {
       setNeedsCrossSection(true);
       _mode=0;
     }
-
+    
     /*
     //! first setup only for pp jets without any centrlaity bins - so no BKG SUB
 
@@ -110,6 +118,11 @@ namespace Rivet {
     /// Book histograms and initialise projections before the run
     void init() {
 
+      
+      //for later use looking up PDG masses using particle PID
+      pdg = new TDatabasePDG();
+    
+
       //! jet pT bins, lead and sublead 
       // _ptleadedges = {10.0, 20.0, 30.0, 40.0, 60.0};
       // _nptleadbins = _ptleadedges.size()-1;
@@ -124,8 +137,8 @@ namespace Rivet {
       _pTconsMax = 30.0;
       _max_track_rap = 1.0;
       
-      //! jet eta max = 0.6
-      RADIUS = 2;//CHANGE BACK LATER
+      //! jet eta max = 0.8
+      RADIUS = 2;
       _jetR = (float)RADIUS/10;
 
       // _jetparams += 0.2, 0.3, 0.4, 0.5, 0.6;
@@ -183,42 +196,49 @@ namespace Rivet {
       FastJets fj(fs, FastJets::ANTIKT, _jetR);
       addProjection(fj, "Jets");
 
+      FinalPartons fp(Cuts::abseta < 1.0);
+      addProjection(fp, "FP");
+      FastJets pj(fp, FastJets::ANTIKT, _jetR);
+      addProjection(pj, "PartonJets");
 
+
+      
       if(_mode == 0){
-	fout = new TFile(Form("star_subjetvars_pythia8_5pthatbin10_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form(/*"Results/py6_decayed_jewel_pthatbin580_R0%d.root"*/"Results/star_subjetvars_pythia8_5pthatbin10_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
-      }else if(_mode == 1){
-	fout = new TFile(Form("star_subjetvars_pythia8_10pthatbin15_R0%d_max30.root", RADIUS),"RECREATE");
+      }    
+      else if(_mode == 1){
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_10pthatbin15_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 2){
-	fout = new TFile(Form("star_subjetvars_pythia8_15pthatbin20_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_15pthatbin20_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 3){
-	fout = new TFile(Form("star_subjetvars_pythia8_20pthatbin25_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_20pthatbin25_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 4){
-	fout = new TFile(Form("star_subjetvars_pythia8_25pthatbin30_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_25pthatbin30_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 5){
-	fout = new TFile(Form("star_subjetvars_pythia8_30pthatbin35_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_30pthatbin35_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 6){
-	fout = new TFile(Form("star_subjetvars_pythia8_35pthatbin40_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_35pthatbin40_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 7){
-	fout = new TFile(Form("star_subjetvars_pythia8_40pthatbin45_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_40pthatbin45_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 8){
-	fout = new TFile(Form("star_subjetvars_pythia8_45pthatbin50_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_45pthatbin50_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 9){
-	fout = new TFile(Form("star_subjetvars_pythia8_50pthatbin60_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_50pthatbin60_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }else if(_mode == 10){
-	fout = new TFile(Form("star_subjetvars_pythia8_60pthatbin80_R0%d_max30.root", RADIUS),"RECREATE");
+	fout = new TFile(Form("Results/star_subjetvars_pythia8_60pthatbin80_R0%d_decays_noHad_m0_and_pdg_IsaacsHepmcs.root", RADIUS),"RECREATE");
 	fout->cd();
       }
-      
+     
       
       //! histograms 
       for(size_t i = 0; i<_ncentbins; ++i){
@@ -331,6 +351,88 @@ namespace Rivet {
 	// // _h_aj_matched[i] = bookHisto1D(9, i+1, 1);
 	// hAJ_matched[i] = new TH1F(Form("hAJ_matched_centbin%d", i), "", 30, 0, 0.9);
       }
+      
+      PartonTree=new TTree("PartonTree","Parton Jets");
+      //! clear the vectors for each event!
+      PLpt.clear();
+      PLm.clear();
+      PLptg.clear();
+      PLmg.clear();
+      PLeta.clear();
+      PLphi.clear();
+      PLzg.clear();
+      PLrg.clear();
+      PLncons.clear();
+      PLnconsg.clear();
+      PLconsM.clear();
+      
+      PartonTree->Branch("PLpt",&PLpt);
+      PartonTree->Branch("PLm",&PLm);
+      PartonTree->Branch("PLptg",&PLptg);
+      PartonTree->Branch("PLmg",&PLmg);
+      PartonTree->Branch("PLeta",&PLeta);
+      PartonTree->Branch("PLphi",&PLphi);
+      PartonTree->Branch("PLzg",&PLzg);
+      PartonTree->Branch("PLrg",&PLrg);
+      PartonTree->Branch("PLncons",&PLncons);
+      PartonTree->Branch("PLnconsg",&PLnconsg);
+      PartonTree->Branch("PLconsM",&PLconsM);
+      PartonTree->Branch("pthat",&pthat,"pthat/d");
+      PartonTree->Branch("mcweight",&mcweight,"mcweight/d");
+
+      m0PartonTree=new TTree("m0PartonTree","m0Parton Jets");
+      //! clear the vectors for each event!
+      m0PLpt.clear();
+      m0PLm.clear();
+      m0PLptg.clear();
+      m0PLmg.clear();
+      m0PLeta.clear();
+      m0PLphi.clear();
+      m0PLzg.clear();
+      m0PLrg.clear();
+      m0PLncons.clear();
+      m0PLnconsg.clear();
+      
+      m0PartonTree->Branch("m0PLpt",&m0PLpt);
+      m0PartonTree->Branch("m0PLm",&m0PLm);
+      m0PartonTree->Branch("m0PLptg",&m0PLptg);
+      m0PartonTree->Branch("m0PLmg",&m0PLmg);
+      m0PartonTree->Branch("m0PLeta",&m0PLeta);
+      m0PartonTree->Branch("m0PLphi",&m0PLphi);
+      m0PartonTree->Branch("m0PLzg",&m0PLzg);
+      m0PartonTree->Branch("m0PLrg",&m0PLrg);
+      m0PartonTree->Branch("m0PLncons",&m0PLncons);
+      m0PartonTree->Branch("m0PLnconsg",&m0PLnconsg);
+      m0PartonTree->Branch("pthat",&pthat,"pthat/d");
+      m0PartonTree->Branch("mcweight",&mcweight,"mcweight/d");
+
+
+      virtPartonTree=new TTree("virtPartonTree","virtParton Jets");
+      //! clear the vectors for each event!
+      virtPLpt.clear();
+      virtPLm.clear();
+      virtPLptg.clear();
+      virtPLmg.clear();
+      virtPLeta.clear();
+      virtPLphi.clear();
+      virtPLzg.clear();
+      virtPLrg.clear();
+      virtPLncons.clear();
+      virtPLnconsg.clear();
+      
+      virtPartonTree->Branch("virtPLpt",&virtPLpt);
+      virtPartonTree->Branch("virtPLm",&virtPLm);
+      virtPartonTree->Branch("virtPLptg",&virtPLptg);
+      virtPartonTree->Branch("virtPLmg",&virtPLmg);
+      virtPartonTree->Branch("virtPLeta",&virtPLeta);
+      virtPartonTree->Branch("virtPLphi",&virtPLphi);
+      virtPartonTree->Branch("virtPLzg",&virtPLzg);
+      virtPartonTree->Branch("virtPLrg",&virtPLrg);
+      virtPartonTree->Branch("virtPLncons",&virtPLncons);
+      virtPartonTree->Branch("virtPLnconsg",&virtPLnconsg);
+      virtPartonTree->Branch("pthat",&pthat,"pthat/d");
+      virtPartonTree->Branch("mcweight",&mcweight,"mcweight/d");
+
 
       TrigRecTree = new TTree("TrigRecTree","Recoil spectra for various triggers");
       trigpT.clear();
@@ -343,8 +445,20 @@ namespace Rivet {
 
       ResultTree=new TTree("ResultTree","Result Jets");
       //! clear the vectors for each event! 
+      conspT.clear();
+      consDist.clear();
+      consGirth.clear();
+      consM.clear();
+      jetTau1.clear();
+      jetTau05.clear();
+      jetTau0.clear();
+      jetTau_05.clear();
+      jetTau_1.clear();
+      jetGirth.clear();
+      qvg.clear();
       jetpT.clear();
       jetM.clear();
+      jetMult.clear();
       sdjetpT.clear();
       sdjetM.clear();
       jeteta.clear();
@@ -363,6 +477,19 @@ namespace Rivet {
       ResultTree->Branch("cent", &cent,"cent/d");
       ResultTree->Branch("mcweight", &mcweight,"mcweight/d");
       ResultTree->Branch("pthat", &pthat,"pthat/d");
+      ResultTree->Branch("eventID",&eventID,"eventID/d");
+      ResultTree->Branch("conspT",&conspT);
+      ResultTree->Branch("consDist",&consDist);
+      ResultTree->Branch("consGirth",&consGirth);
+      ResultTree->Branch("consM",&consM);
+      ResultTree->Branch("jetTau1",&jetTau1);
+      ResultTree->Branch("jetTau05",&jetTau05);
+      ResultTree->Branch("jetTau0",&jetTau0);
+      ResultTree->Branch("jetTau_05",&jetTau_05);
+      ResultTree->Branch("jetTau_1",&jetTau_1);
+      ResultTree->Branch("jetGirth",&jetGirth);
+      ResultTree->Branch("jetMult",&jetMult);
+      ResultTree->Branch("qvg",&qvg);
       ResultTree->Branch("jetpT", &jetpT);
       ResultTree->Branch("jeteta", &jeteta);
       ResultTree->Branch("jetphi", &jetphi);
@@ -457,12 +584,60 @@ namespace Rivet {
 
     /// Perform the per-event analysis
     void analyze(const Event& event) {
+      
       const double weight = handler().crossSection();
 
       //! clear the vectors for each event! 
       recpT.clear();
       trigpT.clear();
+
+      PLpt.clear();
+      PLm.clear();
+      PLptg.clear();
+      PLmg.clear();
+      PLeta.clear();
+      PLphi.clear();
+      PLzg.clear();
+      PLrg.clear();
+      PLncons.clear();
+      PLnconsg.clear();
+      PLconsM.clear();
       
+      m0PLpt.clear();
+      m0PLm.clear();
+      m0PLptg.clear();
+      m0PLmg.clear();
+      m0PLeta.clear();
+      m0PLphi.clear();
+      m0PLzg.clear();
+      m0PLrg.clear();
+      m0PLncons.clear();
+      m0PLnconsg.clear();
+      
+      virtPLpt.clear();
+      virtPLm.clear();
+      virtPLptg.clear();
+      virtPLmg.clear();
+      virtPLeta.clear();
+      virtPLphi.clear();
+      virtPLzg.clear();
+      virtPLrg.clear();
+      virtPLncons.clear();
+      virtPLnconsg.clear();
+      
+
+      conspT.clear();
+      consDist.clear();
+      consGirth.clear();
+      consM.clear();
+      jetTau1.clear();
+      jetTau05.clear();
+      jetTau0.clear();
+      jetTau_05.clear();
+      jetTau_1.clear();
+      jetGirth.clear();
+      jetMult.clear();
+      qvg.clear();
       jetpT.clear();
       jetM.clear();
       sdjetpT.clear();
@@ -511,7 +686,17 @@ namespace Rivet {
       MCthreesubjet_theta.clear();
       
       const double qscale = event.genEvent()->event_scale();
-
+      //MUST BE CHANGED IF MORE PYTHIA EVENTS ARE RUN!!!!!!!!!!!!!!!!!!
+      int nEvents = -1;
+      const char * fname = fout->GetName();
+      std::string fstr = fname;
+      if (fstr.find("py6") != std::string::npos) {
+	nEvents = 10000000;
+      }
+      else {
+	nEvents = 1000000;//100; for testing
+      }
+      eventID = event.genEvent()->event_number() + _mode*nEvents;
 
       // std::cout<<"pthat = "<<qscale<<" ; xsec-weight = "<<weight<<std::endl;
       
@@ -614,12 +799,13 @@ namespace Rivet {
       fastjet::Selector spart = select_track_rap * select_lopt * select_loptmax;
 
       fastjet::Selector select_eta  = fastjet::SelectorAbsEtaMax(1.0 - _jetR);
-      fastjet::Selector select_pt_hi   = fastjet::SelectorPtMin(_pTCut);
+      fastjet::Selector select_pt_hi   = fastjet::SelectorPtMin(5.0);
       //fastjet::Selector select_pt_hi_max = fastjet::SelectorPtMax(_pTMax);
       fastjet::Selector select_pt_lo   = fastjet::SelectorPtMin(0.001);
       fastjet::Selector select_both_hi = select_pt_hi && select_eta;
       fastjet::Selector select_both_lo = select_pt_lo && select_eta;
       const ParticleVector& FS = applyProjection<FinalState>(event, "FS").particlesByPt();     
+      const ParticleVector& FP = applyProjection<FinalPartons>(event, "FP").particlesByPt();
       
       //shouldn't have to check for triggers in the event since we do that in running over the pythia!
       /*
@@ -650,6 +836,35 @@ namespace Rivet {
       fastjet::JetDefinition jet_def(fastjet::antikt_algorithm, _jetR);
       
       
+      //QUARK v. GLUON PREP: figuring out what/where the hard scattered partons are
+      vector<int> identity; vector<PseudoJet> hardparton;
+      //for (int i = 0; i < event.genEvent()->particles_size(); ++ i) {
+      foreach (const Particle &p, event.allParticles()) {
+	if (/*event.genEvent()->statusHepMC(i)*/ p.genParticle()->status() == 23) {//PYTHIA only! NEED TO CHANGE FOR HERWIG?
+	  if (p.pid() <=6 && p.pid() >= 1) {
+	    identity.push_back(0);//0 MEANS QUARK!
+	  }
+	  else if (p.pid() == 21) {
+	    identity.push_back(1);//1 MEANS GLUON!
+	  }
+	  else {
+	    identity.push_back(-1);//MEANS NEITHER!
+	  }
+	  hardparton.push_back(PseudoJet(p.px(), p.py(), p.pz(), p.E()));	  
+	}
+      }
+      //debugging!
+      /*
+      cout << "identity: " << identity.size() << " hardparton: " << hardparton.size() << std::endl;
+      if ((int) identity.size() != (int) hardparton.size()) { std::cerr << "Number of hard partons should match size of the list of the identities of said hard partons, but that does not seem to be the case. Exiting." << std::endl; exit(1);}
+      std::cout << "NUMBER OF INITIAL HARD PARTONS: " << hardparton.size() << std::endl;
+      std::cout << "THEIR IDENTITIES ARE: " << std::endl;
+      for (int i = 0; i < (int) identity.size(); ++ i) {
+	if (identity[i] == 0) {std::cout << "     quark!" << std::endl;}
+	if (identity[i] == 1) {std::cout << "     gluon!" << std::endl;}
+	if (identity[i] == -1) {std::cout << "     neither quark nor gluon!" << std::endl;}
+      }
+      */
       // if(recoJets_hardcore.size()>=2){
       // 	//! fill Aj_hardcore
       // 	if(recoJets_hardcore.at(0).pt() >= 20 &&
@@ -755,24 +970,79 @@ namespace Rivet {
       */
 
       //! Get all the objects > 0.2 GeV for the matched jets
-      PseudoJets pJet_sub; PseudoJets pJet_ch;
+      PseudoJets pJet_sub; PseudoJets pJet_ch; PseudoJet intermediate; PseudoJet m0intermediate; PseudoJet virtintermediate;
       //! first add the hard core objects in the event. 	      
       foreach ( const Particle& p, FS) {
-	if(p.pt() >= 0.2*GeV){
-	  pJet_sub.push_back(PseudoJet(p.px(), p.py(), p.pz(), p.E()));
-	  if (p.charge() != 0) {
-	    pJet_ch.push_back(PseudoJet(p.px(), p.py(), p.pz(), p.E()));
-	  }
+	//if(p.pt() >= 0.2*GeV && fabs(p.eta()) < 1){
+	intermediate = PseudoJet(p.px(), p.py(), p.pz(), p.E());
+	//if (p.charge() != 0) {
+	//	  std::cout << p.mass() << std::endl;
+	//intermediate.reset_PtYPhiM(p.pt(),p.rap(),p.phi(), p.mass());//,m_chpion);
+	
+	//	if (p.mass() > 1) {cout << "MASSIVE PARTICLE BELOW!" << endl;}
+	//if (p.mass() > 9) {cout << "CHONKYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY v" << endl;}
+	//cout << p.pid() << ": " << p.mass() << " " << pdg->GetParticle(p.pid())->Mass() << endl;
+	//if (p.mass() > 1) {cout << "MASSIVE PARTICLE ABOVE!" << endl;}
+	//if (p.mass() > 9) {cout << "CHONKYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY ^" << endl;}
+
+
+	intermediate.reset_PtYPhiM(p.pt(),p.rap(),p.phi(),(double) pdg->GetParticle(p.pid())->Mass()); //PDG MASSES!!!
+       
+	//}
+	pJet_sub.push_back(intermediate);
+	if (p.charge() != 0) {
+	  pJet_ch.push_back(PseudoJet(p.px(), p.py(), p.pz(), p.E()));
 	}
-      }      
-      vector<PseudoJet> pJet_ch_cut = spart(pJet_ch);
+	//}
+      }     
+
+      PseudoJets PLjet; PseudoJets m0PLjet; PseudoJets virtPLjet;
+      foreach ( const Particle & p, FP) {
+	intermediate = PseudoJet(p.px(), p.py(), p.pz(), p.E());
+	m0intermediate = PseudoJet(p.px(), p.py(), p.pz(), p.E());
+	virtintermediate = PseudoJet(p.px(), p.py(), p.pz(), p.E());
+	//	if (p.mass() > 1) {cout << "MASSIVE PARTICLE BELOW!" << endl;}
+	//if (p.mass() > 9) {cout << "CHONKYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY v" << endl;}
+	//cout << setprecision(5) << p.pid() << ": " << p.mass() << " " << pdg->GetParticle(p.pid())->Mass() << endl;
+	//if (p.mass() > 1) {cout << "MASSIVE PARTICLE ABOVE!" << endl;}
+	//if (p.mass() > 9) {cout << "CHONKYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY ^" << endl;}
+	
+	intermediate.reset_PtYPhiM(p.pt(),p.rap(),p.phi(),pdg->GetParticle(p.pid())->Mass()); //PDG MASSES!!!
+	
+	if (p.pid() == 4) { cout << "bottom! " << setprecision(5) << intermediate.m() << endl;}
+	if (p.pid() == -4) {cout << "antibottom! " << setprecision(5) << intermediate.m() << endl;}
+	m0intermediate.reset_PtYPhiM(p.pt(),p.rap(),p.phi(),0); //MASSLESS!!!
+	
+        //intermediate.reset_PtYPhiM(p.pt(),p.rap(),p.phi(), 0);//p.mass());//,m_chpion);//!MASSLESS PARTONS!!!
+        PLjet.push_back(intermediate);
+	m0PLjet.push_back(m0intermediate);
+	virtPLjet.push_back(virtintermediate);
+      }
       
-      fastjet::ClusterSequence cs_sub(pJet_sub, jet_def);
+      vector<PseudoJet> pJet_cut = spart(pJet_sub);
+      vector<PseudoJet> pJet_ch_cut = spart(pJet_ch);
+      vector<PseudoJet> PL_cut = spart(PLjet);
+      vector<PseudoJet> m0PL_cut = spart(m0PLjet);
+      vector<PseudoJet> virtPL_cut = spart(virtPLjet);
+      
+      
+      fastjet::ClusterSequence cs_sub(pJet_cut, jet_def);
       fastjet::ClusterSequence cs_ch(pJet_ch_cut, jet_def);
+      fastjet::ClusterSequence cs_PL(PL_cut, jet_def);
+      fastjet::ClusterSequence cs_m0PL(m0PL_cut, jet_def);
+      fastjet::ClusterSequence cs_virtPL(virtPL_cut, jet_def);
+
       PseudoJets recoJets_bs = sorted_by_pt(cs_sub.inclusive_jets());
       PseudoJets recoJets_bs_ch = sorted_by_pt(cs_ch.inclusive_jets());
-      PseudoJets recoJets_bkgsub = select_both_hi(recoJets_bs);
+      PseudoJets recoJets_bs_pl = sorted_by_pt(cs_PL.inclusive_jets());
+      PseudoJets recoJets_bs_m0pl = sorted_by_pt(cs_m0PL.inclusive_jets());
+      PseudoJets recoJets_bs_virtpl = sorted_by_pt(cs_virtPL.inclusive_jets());
+
+      PseudoJets recoJets_bkgsub = select_both_hi(recoJets_bs); //want to use these for response construction
       PseudoJets recoJets_bkgsub_ch = select_both_hi(recoJets_bs_ch);
+      PseudoJets recoJets_PL = select_both_hi(recoJets_bs_pl);
+      PseudoJets recoJets_m0PL = select_both_hi(recoJets_bs_m0pl);
+      PseudoJets recoJets_virtPL = select_both_hi(recoJets_bs_virtpl);
       
       /*
       if(recoJets_bkgsub.size()==0){
@@ -893,13 +1163,185 @@ namespace Rivet {
       }
       
       TrigRecTree->Fill();
+
+
+      //HEY LOOK HERE!!!!!!!!!!!!!!!!!!!!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      //discards events on the grounds of them having jets of pT > double the high end of the pT-hat bin from which they came.
+      bool bad_event = 0;
+      int upper_edge;
+      const char * str = fout->GetName();
+      std::string s = str;
+      if (_mode == 0 && s.find("py6") == std::string::npos) {upper_edge = 10;} if (_mode == 1) {upper_edge = 15;} if (_mode == 2) {upper_edge = 20;} if (_mode == 3) {upper_edge = 25;}
+      if (_mode == 4) {upper_edge = 30;} if (_mode == 5) {upper_edge = 35;} if (_mode == 6) {upper_edge = 40;} if (_mode == 7) {upper_edge = 45;}
+      if (_mode == 8) {upper_edge = 50;} if (_mode == 9) {upper_edge = 60;} if (_mode == 10){upper_edge = 80;}
+      if (s.find("py6") != std::string::npos) {upper_edge = 80;}
+      if (recoJets_bkgsub.size() != 0) {
+	if (recoJets_bkgsub[0].pt() > 2*upper_edge) {
+	  std::cout << "removing event from bin " << _mode << " due to bad jet with pt, eta, phi, and m: " << recoJets_bkgsub[0].pt() << " " << recoJets_bkgsub[0].eta() << " " << recoJets_bkgsub[0].phi() << " " << recoJets_bkgsub[0].m() << std::endl;
+	  bad_event = 1;
+	}
+      }
+      if (bad_event) {return;}
+
+      foreach(const PseudoJet jet, recoJets_virtPL) {
+	virtPLpt.push_back(jet.pt());
+	virtPLm.push_back(jet.m());
+	virtPLeta.push_back(jet.eta());
+	virtPLphi.push_back(jet.phi());
+	virtPLncons.push_back(jet.constituents().size());
+	
+	fastjet::contrib::RecursiveSymmetryCutBase::SymmetryMeasure  symmetry_measure = fastjet::contrib::RecursiveSymmetryCutBase::scalar_z;
+	fastjet::contrib::SoftDrop sd(beta, z_cut, symmetry_measure, _jetR);
+        PseudoJet sd_jet = sd(jet);
+	
+	if(sd_jet != 0){
+
+          virtPLptg.push_back(sd_jet.pt());
+          virtPLmg.push_back(sd_jet.m());
+          double z = sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry();
+          double r = sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R();
+
+          virtPLzg.push_back(z);
+          virtPLrg.push_back(r);
+	  virtPLnconsg.push_back(sd_jet.constituents().size());
+
+	}
+	
+      }
+
       
-      foreach(const PseudoJet jet, recoJets_bkgsub){	
+      foreach(const PseudoJet jet, recoJets_m0PL) {
+	m0PLpt.push_back(jet.pt());
+	m0PLm.push_back(jet.m());
+	m0PLeta.push_back(jet.eta());
+	m0PLphi.push_back(jet.phi());
+	m0PLncons.push_back(jet.constituents().size());
+	
+	fastjet::contrib::RecursiveSymmetryCutBase::SymmetryMeasure  symmetry_measure = fastjet::contrib::RecursiveSymmetryCutBase::scalar_z;
+	fastjet::contrib::SoftDrop sd(beta, z_cut, symmetry_measure, _jetR);
+        PseudoJet sd_jet = sd(jet);
+	
+	if(sd_jet != 0){
+
+          m0PLptg.push_back(sd_jet.pt());
+          m0PLmg.push_back(sd_jet.m());
+          double z = sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry();
+          double r = sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R();
+
+          m0PLzg.push_back(z);
+          m0PLrg.push_back(r);
+	  m0PLnconsg.push_back(sd_jet.constituents().size());
+
+	}
+	
+      }
+
+      foreach(const PseudoJet jet, recoJets_PL) {
+	PLpt.push_back(jet.pt());
+	PLm.push_back(jet.m());
+	PLeta.push_back(jet.eta());
+	PLphi.push_back(jet.phi());
+	PLncons.push_back(jet.constituents().size());
+	
+	vector<double> cons_M;
+        foreach (const PseudoJet cons, jet.constituents()) {
+	  cons_M.push_back(cons.m());
+	}
+	PLconsM.push_back(cons_M);
+
+	fastjet::contrib::RecursiveSymmetryCutBase::SymmetryMeasure  symmetry_measure = fastjet::contrib::RecursiveSymmetryCutBase::scalar_z;
+	fastjet::contrib::SoftDrop sd(beta, z_cut, symmetry_measure, _jetR);
+        PseudoJet sd_jet = sd(jet);
+	
+	if(sd_jet != 0){
+
+          PLptg.push_back(sd_jet.pt());
+          PLmg.push_back(sd_jet.m());
+          double z = sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry();
+          double r = sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R();
+
+          PLzg.push_back(z);
+          PLrg.push_back(r);
+	  PLnconsg.push_back(sd_jet.constituents().size());
+
+	}
+	
+      }
+      
+      //debugging:
+      //std::cout << "number of jets above 0.2 GeV in the event: " << recoJets_bkgsub.size() << std::endl;
+      foreach(const PseudoJet jet, recoJets_bkgsub){// CHANGE WHEN GOING BETWEEN FULL JETS AND CHARGED JETS
 	//! Inclusive
 	hJetpT[centbin]->Fill(jet.pt(), weight);
 	hJetEta[centbin]->Fill(jet.eta(), weight);
 	hJetPhi[centbin]->Fill(jet.phi(), weight);
 	
+	//GEOMETRICALLY MATCH JET AND PARTON
+	bool match = 0;
+	for (int i = 0; i < (int) hardparton.size(); ++ i) {
+	  if (jet.delta_R(hardparton[i]) < _jetR) { //found a match
+	    match = 1;
+	    if (identity[i] == 0) { //means it's a quark!
+	      /*std::cout << "matched this jet to this initial hard quark!" << std::endl;*/
+	      qvg.push_back(0);
+	    }
+	    else if (identity[i] == 1) { //means it's a gluon!
+	      /*std::cout << "matched this jet to this initial hard gluon!" << std::endl;*/
+	      qvg.push_back(1);
+	    }
+	    else if (identity[i] == -1) { //means it's neither!
+	      /*std::cout << "matched this jet to this initial hard parton that is neither quark nor gluon!" << std::endl;*/
+	      qvg.push_back(2);
+	    }
+	    identity.erase(identity.begin() + i); //removes parton from future matching consideration
+	    hardparton.erase(hardparton.begin() + i); //removes parton from future matching consideration
+	  }
+	  else { /*std::cout << "didn't match this jet with this hard parton" << std::endl;*/ }
+	  if (match == 1) {break;} //ensures that the same jet can't be matched to multiple hard partons
+	}
+	if (match == 0) {/*std::cout << "didn't find a matching hard parton for this jet :(" << std::endl;*/ qvg.push_back(-1);} //no match!
+
+	double jet_girth = 0;
+	double a0 = 0;
+	double a05 = 0;
+	double a1 = 0;
+	double a_05 = 0;
+	double a_1 = 0;
+	vector<double> cons_girth;
+	vector<double> cons_dist;
+	vector<double> cons_pt;
+	vector<double> cons_mass;
+	//vector<PseudoJet> jet_cons = jet.constituents();
+	foreach (const PseudoJet cons, jet.constituents()) {
+	  cons_pt.push_back(cons.pt());
+	  double consR = fabs(cons.delta_R(jet));
+	  cons_dist.push_back(consR);
+	  double part_girth = consR * cons.pt() / (double) jet.pt();
+	  cons_girth.push_back(part_girth);
+	  cons_mass.push_back(cons.m());
+	  jet_girth += part_girth;
+	  //~~~
+	  a_1 += pow(consR,2+1)*cons.pt();
+	  a_05 += pow(consR,2+0.5)*cons.pt();
+	  a0 += pow(consR,2-0)*cons.pt();
+	  a05 += pow(consR,2-0.5)*cons.pt();
+	  a1 += pow(consR,2-1)*cons.pt();
+	}
+	
+	conspT.push_back(cons_pt);
+	consDist.push_back(cons_dist);
+	consGirth.push_back(cons_girth);
+	consM.push_back(cons_mass);
+	//~~~
+	//formula: tau_a = 1/pT sum (pT,i * deltaR^a) (as opposed to ^(2 - a))
+	jetTau_1.push_back(a_1 / (double) jet.pt());
+	jetTau_05.push_back(a_05 / (double) jet.pt());
+	jetTau0.push_back(a0 / (double) jet.pt());
+	jetTau05.push_back(a05 / (double) jet.pt());
+	jetTau1.push_back(a1 / (double) jet.pt());
+	jetGirth.push_back(jet_girth);
+	jetMult.push_back(jet.constituents().size());
 	jetpT.push_back(jet.pt());
 	jetM.push_back(jet.m());
 	jeteta.push_back(jet.eta());
@@ -909,12 +1351,11 @@ namespace Rivet {
 	fastjet::contrib::SoftDrop sd(beta, z_cut, symmetry_measure, _jetR);
 	PseudoJet sd_jet = sd(jet);
 
-
-
 	//! Loop over the jet constituent and make three smaller jets
 	//! apply a zcut on the smaller of the subjets
 	
 	vector<PseudoJet> jetconsts = jet.constituents();
+	
 	fastjet::JetDefinition jetd(fastjet::antikt_algorithm, _jetR*0.5);
 	fastjet::ClusterSequence clust_seq_full(jetconsts, jetd);
 
@@ -1184,9 +1625,10 @@ namespace Rivet {
 	//   }
 	// }
       }
-
+      PartonTree->Fill();
+      m0PartonTree->Fill();
+      virtPartonTree->Fill();
       ResultTree->Fill();
-
       
       // jetcounter = 0;
       
@@ -1660,10 +2102,60 @@ namespace Rivet {
     double cent;
     double mcweight;
     double pthat;
+    double eventID;
     
     vector<double> trigpT;
     vector<double> recpT;
+
+    vector<double> PLpt;
+    vector<double> PLm;
+    vector<double> PLptg;
+    vector<double> PLmg;
+    vector<double> PLeta;
+    vector<double> PLphi;
+    vector<double> PLzg;
+    vector<double> PLrg;
+    vector<double> PLncons;
+    vector<double> PLnconsg;
     
+    vector<double> m0PLpt;
+    vector<double> m0PLm;
+    vector<double> m0PLptg;
+    vector<double> m0PLmg;
+    vector<double> m0PLeta;
+    vector<double> m0PLphi;
+    vector<double> m0PLzg;
+    vector<double> m0PLrg;
+    vector<double> m0PLncons;
+    vector<double> m0PLnconsg;
+
+    vector<double> virtPLpt;
+    vector<double> virtPLm;
+    vector<double> virtPLptg;
+    vector<double> virtPLmg;
+    vector<double> virtPLeta;
+    vector<double> virtPLphi;
+    vector<double> virtPLzg;
+    vector<double> virtPLrg;
+    vector<double> virtPLncons;
+    vector<double> virtPLnconsg;
+
+    
+    vector<vector<double> > PLconsM;
+    
+    vector<vector<double> > conspT;
+    vector<vector<double> > consDist;
+    vector<vector<double> > consGirth;
+    vector<vector<double> > consM;
+
+    vector<int> qvg;
+    vector<double> jetTau1;
+    vector<double> jetTau05;
+    vector<double> jetTau0;
+    vector<double> jetTau_05;
+    vector<double> jetTau_1;
+    vector<double> jetGirth;
+    vector<double> jetMult;
     vector<double> jetpT;
     vector<double> jetM;
     vector<double> sdjetpT;
@@ -1770,88 +2262,93 @@ namespace Rivet {
     // TH1F * hAJ_matched[2];
 
     TTree * TrigRecTree;
+    TTree * PartonTree;
+    TTree * m0PartonTree;
+    TTree * virtPartonTree;
     TTree * ResultTree;
     TTree * HCResultTree;
     TTree * MCResultTree;
+  
+    TDatabasePDG * pdg;
     
   };
-
-  class STAR_SPLITTING_max30_10PTHAT15 : public STAR_SPLITTING_max30 {
+  
+  class STAR_SPLITTING_10PTHAT15 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_10PTHAT15()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_10PTHAT15")
+    STAR_SPLITTING_10PTHAT15()
+      : STAR_SPLITTING("STAR_SPLITTING_10PTHAT15")
     {
       _mode = 1;
     }
   };
-  class STAR_SPLITTING_max30_15PTHAT20 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_15PTHAT20 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_15PTHAT20()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_15PTHAT20")
+    STAR_SPLITTING_15PTHAT20()
+      : STAR_SPLITTING("STAR_SPLITTING_15PTHAT20")
     {
       _mode = 2;
     }
   };
-  class STAR_SPLITTING_max30_20PTHAT25 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_20PTHAT25 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_20PTHAT25()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_20PTHAT25")
+    STAR_SPLITTING_20PTHAT25()
+      : STAR_SPLITTING("STAR_SPLITTING_20PTHAT25")
     {
       _mode = 3;
     }
   };
-  class STAR_SPLITTING_max30_25PTHAT30 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_25PTHAT30 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_25PTHAT30()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_25PTHAT30")
+    STAR_SPLITTING_25PTHAT30()
+      : STAR_SPLITTING("STAR_SPLITTING_25PTHAT30")
     {
       _mode = 4;
     }
   };
-  class STAR_SPLITTING_max30_30PTHAT35 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_30PTHAT35 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_30PTHAT35()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_30PTHAT35")
+    STAR_SPLITTING_30PTHAT35()
+      : STAR_SPLITTING("STAR_SPLITTING_30PTHAT35")
     {
       _mode = 5;
     }
   };
-  class STAR_SPLITTING_max30_35PTHAT40 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_35PTHAT40 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_35PTHAT40()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_35PTHAT40")
+    STAR_SPLITTING_35PTHAT40()
+      : STAR_SPLITTING("STAR_SPLITTING_35PTHAT40")
     {
       _mode = 6;
     }
   };
-  class STAR_SPLITTING_max30_40PTHAT45 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_40PTHAT45 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_40PTHAT45()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_40PTHAT45")
+    STAR_SPLITTING_40PTHAT45()
+      : STAR_SPLITTING("STAR_SPLITTING_40PTHAT45")
     {
       _mode = 7;
     }
   };
-  class STAR_SPLITTING_max30_45PTHAT50 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_45PTHAT50 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_45PTHAT50()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_45PTHAT50")
+    STAR_SPLITTING_45PTHAT50()
+      : STAR_SPLITTING("STAR_SPLITTING_45PTHAT50")
     {
       _mode = 8;
     }
   };
-  class STAR_SPLITTING_max30_50PTHAT60 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_50PTHAT60 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_50PTHAT60()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_50PTHAT60")
+    STAR_SPLITTING_50PTHAT60()
+      : STAR_SPLITTING("STAR_SPLITTING_50PTHAT60")
     {
       _mode = 9;
     }
   };
-  class STAR_SPLITTING_max30_60PTHAT80 : public STAR_SPLITTING_max30 {
+  class STAR_SPLITTING_60PTHAT80 : public STAR_SPLITTING {
   public:
-    STAR_SPLITTING_max30_60PTHAT80()
-      : STAR_SPLITTING_max30("STAR_SPLITTING_max30_60PTHAT80")
+    STAR_SPLITTING_60PTHAT80()
+      : STAR_SPLITTING("STAR_SPLITTING_60PTHAT80")
     {
       _mode = 10;
     }
@@ -1860,17 +2357,16 @@ namespace Rivet {
 
   
   // The hook for the plugin system
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_10PTHAT15);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_15PTHAT20);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_20PTHAT25);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_25PTHAT30);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_30PTHAT35);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_35PTHAT40);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_40PTHAT45);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_45PTHAT50);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_50PTHAT60);
-  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_max30_60PTHAT80);
-
-
-}
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_10PTHAT15);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_15PTHAT20);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_20PTHAT25);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_25PTHAT30);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_30PTHAT35);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_35PTHAT40);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_40PTHAT45);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_45PTHAT50);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_50PTHAT60);
+  DECLARE_RIVET_PLUGIN(STAR_SPLITTING_60PTHAT80);
+  				       
+  }

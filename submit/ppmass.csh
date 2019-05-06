@@ -40,6 +40,13 @@ if ($1 == 'matching') then
     # Create the folder name for output
     set outFile = matching
 endif
+if ($1 == 'systematics') then
+    make bin/systematics || exit
+    set execute = './bin/systematics'
+    set base = /nfs/rhi/STAR/Data/AddedEmbedPythiaRun12pp200/Cleanpp12Pico_pt
+    # Create the folder name for output
+    set outFile = systematics
+endif
 if ($1 == 'closure') then
     make bin/closure || exit
     set execute = './bin/closure'
@@ -109,9 +116,9 @@ echo "Logging errors to " $ErrFile
 set arg = "$outLocation $outName $full_or_ch $ge_or_py $Files"
 
 echo "now submitting this script: "
-echo qsub -q erhiq -V -l mem=2GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
+echo qsub -V -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
 
-qsub -q erhiq -V -l mem=2GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
+qsub -V -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg   
 #make python script later: jet_analysis/submit scripts start with pbs
 #add back in a second: -q erhiq
 end

@@ -2,6 +2,7 @@
 
 # that crap emacs generates
 *~
+*#
 
 # build directory
 build
@@ -72,3 +73,6 @@ CondorFile
 # RIVET stuff
 *.yoda
 *.hepmc
+
+# not sure what these files are but they're large...
+core.*

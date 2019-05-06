@@ -45,7 +45,7 @@ double pthatweight_HW7[npthatbins+1] = {3.67764e+07, 4.94731e+06, 866978, 26833.
 double pthatweight_PY8[npthatbins+1] = {1240.43, 9.18156, 0.615729, 0.0779501, 0.0132134, 0.00261512, 0.000563591, 0.000126293, 2.8601e-05, 7.7384e-06, 9.04096e-07};//{446225, 184.244, 3.35316, 0.23586, 0.0293411, 0.00475607, 0.000888898, 0.000177778, 3.6652e-05, 9.05141e-06, 9.21373e-07};
 
 
-void combineMCpthat(std::string mctype = "pythia8", int radius = 2)
+void combineMCpthat(std::string mctype = "pythia8", int radius = 4)
 {
 
   TH1::SetDefaultSumw2();
@@ -162,7 +162,7 @@ void combineMCpthat(std::string mctype = "pythia8", int radius = 2)
   const int npubptbins = sizeof(pubptbins)/sizeof(double)-1;
 
   //! declare the output file and histograms
-  TFile * fout = new TFile(Form("Results/%s_recSD_histograms_R0%d_max30.root", mctype.c_str(), radius),"RECREATE");
+  TFile * fout = new TFile(Form("Results/%s_recSD_histograms_R0%d_decays_off.root", mctype.c_str(), radius),"RECREATE");
   fout->cd();
 
   double groompTbins[] = {15.0, 20.0, 25.0, 30.0, 40.0, 60.0};
@@ -253,7 +253,7 @@ void combineMCpthat(std::string mctype = "pythia8", int radius = 2)
     if(printDebug)
       std::cout<<"inpt = "<<inpt<<", pthatbins = ("<<pthatbins[inpt]<<", "<<pthatbins[inpt+1]<<")"<<std::endl;
     
-    std::string pthatbinname = Form("star_subjetvars_%s_%dpthatbin%d_R0%d_max30.root",
+    std::string pthatbinname = Form("star_subjetvars_%s_%dpthatbin%d_R0%d_decays_off.root",
 				    mctype.c_str(),
 				    pthatbins[inpt],
 				    pthatbins[inpt+1],

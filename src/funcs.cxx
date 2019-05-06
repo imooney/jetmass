@@ -1,21 +1,21 @@
-//  functions.cxx
-//  Veronica Verkest May 13, 2018
-//  Adapted by Isaac Mooney June, 2018
+//!  functions.cxx
+//!  Veronica Verkest May 13, 2018
+//!  Adapted by Isaac Mooney June, 2018
 
 #include "params.hh"
 #include "funcs.hh"
-//#include "ktTrackEff.hh"
+//!#include "ktTrackEff.hh"
 
 typedef fastjet::contrib::SoftDrop SD;
 
 namespace Analysis {
 
-  // -------------------------                                                                                                                                                                            
-  // IO/OS Manip functionality                                                                                                                                                                            
-  // -------------------------                                                                                                                                                                             
-  // Used to understand which format of input file is being used                                                                                                                                          
-  // ( .root file, .txt, .list, etc )                                                                                                                                                                     
-  // ---------------------------------------------------------------------                                                                                                                                 
+  //! -------------------------                                                                                                                                                                            
+  //! IO/OS Manip functionality                                                                                                                                                                            
+  //! -------------------------                                                                                                                                                                             
+  //! Used to understand which format of input file is being used                                                                                                                                          
+  //! ( .root file, .txt, .list, etc )                                                                                                                                                                     
+  //! ---------------------------------------------------------------------                                                                                                                                 
   bool HasEnding (std::string const &full_string, std::string const &ending) {
     if (full_string.length() >= ending.length()) {
       return (0 == full_string.compare (full_string.length() - ending.length(), ending.length(), ending) );
@@ -24,22 +24,22 @@ namespace Analysis {
     }
   }
 
-  // parse a CSV file to a set of unique entries.
-  // All comments must start on their own line, and be proceeded   
-  // by a pound sign (#)                                                                                                                                                              
+  //! parse a CSV file to a set of unique entries.
+  //! All comments must start on their own line, and be proceeded   
+  //! by a pound sign (#)                                                                                                                                                              
   template <typename T>
   std::set<T> ParseCSV(std::string csv) {
-    // return set                                                                                                        
+    //! return set                                                                                                        
     std::set<T> ret;
     std::ifstream fs(csv);
     std::string line;
-    // first, split by line
+    //! first, split by line
     while (std::getline(fs, line)) {
-      if (line.size() == 0) // reject empty lines   
+      if (line.size() == 0) //!reject empty lines   
 	continue;
-      if (line[0] == '#') // reject comments                                                                                                                                          
+      if (line[0] == '#') //!reject comments                                                                                                                                        
 	continue;
-      // split the string by commas                                                                                                                                                   
+      //! split the string by commas                                                                                                                                                   
       std::istringstream ss(line);
       while (ss) {
 	std::string str_value;
@@ -77,13 +77,13 @@ namespace Analysis {
   }
 
   void FillTrees ( std::vector<fastjet::PseudoJet> jets, TTree* Tree, double &jPt, double &jEta, double &jPhi, double &jM, double &jE, int &jncons, double &wt, const double weight) {
-    for ( int j = 0; j< jets.size(); ++ j) {   // FILL JET INFO
+    for ( int j = 0; j< jets.size(); ++ j) { //!FILL JET INFO
       int nGhosts = 0;
       if (jets[j].pt() < 0.2) continue;
       jPt = jets[j].pt();    jEta = jets[j].eta();    jPhi = jets[j].phi();
       jE = jets[j].e();    jM = jets[j].m(); wt = weight;
       std::vector<fastjet::PseudoJet> Cons = jets[j].constituents(); //jncons = Cons.size();
-      //cons without ghosts:
+      //!cons without ghosts:
       for (int c = 0; c < Cons.size(); ++ c) {
 	if (Cons[c].pt() < 0.2) ++nGhosts;
       }
@@ -103,32 +103,51 @@ namespace Analysis {
     std::cout << egMatchedJets << " GEANT jets have been matched to Pythia6+Efficiency jets" << std::endl;
     std::cout <<std::endl << "Writing to:  " << outName << std::endl << std::endl;
   }
-  //remind self later: why am I passing TStarJetVector *sv? should just be declaring it before the for-loop
-  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container, TStarJetVector *sv, std::vector<fastjet::PseudoJet> & Particles, const bool full, const bool py){
+  //!remind self later: why am I passing TStarJetVector *sv? should just be declaring it before the for-loop
+  void GatherParticles ( TStarJetVectorContainer<TStarJetVector> * container, TStarJetVector *sv, std::vector<fastjet::PseudoJet> & Particles, const bool full, const bool py, TDatabasePDG *pdg){
     for ( int i=0; i < container->GetEntries() ; ++i ) {
       sv = container->Get(i);
       fastjet::PseudoJet current = fastjet::PseudoJet( *sv );
 
-      // current.set_user_index( sv->GetCharge() );
-      //      if (py == 1 && full == 1) {std::cout << "starting with charge: " << sv->GetCharge() << " for particle " << i << std::endl;}
+      //! current.set_user_index( sv->GetCharge() );
+      //!      if (py == 1 && full == 1) {std::cout << "starting with charge: " << sv->GetCharge() << " for particle " << i << std::endl;}
       
-      if (sv->GetCharge() != 0 /*&& py == 0*/) {
+      if (sv->GetCharge() != 0 && py == 0) {
 	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), chPionMass); //assigning pion mass to charged particles
-      }/*
-      if (py != 0) {
-	current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), current.m());
       }
-       */
-      if ((sv->GetCharge() == 0) && (full == 0)) { continue; } // if we don't want full jets, skip neutrals
+      if (sv->GetCharge() == 0 && py == 0) {
+	current.reset_PtYPhiM(sqrt(current.perp2()),current.rap(),current.phi(), 0); //neutral particles massless!
+      }
+      
+      
+      if (py != 0) {
+	//!std::cout << "ASSIGNING MASS " << current.m() << " TO THIS CONSTITUENT WITH CHARGE " << sv->GetCharge() << "AND MASS " << sv->GetPicoMass() << std::endl;
+	//!	std::cout << "PARTICLE WITH PID " << sv->mc_pdg_pid() << " has mass " << pdg->GetParticle(sv->mc_pdg_pid())->Mass() << std::endl;
+	current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), pdg->GetParticle(sv->mc_pdg_pid())->Mass());//current.m());
+
+	//!TEMPORARY!!!!!!!!!!!!!!!!!!!!! UNCOMMENT THE LINE ABOVE AND REMOVE THE IF ELSE BELOW!!!!!!!!!!!!!!!!!!!!!!!!!
+	/*
+	if (sv->GetCharge() != 0) {
+	  current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), 0);//chPionMass);
+	}
+	else { current.reset_PtYPhiM(sqrt(current.perp2()), current.rap(), current.phi(), 0);}
+	*/
+      }
+
+      //!std::cout << "TEST: " << sv->GetCharge() << " " << current.m() << std::endl;
+      
+      if ((sv->GetCharge() == 0) && (full == 0)) { continue; } //!if we don't want full jets, skip neutrals
       current.set_user_index( sv->GetCharge() );
-      // if (py == 1 && full == 1) {std::cout << "ending with charge: " << current.user_index() << " for particle " << i << std::endl;}
+      //! if (py == 1 && full == 1) {std::cout << "ending with charge: " << current.user_index() << " for particle " << i << std::endl;}
+
       Particles.push_back(current);
     }
     return;
   }
 
+  //!the name is a bit of a misnomer, we're actually using pT, not energy.
   void ApplyNEFSelection(const std::vector<fastjet::PseudoJet> init, std::vector<fastjet::PseudoJet> & result) {
-    //Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
+    //!Implementing a neutral energy fraction cut of 90% on inclusive jets                                                                                                                           
     for (int i = 0; i < init.size(); ++ i) {
       double towersum = 0; double ptsum = 0;
       for (int j = 0; j < init[i].constituents().size(); ++ j) {
@@ -148,33 +167,33 @@ namespace Analysis {
   double LookupRun6Xsec(TString currentfile ) {
 
     static const Double_t Xsec[12] = {
-      1.0,        // Placeholder for 2-3
-      1.30E+09, // 3-4
-      3.15E+08, // 4-5
-      1.37E+08, // 5-7
-      2.30E+07, // 7-9
-      5.53E+06, // 9-11
-      2.22E+06, // 11-15
-      3.90E+05, // 15-25
-      1.02E+04, // 25-35
-      5.01E+02, // 35-45
-      2.86E+01, // 45-55
-      1.46E+00 // 55-65
+      1.0,      //!Placeholder for 2-3
+      1.30E+09, //!3-4
+      3.15E+08, //!4-5
+      1.37E+08, //!5-7
+      2.30E+07, //!7-9
+      5.53E+06, //!9-11
+      2.22E+06, //!11-15
+      3.90E+05, //!15-25
+      1.02E+04, //!25-35
+      5.01E+02, //!35-45
+      2.86E+01, //!45-55
+      1.46E+00  //!55-65
     };
 
     static const Double_t Nmc[12] = {
-      1, // 2-3
-      672518, // 3-4
-      672447, // 4-5
-      393498, // 5-7
-      417659, // 7-9
-      412652, // 9-11
-      419030, // 11-15
-      396744, // 15-25
-      399919, // 25-35
-      119995, // 35-45
-      117999, // 45-55
-      119999 // 55-65
+      1,      //!2-3
+      672518, //!3-4
+      672447, //!4-5
+      393498, //!5-7
+      417659, //!7-9
+      412652, //!9-11
+      419030, //!11-15
+      396744, //!15-25
+      399919, //!25-35
+      119995, //!35-45
+      117999, //!45-55
+      119999  //!55-65
     };
 
     Double_t w[12];
@@ -200,7 +219,7 @@ namespace Analysis {
   double LookupRun12Xsec( TString filename ){
   
     const int NUMBEROFPT = 11;
-    // const char *PTBINS[NUMBEROFPT]={"2_3","3_4","4_5","5_7","7_9","9_11","11_15","15_20","20_25","25_35","35_-1"};
+    //! const char *PTBINS[NUMBEROFPT]={"2_3","3_4","4_5","5_7","7_9","9_11","11_15","15_20","20_25","25_35","35_-1"};
     const static float XSEC[NUMBEROFPT] = {9.00581646, 1.461908221, 0.3544350863, 0.1513760388, 0.02488645725, 0.005845846143, 0.002304880181, 0.000342661835, 4.562988397e-05, 9.738041626e-06, 5.019978175e-07};
     const static float NUMBEROFEVENT[NUMBEROFPT] = {2100295, 600300, 600300, 300289, 300289, 300289, 160295, 100302, 80293, 76303, 23307};
 
@@ -237,12 +256,12 @@ namespace Analysis {
     if (candidates.size() == 0) {
       return;
     }
-    // match the leading jet                                                                                                                                                    
+    //! match the leading jet                                                                                                                                                    
     fastjet::Selector selectMatchedLead = fastjet::SelectorCircle( R );
     selectMatchedLead.set_reference( toMatch );
     std::vector<fastjet::PseudoJet> matchedToLead = sorted_by_pt( selectMatchedLead( candidates ));
     if (matchedToLead.size() == 0) {return;}
-    //If here, found match(es)
+    //!If here, found match(es)
     for (int i = 0; i < candidates.size(); ++ i) { //finding which one was the highest pT match
       if (matchedToLead[0].delta_R(candidates[i]) < 0.0001) { //is probably the same jet
 	match_position = i;
@@ -283,7 +302,7 @@ namespace Analysis {
     return match_indices;
   }
 
-  //this function is similar to the "MatchJets" function, but it instead takes a list of jets which have already been matched ("candidates_safe") and finds the jets to which they correspond in the list of unmatched jets ("toMatch") by geometrical matching. I know, it is confusing to match matched jets to unmatched jets. But that's what we're doing. When we have jets which don't have a basically perfect geometrical match to a matched jet, we know that the jet in our hands is unmatched (to a detector/particle-level complement rather than to itself in the other list, basically). 
+  //!this function is similar to the "MatchJets" function, but it instead takes a list of jets which have already been matched ("candidates_safe") and finds the jets to which they correspond in the list of unmatched jets ("toMatch") by geometrical matching. I know, it is confusing to match matched jets to unmatched jets. But that's what we're doing. When we have jets which don't have a basically perfect geometrical match to a matched jet, we know that the jet in our hands is unmatched (to a detector/particle-level complement rather than to itself in the other list, basically). 
   std::vector<int> FakesandMisses(const std::vector<fastjet::PseudoJet> candidates_safe, const std::vector<fastjet::PseudoJet> toMatch, std::vector<fastjet::PseudoJet> & unmatched) {
     std::vector<int> miss_fake_index;
     std::vector<fastjet::PseudoJet> candidates = candidates_safe; 
@@ -341,14 +360,13 @@ namespace Analysis {
   //new construction of responses based on ~inclusive~ matching. We now need to have two vectors to be filled with matched jets. If they aren't, when looping over pythia jets, we have misses. Fill all pythia jets into the misses. Same goes when looping over geant jets with fakes. And for matches, we just fill with however many entries there are in the matched vectors.
   //MatchJets now returns a vector of pairs of indices (i,j). The first entry is the candidate's position, the second its match's position, the third the next candidate's position, the fourth its match's position, etc.
   //FakesandMisses now returns a vector of indices (i) corresponding to the indices of misses or fakes from the original candidate vector.
-  void ConstructResponses(std::vector<RooUnfoldResponse*> res, const std::vector<fastjet::PseudoJet> g_Jets, const std::vector<fastjet::PseudoJet> p_Jets, const std::vector<fastjet::PseudoJet> g_Groomed, const std::vector<fastjet::PseudoJet> p_Groomed, std::vector<std::vector<double> > & g_tree, std::vector<std::vector<double> > & p_tree, const double mc_weight/*, double & nEntries, double & nFakes, double & nMisses, double & nMatches*/) {
+  void ConstructResponses(std::vector<RooUnfoldResponse*> res, const std::vector<fastjet::PseudoJet> g_Jets, const std::vector<fastjet::PseudoJet> p_Jets, const std::vector<fastjet::PseudoJet> g_Groomed, const std::vector<fastjet::PseudoJet> p_Groomed, std::vector<std::vector<double> > & g_tree, std::vector<std::vector<double> > & p_tree, const double mc_weight, std::vector<RooUnfoldResponse*> m_res_ptbinned, TH1D* tmp_misses, TH1D* tmp_misses_cts) {
     std::vector<fastjet::PseudoJet> g_matches; std::vector<fastjet::PseudoJet> p_matches; 
     std::vector<fastjet::PseudoJet> fakes; std::vector<fastjet::PseudoJet> misses;
     std::vector<fastjet::PseudoJet> g_sd_matches; std::vector<fastjet::PseudoJet> p_sd_matches; 
     std::vector<fastjet::PseudoJet> sd_fakes; std::vector<fastjet::PseudoJet> sd_misses;
     std::vector<int> sd_match_indices;
     std::vector<int> sd_miss_indices; std::vector<int> sd_fake_indices;
-    
     if (p_Jets.size() != 0) {
       g_matches.clear(); p_matches.clear(); g_sd_matches.clear(); p_sd_matches.clear(); misses.clear(); sd_misses.clear();
       sd_match_indices.clear(); sd_miss_indices.clear();
@@ -367,10 +385,29 @@ namespace Analysis {
 	sd_miss_indices = FakesandMisses(p_matches, p_Jets, misses);
 	for (int i = 0; i < misses.size(); ++ i) {
 	  res[0]->Miss(misses[i].pt(), mc_weight);
+	  tmp_misses->Fill(misses[i].pt(), mc_weight);
+	  tmp_misses_cts->Fill(misses[i].pt());
 	  res[1]->Miss(misses[i].m(), mc_weight);
 	  res[2]->Miss(misses[i].m(), misses[i].pt(), mc_weight);
+	  res[11]->Miss(misses[i].m(), misses[i].pt(), 1.0); //using this copy response to remove stats-limited bins later
+	  res[13]->Miss(misses[i].pt(), mc_weight);
 	  //	  nMisses ++;
 	  //	  std::cout << "MISS " << misses[i].pt() << std::endl;
+	  if (misses[i].pt() >15 && misses[i].pt() < 20) {
+	    m_res_ptbinned[0]->Miss(misses[i].m(), mc_weight);
+	  }
+	  if (misses[i].pt() >20 && misses[i].pt() < 25) {
+	    m_res_ptbinned[1]->Miss(misses[i].m(), mc_weight);
+	  }
+	  if (misses[i].pt() >25 && misses[i].pt() < 30) {
+	    m_res_ptbinned[2]->Miss(misses[i].m(), mc_weight);
+	  }
+	  if (misses[i].pt() >30 && misses[i].pt() < 40) {
+	    m_res_ptbinned[3]->Miss(misses[i].m(), mc_weight);
+	  }
+	  if (misses[i].pt() >40 && misses[i].pt() < 60) {
+	    m_res_ptbinned[4]->Miss(misses[i].m(), mc_weight);
+	  }
 	}
 	for (int i = 0; i < sd_miss_indices.size(); ++ i) {
 	  res[3]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().symmetry(), mc_weight);
@@ -381,6 +418,7 @@ namespace Analysis {
 	  res[8]->Miss(p_Groomed[sd_miss_indices[i]].structure_of<SD>().delta_R(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
 	  res[9]->Miss(p_Groomed[sd_miss_indices[i]].pt(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
 	  res[10]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	  res[12]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), 1.0);
 	}
       }
       if (g_matches.size() != 0) { //found match(es)
@@ -388,6 +426,25 @@ namespace Analysis {
 	  res[0]->Fill(g_matches[i].pt(), p_matches[i].pt(), mc_weight); //matches should be at same index in respective vectors
 	  res[1]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
 	  res[2]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), mc_weight);
+	  res[11]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), 1.0);
+	  res[13]->Fill(g_matches[i].pt(), p_matches[i].pt(), mc_weight);
+	  // std::cout << "FILLING RESPONSE " << res[2]->GetName() <<std::endl;
+	  if (p_matches[i].pt() >15 && p_matches[i].pt() < 20) {
+	    m_res_ptbinned[0]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  }
+	  if (p_matches[i].pt() >20 && p_matches[i].pt() < 25) {
+	    m_res_ptbinned[1]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  }
+	  if (p_matches[i].pt() >25 && p_matches[i].pt() < 30) {
+	    m_res_ptbinned[2]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  }
+	  if (p_matches[i].pt() >30 && p_matches[i].pt() < 40) {
+	    m_res_ptbinned[3]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  }
+	  if (p_matches[i].pt() >40 && p_matches[i].pt() < 60) {
+	    m_res_ptbinned[4]->Fill(g_matches[i].m(), p_matches[i].m(), mc_weight);
+	  }
+	  
 	  //  nMatches ++; nEntries ++;
 	  g_tree[0].push_back(g_matches[i].pt());
 	  g_tree[1].push_back(g_matches[i].m());
@@ -407,6 +464,7 @@ namespace Analysis {
 	  res[8]->Fill(g_sd_matches[i].structure_of<SD>().delta_R(), g_matches[i].pt(), p_sd_matches[i].structure_of<SD>().delta_R(), p_matches[i].pt(), mc_weight);
 	  res[9]->Fill(g_sd_matches[i].pt(), g_matches[i].pt(), p_sd_matches[i].pt(), p_matches[i].pt(), mc_weight);
 	  res[10]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), mc_weight);
+	  res[12]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), 1.0);
 	
 	  g_tree[2].push_back(g_sd_matches[i].structure_of<SD>().symmetry());
 	  g_tree[3].push_back(g_sd_matches[i].structure_of<SD>().delta_R());
@@ -434,8 +492,26 @@ namespace Analysis {
 	  res[0]->Fake(fakes[i].pt(), mc_weight);
 	  res[1]->Fake(fakes[i].m(), mc_weight);
 	  res[2]->Fake(fakes[i].m(), fakes[i].pt(), mc_weight);
+	  res[11]->Fake(fakes[i].m(), fakes[i].pt(), 1.0);
+	  res[13]->Fake(fakes[i].pt(), mc_weight);
 	  //nFakes ++; nEntries ++;
 	  //std::cout << "FAKE " << fakes[i].pt() << " " << std::endl;
+	  if (fakes[i].pt() >15 && fakes[i].pt() < 20) {
+	    m_res_ptbinned[0]->Fake(fakes[i].m(), mc_weight);
+	  }
+	  if (fakes[i].pt() >20 && fakes[i].pt() < 25) {
+	    m_res_ptbinned[1]->Fake(fakes[i].m(), mc_weight);
+	  }
+	  if (fakes[i].pt() >25 && fakes[i].pt() < 30) {
+	    m_res_ptbinned[2]->Fake(fakes[i].m(), mc_weight);
+	  }
+	  if (fakes[i].pt() >30 && fakes[i].pt() < 40) {
+	    m_res_ptbinned[3]->Fake(fakes[i].m(), mc_weight);
+	  }
+	  if (fakes[i].pt() >40 && fakes[i].pt() < 60) {
+	    m_res_ptbinned[4]->Fake(fakes[i].m(), mc_weight);
+	  }
+	  
 	}
 	for (int i = 0; i < sd_fake_indices.size(); ++ i) {
 	  res[3]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().symmetry(), mc_weight);
@@ -446,6 +522,160 @@ namespace Analysis {
 	  res[8]->Fake(g_Groomed[sd_fake_indices[i]].structure_of<SD>().delta_R(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
 	  res[9]->Fake(g_Groomed[sd_fake_indices[i]].pt(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
 	  res[10]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	  res[12]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt(), 1.0);
+	}
+      }
+    }
+    return;
+  }
+
+  void ConstructSystematicsResponses(std::vector<RooUnfoldResponse*> res, const std::vector<fastjet::PseudoJet> g_Jets, const std::vector<fastjet::PseudoJet> p_Jets, const std::vector<fastjet::PseudoJet> g_Groomed, const std::vector<fastjet::PseudoJet> p_Groomed, const double mc_weight, TH2D* res2D, TH2D* res2D_g, TH1D* ratio, TH1D* ratio_g, const int iSyst) {
+    double prior_adjust = 0;
+    TProfile *pt_res = (TProfile*) res2D->ProfileX("pt_res",1,220);
+    std::vector<fastjet::PseudoJet> g_matches; std::vector<fastjet::PseudoJet> p_matches; 
+    std::vector<fastjet::PseudoJet> fakes; std::vector<fastjet::PseudoJet> misses;
+    std::vector<fastjet::PseudoJet> g_sd_matches; std::vector<fastjet::PseudoJet> p_sd_matches; 
+    std::vector<fastjet::PseudoJet> sd_fakes; std::vector<fastjet::PseudoJet> sd_misses;
+    std::vector<int> sd_match_indices;
+    std::vector<int> sd_miss_indices; std::vector<int> sd_fake_indices;
+    if (p_Jets.size() != 0) {
+      g_matches.clear(); p_matches.clear(); g_sd_matches.clear(); p_sd_matches.clear(); misses.clear(); sd_misses.clear();
+      sd_match_indices.clear(); sd_miss_indices.clear();
+      sd_match_indices = MatchJets(g_Jets, p_Jets, g_matches, p_matches);
+      if (sd_match_indices.size() != 0) {//means there is >= 1 match. Will index the g_vector with these match indices (and the p_vector with index 0). 
+	for (int i = 0; i < sd_match_indices.size(); i += 2) {
+	  p_sd_matches.push_back(p_Groomed[sd_match_indices[i]]);
+	}
+	for (int i = 1; i < sd_match_indices.size(); i += 2) {
+	  g_sd_matches.push_back(g_Groomed[sd_match_indices[i]]);
+	}
+      }
+      if (g_matches.size() != p_matches.size()) {std::cerr << "Somehow we have different-sized match vectors. This should never happen!" <<std::endl; exit(1);}
+      if (g_sd_matches.size() != g_matches.size()) {std::cerr << "There should be as many matched groomed jets as matched ungroomed jets!" <<std::endl; exit(1);}
+      if (g_matches.size() < p_Jets.size()) { //then we have misses
+	sd_miss_indices = FakesandMisses(p_matches, p_Jets, misses);
+	for (int i = 0; i < misses.size(); ++ i) {
+	  if (iSyst == 6) {
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(misses[i].pt()));
+	    prior_adjust = fabs(gRandom->Gaus(0,fabs(res_for_this_jet*misses[i].pt())));
+	    res[0]->Miss(misses[i].m(), misses[i].pt() - prior_adjust, mc_weight);
+	    res[2]->Miss(misses[i].m(), misses[i].pt() - prior_adjust, 1.0);
+	  }
+	  else if (iSyst == 7) {
+	    prior_adjust = ratio->GetBinContent(ratio->GetXaxis()->FindBin(misses[i].m()));//,ratio->GetYaxis()->FindBin(misses[i].pt()));
+	    res[0]->Miss(misses[i].m(), misses[i].pt(), mc_weight*prior_adjust);
+	    res[2]->Miss(misses[i].m(), misses[i].pt(), 1.0);
+	  }
+	  else {
+	    res[0]->Miss(misses[i].m(), misses[i].pt(), mc_weight);
+	    res[2]->Miss(misses[i].m(), misses[i].pt(), 1.0);
+	  }
+	  //	  nMisses ++;
+	  //	  std::cout << "MISS " << misses[i].pt() << std::endl;
+	}
+	for (int i = 0; i < sd_miss_indices.size(); ++ i) {
+	  if (iSyst == 6) {
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(p_Jets[sd_miss_indices[i]].pt()));
+            prior_adjust = fabs(gRandom->Gaus(0,fabs(res_for_this_jet*p_Jets[sd_miss_indices[i]].pt())));
+	    res[1]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt() - prior_adjust, mc_weight);
+	    res[3]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt() - prior_adjust, 1.0);
+	  }
+	  else if (iSyst == 7) {
+	    prior_adjust = ratio_g->GetBinContent(ratio_g->GetXaxis()->FindBin(p_Groomed[sd_miss_indices[i]].m()));//,ratio_g->GetYaxis()->FindBin(p_Jets[sd_miss_indices[i]].pt()));
+	    res[1]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), mc_weight*prior_adjust);
+	    res[3]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), 1.0);
+	  }
+	  else {
+	    res[1]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), mc_weight);
+	    res[3]->Miss(p_Groomed[sd_miss_indices[i]].m(), p_Jets[sd_miss_indices[i]].pt(), 1.0);
+	  }
+	}
+      }
+      if (g_matches.size() != 0) { //found match(es)
+	for (int i = 0; i < g_matches.size(); ++ i) {
+	  if (iSyst == 5) { // detector pT smearing
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(g_matches[i].pt()));
+	    prior_adjust = gRandom->Gaus(0,fabs(res_for_this_jet*g_matches[i].pt()));
+	    res[0]->Fill(g_matches[i].m(), g_matches[i].pt() + prior_adjust, p_matches[i].m(), p_matches[i].pt(), mc_weight); //matches should be at the same index in respective vectors
+	    res[2]->Fill(g_matches[i].m(), g_matches[i].pt() + prior_adjust, p_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	  else if (iSyst == 6) { // gen pT smearing
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(p_matches[i].pt()));
+	    prior_adjust = fabs(gRandom->Gaus(0,fabs(res_for_this_jet*p_matches[i].pt())));
+	    res[0]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt() - prior_adjust, mc_weight); //matches should be at the same index in respective vectors
+	    res[2]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt() - prior_adjust, 1.0);
+	  }
+	  else if (iSyst == 7) { // gen M smearing
+	    prior_adjust = ratio->GetBinContent(ratio->GetXaxis()->FindBin(p_matches[i].m()));//,ratio->GetYaxis()->FindBin(p_matches[i].pt()));
+	    res[0]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), mc_weight*prior_adjust); //matches should be at the same index in respective vectors
+	    res[2]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	  else {
+	    res[0]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), mc_weight); //matches should be at the same index in respective vectors
+	    res[2]->Fill(g_matches[i].m(), g_matches[i].pt(), p_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	  //  nMatches ++; nEntries ++;
+	  //std::cout << "MATCH p:" << p_matches[i].pt() << " g:" << g_matches[i].pt() << std::endl;
+	}
+	for (int i = 0; i < g_sd_matches.size(); ++ i) {
+	  if (iSyst == 5) { // detector pT smearing
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(g_matches[i].pt()));
+	    prior_adjust = gRandom->Gaus(0,fabs(res_for_this_jet*g_matches[i].pt()));
+	    res[1]->Fill(g_sd_matches[i].m(), g_matches[i].pt() + prior_adjust, p_sd_matches[i].m(), p_matches[i].pt(), mc_weight); //matches should be at the same index in respective vectors
+	    res[3]->Fill(g_sd_matches[i].m(), g_matches[i].pt() + prior_adjust, p_sd_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	  else if (iSyst == 6) { // gen pT smearing
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(p_matches[i].pt()));
+	    prior_adjust = fabs(gRandom->Gaus(0,fabs(res_for_this_jet*p_matches[i].pt())));
+	    res[1]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt() - prior_adjust, mc_weight); //matches should be at the same index in respective vectors
+	    res[3]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt() - prior_adjust, 1.0);
+	  }
+	  else if (iSyst == 7) { // gen M smearing
+	    prior_adjust = ratio_g->GetBinContent(ratio_g->GetXaxis()->FindBin(p_sd_matches[i].m()));//,ratio_g->GetYaxis()->FindBin(p_matches[i].pt()));
+	    res[1]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), mc_weight*prior_adjust); //matches should be at the same index in respective vectors
+	    res[3]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	  else {
+	    res[1]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), mc_weight); //matches should be at the same index in respective vectors
+	    res[3]->Fill(g_sd_matches[i].m(), g_matches[i].pt(), p_sd_matches[i].m(), p_matches[i].pt(), 1.0);
+	  }
+	}
+      }
+    }
+    
+    //fake rate                                                
+    if (g_Jets.size() != 0) {
+      g_matches.clear(); p_matches.clear(); g_sd_matches.clear(); p_sd_matches.clear(); fakes.clear(); sd_fakes.clear();
+      sd_match_indices.clear(); sd_fake_indices.clear();
+      MatchJets(p_Jets, g_Jets, p_matches, g_matches);
+      if (g_matches.size() != p_matches.size()) {std::cerr << "Somehow we have different-sized match vectors. This should never happen!" <<std::endl; exit(1);}
+      if (p_matches.size() < g_Jets.size()) { //then we have fakes
+	sd_fake_indices = FakesandMisses(g_matches, g_Jets, fakes);
+	for (int i = 0; i < fakes.size(); ++ i) {
+	  if (iSyst == 5) {
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(fakes[i].pt()));
+            prior_adjust = gRandom->Gaus(0,fabs(res_for_this_jet*fakes[i].pt()));
+            res[0]->Fake(fakes[i].m(), fakes[i].pt() + prior_adjust, mc_weight);
+	    res[2]->Fake(fakes[i].m(), fakes[i].pt() + prior_adjust, 1.0);
+	  }
+	  else {
+	    res[0]->Fake(fakes[i].m(), fakes[i].pt(), mc_weight);
+	    res[2]->Fake(fakes[i].m(), fakes[i].pt(), 1.0);
+	  }
+	  //nFakes ++; nEntries ++;
+	  //std::cout << "FAKE " << fakes[i].pt() << " " << std::endl;
+	}
+	for (int i = 0; i < sd_fake_indices.size(); ++ i) {
+	  if (iSyst == 5) {
+	    double res_for_this_jet = pt_res->GetBinContent(pt_res->GetXaxis()->FindBin(g_Jets[sd_fake_indices[i]].pt()));
+            prior_adjust = gRandom->Gaus(0,fabs(res_for_this_jet*g_Jets[sd_fake_indices[i]].pt()));
+            res[1]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt() + prior_adjust, mc_weight);
+	    res[3]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt() + prior_adjust, 1.0);
+	  }
+	  else {
+	    res[1]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt(), mc_weight);
+	    res[3]->Fake(g_Groomed[sd_fake_indices[i]].m(), g_Jets[sd_fake_indices[i]].pt(), 1.0);
+	  }
 	}
       }
     }
@@ -519,15 +749,16 @@ namespace Analysis {
    
   
   //  INITIATE READER
-  void InitReader( TStarJetPicoReader & reader, TChain* chain, int nEvents, const std::string trig, const double vZ, const double vZDiff, const double Pt, const double Et, const double Etmin,  const double DCA, const double NFit, const double NFitRatio, const double maxEtTow, const std::string badTows, const std::string bad_run_list) {
+  void InitReader( TStarJetPicoReader & reader, TChain* chain, int nEvents, const std::string trig, const double vZ, const double vZDiff, const double Pt, const double Et, const double Etmin,  const double DCA, const double NFit, const double NFitRatio, const double maxEtTow, const double hc, const bool mip_correction, const std::string badTows, const std::string bad_run_list) {
     
     // set the chain
     reader.SetInputChain( chain );
     // apply hadronic correction - subtract 100% of charged track energy from towers
     reader.SetApplyFractionHadronicCorrection( true );
-    reader.SetFractionHadronicCorrection( 0.9999 );
+    reader.SetFractionHadronicCorrection( hc ); //0.9999 );
     reader.SetRejectTowerElectrons( kFALSE );
-
+    reader.SetApplyMIPCorrection( mip_correction );
+    
     // if bad run list is specified, add to reader
     
     if (!bad_run_list.empty()) {
@@ -541,7 +772,7 @@ namespace Analysis {
     // -------------------------
     
     TStarJetPicoEventCuts* evCuts = reader.GetEventCuts();
-    evCuts->SetTriggerSelection( trig.c_str() ); //All, MB, HT, pp, ppHT, ppJP
+    evCuts->SetTriggerSelection( trig.c_str() ); //All, MB, HT, pp, ppHT, ppJP2
     evCuts->SetVertexZCut ( vZ );
     evCuts->SetVertexZDiffCut( vZDiff );
     evCuts->SetRefMultCut( refMultCut );
@@ -600,10 +831,150 @@ namespace Analysis {
     
     return bad_event;
   }
+  /*  
+  //loops over the unweighted response object's response histogram and finds any bins where there are fewer than 20 counts. These statistics-limited bins are dropped from the corresponding weighted response.
+  void DropLowStatsBins(RooUnfoldResponse* weighted, RooUnfoldResponse* unweighted) {
+    TH2D* unweighted_res = (TH2D*) unweighted->Hresponse();
+    
+    for (int i = 0; i <= unweighted_res->GetXaxis()->GetNbins(); ++ i) {
+      for (int j = 0; j <= unweighted_res->GetYaxis()->GetNbins(); ++ j) {
+	if (unweighted_res->GetBinContent(i,j) < 20) {
+	  weighted->Hresponse()->SetBinContent(i,j,0);
+	  weighted->Hresponse()->SetBinError(i,j,0);
+	}
+      }
+    }
+    return;
+  }
 
+  //loops over the unweighted 1D histogram and finds any bins where there are fewer than 20 counts. These statistics-limited bins are dropped from the corresponding weighted histogram.
+  void DropLowStatsBins(TH1D* weighted, TH1D* unweighted) {
+    for (int i = 0; i <= unweighted->GetXaxis()->GetNbins(); ++ i) {
+      if (unweighted->GetBinContent(i) < 20) {
+	weighted->SetBinContent(i,0);
+	weighted->SetBinError(i,0);
+      }
+    }
+    return;
+  }
 
-
+  //loops over the unweighted 2D histogram and finds any bins where there are fewer than 20 counts. These statistics-limited bins are dropped from the corresponding weighted histogram.
+  void DropLowStatsBins(TH2D* weighted, TH2D* unweighted) {
+    for (int i = 0; i <= unweighted->GetXaxis()->GetNbins(); ++ i) {
+      for (int j = 0; j <= unweighted->GetYaxis()->GetNbins(); ++ j) {
+	if (unweighted->GetBinContent(i,j) < 20) {
+	  weighted->SetBinContent(i,j,0);
+	  weighted->SetBinError(i,j,0);
+	}
+      }
+    }
+    return;
+  }
+  */
   
+  /*
+  void DropLowStatsBins(RooUnfoldResponse *pt_m_response) {
+    //DROPPING STATISTICS-LIMITED BINS!!!                                                                                              
+    //dropping det-level bins                                                                                                           
+    for (int i = 0; i < pt_m_response->Hresponse()->GetYaxis()->GetNbins(); ++ i) {
+      for (int j = 7; j <= 10; ++ j) { //15 - 20                                                                                        
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 18; j <= 20; ++ j) { //20 - 25                                                                                      
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+    }
+      for (int j = 29; j <= 30; ++ j) { //25 - 30                                                                                      
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 39; j <= 40; ++ j) { //30 - 35                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 50; j <= 50; ++ j) { //35 - 40                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 59; j <= 60; ++ j) { //40 - 45                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 62; j <= 63; ++ j) { //45 - 50 (low mass)                                                                            
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 68; j <= 70; ++ j) { //45 - 50 (high mass)                                                                   
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 71; j <= 80; ++ j) { //50 - 55                                                                           
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+      for (int j = 81; j <= 90; ++ j) { //55 - 60                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(j,i,0);
+	pt_m_response->Hresponse()->SetBinError(j,i,0);
+      }
+    }
+    //dropping gen-level bins                                                                                                           
+    for (int i = 0; i < pt_m_response->Hresponse()->GetXaxis()->GetNbins(); ++ i) {
+      for (int j = 5; j <= 10; ++ j) { //5 - 10                                                                                         
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 18; j <= 20; ++ j) { //10 - 15                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 30; j <= 30; ++ j) { //15 - 20                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 41; j <= 40; ++ j) { //20 - 25                                                                                       
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 51; j <= 50; ++ j) { //25 - 30                                                                               
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 51; j <= 51; ++ j) { //30 - 35                                                                               
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 61; j <= 61; ++ j) { //35 - 40                                                                                    
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 71; j <= 72; ++ j) { //40 - 45                                                                             
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 81; j <= 83; ++ j) { //45 - 50 (low mass)                                                             
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 90; j <= 90; ++ j) { //45 - 50 (high mass)                                                              
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 91; j <= 96; ++ j) { //50 - 55 (low mass)                                                             
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 98; j <= 100; ++ j) { //50 - 55 (high mass)                                                          
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }
+      for (int j = 101; j < pt_m_response->Hresponse()->GetYaxis()->GetNbins(); ++ j) { //all remaining bins on the gen-axis    
+	pt_m_response->Hresponse()->SetBinContent(i,j,0);
+	pt_m_response->Hresponse()->SetBinError(i,j,0);
+      }	
+    }
+  }
+  */
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~FILL HISTS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
   
   void FillHistsHelper(Collection<std::string, TH1D> & c1D, Collection<std::string, TH2D> &c2D, Collection<std::string, TH3D> & c3D, const std::string flag, const fastjet::PseudoJet jet, const double weight) {

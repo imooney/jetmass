@@ -109,16 +109,20 @@ std::vector<TH1D*> Projection2D (TH2D * hist2D, const int nBins, double * ranges
 //prettify 1D histogram
 void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
 		 const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  /*
-  if (yTitle.find("arb") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
+  
+  if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
     hist->Scale(1/(double)hist->Integral());
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
+  }
+  else if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") != std::string::npos) {
     double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
     hist->Scale(1/(double)binwidth);
   }
   else {
     cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
   }
-  */
+  
   hist->SetMarkerColor(markColor); hist->SetMarkerStyle(markStyle); hist->SetMarkerSize(markSize); hist->SetLineColor(lineColor);
   hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
   if (highx != -1) {
@@ -133,14 +137,20 @@ void Prettify1D (TH1D * hist, const Color_t markColor, const Style_t markStyle, 
 //prettify 1D histogram to be drawn as line with "C" option
 void Prettify1DwLineStyle(TH1D * hist, const Color_t lineColor, const Style_t lineStyle, const double lineWidth,
 			  const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
-  if (yTitle.find("arb") == std::string::npos) {
+  
+  if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
     hist->Scale(1/(double)hist->Integral());
     double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
     hist->Scale(1/(double)binwidth);
   }
-  else {
-    std::cout << "Not scaling by histogram " << hist->GetName() << "'s integral! If this is not a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing 'prob' or 'arb'" << std::endl;
+  else if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") != std::string::npos) {
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
   }
+  else {
+    cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
+  }
+  
   hist->SetLineColor(lineColor); hist->SetLineStyle(lineStyle); hist->SetLineWidth(lineWidth);
   hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
   if (highx != -1) {
@@ -152,6 +162,36 @@ void Prettify1DwLineStyle(TH1D * hist, const Color_t lineColor, const Style_t li
   hist->Sumw2(0);
   return;
 }
+
+//prettify 1D histogram to be drawn as line with "C" option //OVERLOADED
+void Prettify1DwLineStyle(TH1D * hist, const Style_t lineStyle, const double lineWidth,
+			  const std::string xTitle, const std::string yTitle, const double lowx, const double highx, const double lowy, const double highy) {
+  
+  if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") == std::string::npos) { //|| yTitle.find("prob") != std::string::npos) {
+    hist->Scale(1/(double)hist->Integral());
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
+  }
+  else if (yTitle.find("1/N") != std::string::npos && yTitle.find("N_{cons}") != std::string::npos) {
+    double binwidth = (hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin()) / (double) hist->GetXaxis()->GetNbins();
+    hist->Scale(1/(double)binwidth);
+  }
+  else {
+    cout << "Not scaling by histogram " << hist->GetName() << "'s integral & bin width! If this is a cross section measurement, this will be a problem! Fix by passing histogram y-axis title containing anything but 'arb'" << endl;
+  }
+  
+  hist->SetLineStyle(lineStyle); hist->SetLineWidth(lineWidth);
+  hist->GetXaxis()->SetTitle((xTitle).c_str()); hist->GetYaxis()->SetTitle((yTitle).c_str());
+  if (highx != -1) {
+    hist->GetXaxis()->SetRangeUser(lowx, highx);
+  }
+  if (highy != -1) {
+    hist->GetYaxis()->SetRangeUser(lowy, highy);
+  }
+  hist->Sumw2(0);
+  return;
+}
+
 
 //prettify TGraphErrors
 void PrettifyTGraph (TGraphErrors * gr, const Color_t markColor, const Style_t markStyle, const double markSize, const Color_t lineColor,
@@ -189,11 +229,11 @@ void Prettify2D (TH2D * hist, const std::string xTitle, const std::string yTitle
 TLegend * TitleLegend(const double xlow, const double ylow, const double xhigh, const double yhigh) {
     TLegend * leg = new TLegend(xlow,ylow,xhigh,yhigh);
     leg->SetBorderSize(0);
-    leg->AddEntry((TObject*)0,"pp 200 GeV #pi_{0} trigger > 5.4 GeV/c","");
-    leg->AddEntry((TObject*)0,"anti-k_{T}, R = 0.2","");
-    leg->AddEntry((TObject*)0, "Ch rec. jets, |#eta| < 0.8, p^{cons.}_{T} < 30 GeV/c","");
-    leg->AddEntry((TObject*)0,"#phi_{rec.} #in [3#pi/4, 5#pi/4] w/r/t #phi_{trig.}","");
-
+    leg->AddEntry((TObject*)0,"pp 200 GeV" /*#pi_{0} trigger > 5.4 GeV/c*/,"");
+    leg->AddEntry((TObject*)0,"anti-k_{T}, R = 0.4"/*2"*/,"");
+    leg->AddEntry((TObject*)0,"Ch+Ne jets, |#eta| < 0.6"/*"Ch rec. jets, |#eta| < 0.8, p^{cons.}_{T} < 30 GeV/c"*/,"");
+    leg->AddEntry((TObject*)0,"Constituents assigned m_{PDG}"/*"#phi_{rec.} #in [3#pi/4, 5#pi/4] w/r/t #phi_{trig.}"*/,"");
+    
     return leg;
 }
 
@@ -201,11 +241,12 @@ TLatex * PanelTitle() {
   TLatex *t = new TLatex();
   t->SetTextAlign(11);
   //  t->SetTextFont(63);
-  t->SetTextSizePixels(26);
-  t->DrawLatex(0.1,0.75, "pp 200 GeV #pi_{0} trigger > 5.4 GeV/c");
-  t->DrawLatex(0.1,0.6, "anti-k_{T}, R = 0.2");
-  t->DrawLatex(0.1,0.45, "Ch rec. jets, |#eta| < 0.8");
-  t->DrawLatex(0.1,0.3,"#phi_{rec.} within 1/4 of #phi_{trig.} + #pi");
+  t->SetTextSize(0.07);
+  t->DrawLatexNDC(0.2,0.65, "Pythia8 - pp 200 GeV"/*#pi_{0} trigger > 5.4 GeV/c"*/);
+  t->DrawLatexNDC(0.2,0.55, "anti-k_{T}, R = 0.4"/*2"*/);
+  t->DrawLatexNDC(0.2,0.45, "Ch+Ne jets, |#eta| < 0.6"/*"Ch rec. jets, |#eta| < 0.8"*/);
+  t->DrawLatexNDC(0.2,0.35,"Constituents assigned m_{PDG}"/*"#phi_{rec.} within 1/4 of #phi_{trig.} + #pi"*/);
+
   return t;
 }
 
