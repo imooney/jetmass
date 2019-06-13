@@ -113,7 +113,7 @@ namespace Analysis {
 
   void FakesSD(RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, RooUnfoldResponse &, const fastjet::PseudoJet, const fastjet::PseudoJet, const double);  
   
-  void InitReader(TStarJetPicoReader &, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const double, const bool, const std::string, const std::string);
+  void InitReader(TStarJetPicoReader * /*&*/, TChain*, int, const std::string, const double, const double, const double, const double, const double, const double, const double, const double, const double, const double, const bool, const std::string, const std::string);
 
   bool DiscardEvent(const TString, const std::vector<fastjet::PseudoJet>, const std::vector<fastjet::PseudoJet>);
 

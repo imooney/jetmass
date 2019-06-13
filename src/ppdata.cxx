@@ -162,23 +162,28 @@ int main ( int argc, const char** argv) {
   eventTree->Branch("tau0",&tau0); eventTree->Branch("tau05",&tau05); eventTree->Branch("tau_05",&tau_05); eventTree->Branch("tau_1",&tau_1);
   eventTree->Branch("tau0_g",&tau0_g); eventTree->Branch("tau05_g",&tau05_g); eventTree->Branch("tau_05_g",&tau_05_g); eventTree->Branch("tau_1_g",&tau_1_g);
   
-  double evt_vtx_JP2; double bbc_coinc_JP2;
-  double n_trks_JP2; double n_tows_JP2;
-  vector<double> trackPt_JP2; vector<double> trackEta_JP2; vector<double> trackPhi_JP2; vector<double> trackDCA_JP2;
+  double evt_vtx_JP2; double bbc_coinc_JP2; double runID_JP2;
+  double n_trks_JP2; double n_tows_JP2; double n_vertices_JP2; double n_globals_JP2;
+  vector<double> trackPt_JP2; vector<double> trackEta_JP2; vector<double> trackPhi_JP2; vector<double> trackDCA_JP2; vector<double> trackNhits_JP2; vector<double> trackNhitsposs_JP2;
   vector<double> towerEt_JP2; vector<double> towerEta_JP2; vector<double> towerPhi_JP2; vector<double> towerId_JP2;
 
 
   // ; towerEt vs towerID; average Et per event in towers vs luminosity;   ;trackDCA event_vertex  2D of z_vertex and bbc_coincidence.
 
   TTree *QAJP2 = new TTree("QAJP2","QAJP2");
+  QAJP2->Branch("n_globals", &n_globals_JP2);
   QAJP2->Branch("n_trks", &n_trks_JP2);
   QAJP2->Branch("n_tows", &n_tows_JP2);
+  QAJP2->Branch("n_vertices", &n_vertices_JP2);
   QAJP2->Branch("bbc_coinc", &bbc_coinc_JP2);
   QAJP2->Branch("evt_vtx", &evt_vtx_JP2); //vpdvz
+  QAJP2->Branch("runID", &runID_JP2);
   QAJP2->Branch("trackPt", &trackPt_JP2);
   QAJP2->Branch("trackEta", &trackEta_JP2);
   QAJP2->Branch("trackPhi", &trackPhi_JP2);
   QAJP2->Branch("trackDCA", &trackDCA_JP2);
+  QAJP2->Branch("trackNhits", &trackNhits_JP2);
+  QAJP2->Branch("trackNhitsposs", &trackNhitsposs_JP2);
   QAJP2->Branch("towerEta", &towerEta_JP2);
   QAJP2->Branch("towerPhi", &towerPhi_JP2);
   QAJP2->Branch("towerEt", &towerEt_JP2);
@@ -246,8 +251,8 @@ int main ( int argc, const char** argv) {
       //initializing variables to -9999
       n_jets = -9999;
 
-      n_trks_JP2 = -9999; n_tows_JP2 = -9999; bbc_coinc_JP2 = -9999; evt_vtx_JP2 = -9999;
-      trackPt_JP2.clear(); trackEta_JP2.clear(); trackPhi_JP2.clear(); trackDCA_JP2.clear();
+      n_globals_JP2 = -9999; n_trks_JP2 = -9999; n_tows_JP2 = -9999; bbc_coinc_JP2 = -9999; evt_vtx_JP2 = -9999; runID_JP2 = -9999; n_vertices_JP2 = -9999;
+      trackPt_JP2.clear(); trackEta_JP2.clear(); trackPhi_JP2.clear(); trackDCA_JP2.clear(); trackNhits_JP2.clear(); trackNhitsposs_JP2.clear();
       towerEt_JP2.clear(); towerEta_JP2.clear(); towerPhi_JP2.clear(); towerId_JP2.clear();
 
       reader.PrintStatus(10);
@@ -267,21 +272,48 @@ int main ( int argc, const char** argv) {
       
       // if it HAS the trigger, do the QA for the triggered events. This should ALWAYS be satisfied for pp, since I'm selecting the JP2 trigger!
       if (header->HasTriggerId(370621)) {//!JP2 - only for ppY12! change if you change datasets! 
-	n_trks_JP2 = header->GetNOfTowers(); n_tows_JP2 = header->GetNOfPrimaryTracks(); bbc_coinc_JP2 = header->GetBbcCoincidenceRate(); evt_vtx_JP2 = header->GetPrimaryVertexZ();
+	/*n_tows_JP2 = header->GetNOfTowers(); n_trks_JP2 = header->GetNOfPrimaryTracks();*/ bbc_coinc_JP2 = header->GetBbcCoincidenceRate(); evt_vtx_JP2 = header->GetPrimaryVertexZ();
+	n_vertices_JP2 = header->GetNumberOfVertices(); n_globals_JP2 = header->GetNGlobalTracks();
 	
 	for (int i = 0; i < header->GetNOfPrimaryTracks(); ++ i) {
-	  trackDCA_JP2.push_back(event->GetPrimaryTrack(i)->GetDCA());
-	  trackPt_JP2.push_back(event->GetPrimaryTrack(i)->GetPt());
-	  trackEta_JP2.push_back(event->GetPrimaryTrack(i)->GetEta());
-	  trackPhi_JP2.push_back(event->GetPrimaryTrack(i)->GetPhi());
-	}
-	for (int i = 0; i < header->GetNOfTowers(); ++ i) {
-	  towerEta_JP2.push_back(event->GetTower(i)->GetEta());
-	  towerPhi_JP2.push_back(event->GetTower(i)->GetPhi());
-	  towerEt_JP2.push_back(event->GetTower(i)->GetEt());
-	  towerId_JP2.push_back(event->GetTower(i)->GetId());
+          trackNhits_JP2.push_back(event->GetPrimaryTrack(i)->GetNOfFittedHits());
+          trackNhitsposs_JP2.push_back(event->GetPrimaryTrack(i)->GetNOfPossHits());
+        }
 
-	}
+	TList *trks = reader.GetListOfSelectedTracks();
+        TIter nxt_trk(trks);
+	int n_trks = 0;
+	
+        while (TStarJetPicoPrimaryTrack* trk = (TStarJetPicoPrimaryTrack*) nxt_trk()) {
+          if (fabs(trk->GetEta()) > 1.0 || trk->GetPt() < 0.2)
+            continue;
+
+          trackDCA_JP2.push_back(trk->GetDCA());
+          trackPt_JP2.push_back(trk->GetPt());
+          trackEta_JP2.push_back(trk->GetEta());
+          trackPhi_JP2.push_back(trk->GetPhi());
+	  //  trackNhits_JP2.push_back(trk->GetNOfFittedHits());
+          //trackNhitsposs_JP2.push_back(trk->GetNOfPossHits());
+          ++n_trks;
+        }
+	n_trks_JP2 = n_trks;
+	
+        TList *tows = reader.GetListOfSelectedTowers();
+        TIter nxt_tow(tows);
+	int n_tows = 0;
+	
+        while (TStarJetPicoTower* tow = (TStarJetPicoTower*) nxt_tow()) {
+          if (fabs(tow->GetEta()) > 1.0 || tow->GetEt() < 0.2)
+            continue;
+
+          towerEta_JP2.push_back(tow->GetEta());
+          towerPhi_JP2.push_back(tow->GetPhi());
+          towerEt_JP2.push_back(tow->GetEt());
+          towerId_JP2.push_back(tow->GetId());
+	  ++n_tows;
+        }
+	n_tows_JP2 = n_tows;
+
 	QAJP2->Fill();
 	//continue;
       }

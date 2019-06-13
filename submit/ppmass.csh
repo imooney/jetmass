@@ -9,11 +9,18 @@ set ExecPath = `pwd`
 #set base = /nfs/rhi/STAR/Data/ppHT/picoDst_
 set arg = '' 
 
+if ($1 == 'QA') then
+    make bin/ppdata || exit
+    set execute = './bin/ppdata'
+    set base = /nfs/rhi/STAR/Data/ppJP2Run12/sum
+    # Create the folder name for output
+    set outFile = QA
+endif
 if ($1 == 'data') then
     make bin/ppdata || exit
     set execute = './bin/ppdata'
     set base = /nfs/rhi/STAR/Data/ppJP2Run12/sum
-     # Create the folder name for output
+    # Create the folder name for output
     if ($3 == 'ge') then
 	set outFile = data
     endif    

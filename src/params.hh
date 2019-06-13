@@ -110,7 +110,8 @@ namespace Analysis {
   const std::string pAu_triggerString = "All";
   const std::string pAu_badTowers = "src/dummy_tower_list.txt";
   const std::string pAu_bad_run_list = "dummy_badrun.list";
-
+  const double pAu_vZDiff = 3.0;
+  
   //particle cuts                                                                                                                                                                 
   const double max_track_rap = 1.0;
   const double partMinPt = 0.2;           //30.0 GeV >= particle pT >= 0.2 GeV 

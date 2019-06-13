@@ -9,10 +9,18 @@ set ExecPath = `pwd`
 #set base = /nfs/rhi/STAR/Data/ppMB/picoDst_
 set arg = '' 
 
-make bin/ppdata || exit
-set execute = './bin/ppdata'
+if ($1 == 'QA') then
+make bin/pAudata || exit
+set execute = './bin/pAudata'
+set base = /nfs/rhi/STAR/Data/P16id/production_pAu200_2015/MB/pAu_2015_200_MB_ #change back to HT later in both places
+set outFile = QA
+endif
+if ($1 == 'data') then
+make bin/pAudata || exit
+set execute = './bin/pAudata'
 set base = /nfs/rhi/STAR/Data/P16id/production_pAu200_2015/MB/pAu_2015_200_MB_
-set outFile = MB
+set outFile = pAuData
+endif
 
 set full_or_ch = "full"
 set ge_or_py = "ge"
@@ -61,9 +69,9 @@ echo "Logging errors to " $ErrFile
 set arg = "$outLocation $outName $full_or_ch $ge_or_py $Files"
 
 echo "now submitting this script: "
-echo qsub -V -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
+echo qsub -V -q erhiq -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg
 
-qsub -V -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg   
+qsub -V -q erhiq -l mem=4GB -o $LogFile -e $ErrFile -N $1 -- ${ExecPath}/submit/qwrap.sh ${ExecPath} $execute $arg   
 #make python script later: jet_analysis/submit scripts start with pbs
 #add back in a second: -q erhiq
 end

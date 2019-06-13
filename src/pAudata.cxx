@@ -1,6 +1,7 @@
 #include <TH1.h>
 #include <TH2.h>
 #include <TH3.h>
+#include <TGraph.h>
 #include <THnSparse.h>
 #include <TFile.h>
 
@@ -14,6 +15,8 @@
 #include <TSystem.h>
 #include <TStopwatch.h>
 #include <chrono>
+
+#include <set>
 
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/ClusterSequence.hh"
@@ -124,8 +127,8 @@ int main ( int argc, const char** argv) {
 	
   // Build the event structure w/ cuts
   // ---------------------------------
-  TStarJetPicoReader reader;
-  InitReader(reader, chain, nEvents, pAu_triggerString, det_absMaxVz, det_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, 0.9999, false, /*"dummy_badtows.list"*/pAu_badTowers, pAu_bad_run_list);
+  TStarJetPicoReader *reader = new TStarJetPicoReader(); //~~~
+  InitReader(reader, chain, nEvents, pAu_triggerString, det_absMaxVz, pAu_vZDiff, det_evPtMax, det_evEtMax, det_evEtMin, det_DCA, det_NFitPts, det_FitOverMaxPts, dat_maxEtTow, 0.9999, false, /*"dummy_badtows.list"*/pAu_badTowers, pAu_bad_run_list);
 
   // Data classes
   // ------------
@@ -162,33 +165,42 @@ int main ( int argc, const char** argv) {
   eventTree->Branch("tau0",&tau0); eventTree->Branch("tau05",&tau05); eventTree->Branch("tau_05",&tau_05); eventTree->Branch("tau_1",&tau_1);
   eventTree->Branch("tau0_g",&tau0_g); eventTree->Branch("tau05_g",&tau05_g); eventTree->Branch("tau_05_g",&tau_05_g); eventTree->Branch("tau_1_g",&tau_1_g);
   
-  double evt_vtx_BBCMB; double bbc_coinc_BBCMB;
+  double evt_vtx_JP2; double vpdvz_JP2; double vzdiff_JP2; double bbc_coinc_JP2; double runID_JP2; 
+  double n_globals_JP2; double n_trks_JP2; double n_tows_JP2; double n_vertices_JP2;
+  vector<double> trackPt_JP2; vector<double> trackEta_JP2; vector<double> trackPhi_JP2; vector<double> trackDCA_JP2; vector<double> trackNhits_JP2; vector<double> trackNhitsposs_JP2;
+  vector<double> towerEt_JP2; vector<double> towerEta_JP2; vector<double> towerPhi_JP2; vector<double> towerId_JP2; vector<double> towerADC_JP2;
+
+  set<double> runIds;
+
+  /*
+  double evt_vtx_BBCMB; double bbc_coinc_BBCMB; double runID_BBCMB;
   double n_trks_BBCMB; double n_tows_BBCMB;
-  vector<double> trackPt_BBCMB; vector<double> trackEta_BBCMB; vector<double> trackPhi_BBCMB; vector<double> trackDCA_BBCMB;
+  vector<double> trackPt_BBCMB; vector<double> trackEta_BBCMB; vector<double> trackPhi_BBCMB; vector<double> trackDCA_BBCMB; vector<double> trackNhits_BBCMB; vector<double> trackNhitsposs_BBCMB;
   vector<double> towerEt_BBCMB; vector<double> towerEta_BBCMB; vector<double> towerPhi_BBCMB; vector<double> towerId_BBCMB;
+*/
 
-  double evt_vtx_VPDMB; double bbc_coinc_VPDMB;
-  double n_trks_VPDMB; double n_tows_VPDMB;
-  vector<double> trackPt_VPDMB; vector<double> trackEta_VPDMB; vector<double> trackPhi_VPDMB; vector<double> trackDCA_VPDMB;
-  vector<double> towerEt_VPDMB; vector<double> towerEta_VPDMB; vector<double> towerPhi_VPDMB; vector<double> towerId_VPDMB;
-
-
-  // ; towerEt vs towerID; average Et per event in towers vs luminosity;   ;trackDCA event_vertex  2D of z_vertex and BBC_coincidence.
-
-  TTree *QABBCMB = new TTree("QABBCMB","QABBCMB");
-  QABBCMB->Branch("n_trks", &n_trks_BBCMB);
-  QABBCMB->Branch("n_tows", &n_tows_BBCMB);
-  QABBCMB->Branch("bbc_coinc", &bbc_coinc_BBCMB);
-  QABBCMB->Branch("evt_vtx", &evt_vtx_BBCMB); //vpdvz
-  QABBCMB->Branch("trackPt", &trackPt_BBCMB);
-  QABBCMB->Branch("trackEta", &trackEta_BBCMB);
-  QABBCMB->Branch("trackPhi", &trackPhi_BBCMB);
-  QABBCMB->Branch("trackDCA", &trackDCA_BBCMB);
-  QABBCMB->Branch("towerEta", &towerEta_BBCMB);
-  QABBCMB->Branch("towerPhi", &towerPhi_BBCMB);
-  QABBCMB->Branch("towerEt", &towerEt_BBCMB);
-  QABBCMB->Branch("towerId", &towerId_BBCMB);
-
+  TTree *QAJP2 = new TTree("QABBCMB","QABBCMB"); //CHANGE BACK LATER!
+  QAJP2->Branch("n_globals", &n_globals_JP2);
+  QAJP2->Branch("n_trks", &n_trks_JP2);
+  QAJP2->Branch("n_tows", &n_tows_JP2);
+  QAJP2->Branch("bbc_coinc", &bbc_coinc_JP2);
+  QAJP2->Branch("evt_vtx", &evt_vtx_JP2);
+  QAJP2->Branch("vpdvz", &vpdvz_JP2); //vpdvz
+  QAJP2->Branch("vzdiff", &vzdiff_JP2); //abs(vpdvz - TPC vz)
+  QAJP2->Branch("runID", &runID_JP2);
+  QAJP2->Branch("n_vertices", &n_vertices_JP2);
+  QAJP2->Branch("trackPt", &trackPt_JP2);
+  QAJP2->Branch("trackEta", &trackEta_JP2);
+  QAJP2->Branch("trackPhi", &trackPhi_JP2);
+  QAJP2->Branch("trackDCA", &trackDCA_JP2);
+  QAJP2->Branch("trackNhits", &trackNhits_JP2);
+  QAJP2->Branch("trackNhitsposs", &trackNhitsposs_JP2);
+  QAJP2->Branch("towerEta", &towerEta_JP2);
+  QAJP2->Branch("towerPhi", &towerPhi_JP2);
+  QAJP2->Branch("towerEt", &towerEt_JP2);
+  QAJP2->Branch("towerId", &towerId_JP2);
+  QAJP2->Branch("towerADC", &towerADC_JP2);
+  /*
   TTree *QAVPDMB = new TTree("QAVPDMB","QAVPDMB");
   QAVPDMB->Branch("n_trks", &n_trks_VPDMB);
   QAVPDMB->Branch("n_tows", &n_tows_VPDMB);
@@ -202,6 +214,7 @@ int main ( int argc, const char** argv) {
   QAVPDMB->Branch("towerPhi", &towerPhi_VPDMB);
   QAVPDMB->Branch("towerEt", &towerEt_VPDMB);
   QAVPDMB->Branch("towerId", &towerId_VPDMB);
+  */
 
 
   // Helpers
@@ -253,9 +266,19 @@ int main ( int argc, const char** argv) {
   //initialize the reader
   //reader.Init( nEvents ); //runs through all events with -1
 
+  TStarJetPicoEventCuts* EventCuts = reader->GetEventCuts();
+
+  
   try{
-    while ( reader.NextEvent() ) {
+    while ( reader->NextEvent() ) {
       
+      header = reader->GetEvent()->GetHeader();
+      event = reader->GetEvent();
+      
+      //later need to also implement "IsHighestPtOK(value)" and "IsHighestEtOK(value)" but for now don't have time to figure out how to easily get the highest pT or Et
+      //also the IsEventOK is redundant because it's asked by NextEvent() above; and IsTriggerIdOK is definitely redundant if I hardcode the trigger string below, and possibly redundant even if I don't, but need to follow up on that...
+      if (!EventCuts->IsEventOK(event,chain) || !EventCuts->IsVertexZDiffOK(event) || !EventCuts->IsTriggerIdOK(event)) {continue;}//shouldn't have to hard code this...to be figured out later
+
       //clearing vectors
       Pt.clear(); Eta.clear(); Phi.clear(); M.clear(); E.clear();
       zg.clear(); rg.clear(); mg.clear(); ptg.clear();
@@ -265,25 +288,32 @@ int main ( int argc, const char** argv) {
       //initializing variables to -9999
       n_jets = -9999;
 
-      n_trks_BBCMB = -9999; n_tows_BBCMB = -9999; bbc_coinc_BBCMB = -9999; evt_vtx_BBCMB = -9999;
-      trackPt_BBCMB.clear(); trackEta_BBCMB.clear(); trackPhi_BBCMB.clear(); trackDCA_BBCMB.clear();
-      towerEt_BBCMB.clear(); towerEta_BBCMB.clear(); towerPhi_BBCMB.clear(); towerId_BBCMB.clear();
-      
+      n_globals_JP2 = -9999; n_trks_JP2 = -9999; n_tows_JP2 = -9999; bbc_coinc_JP2 = -9999; evt_vtx_JP2 = -9999; vpdvz_JP2 = -9999; vzdiff_JP2 = -9999; runID_JP2 = -9999; n_vertices_JP2 = -9999;
+      trackPt_JP2.clear(); trackEta_JP2.clear(); trackPhi_JP2.clear(); trackDCA_JP2.clear(); trackNhits_JP2.clear(); trackNhitsposs_JP2.clear();
+      towerEt_JP2.clear(); towerEta_JP2.clear(); towerPhi_JP2.clear(); towerId_JP2.clear(); towerADC_JP2.clear();
+      /*
       n_trks_VPDMB = -9999; n_tows_VPDMB = -9999; bbc_coinc_VPDMB = -9999; evt_vtx_VPDMB = -9999;
       trackPt_VPDMB.clear(); trackEta_VPDMB.clear(); trackPhi_VPDMB.clear(); trackDCA_VPDMB.clear();
       towerEt_VPDMB.clear(); towerEta_VPDMB.clear(); towerPhi_VPDMB.clear(); towerId_VPDMB.clear();
-
-      reader.PrintStatus(10);
+      */
+      reader->PrintStatus(10);
       //get the event header
-      
-      header = reader.GetEvent()->GetHeader();
-      event = reader.GetEvent();
       
       particles.clear();
       
       // Get the output container from the reader
       // ----------------------------------------
-      container = reader.GetOutputContainer();
+      container = reader->GetOutputContainer();
+      
+      //TEMPORARILY SKIPPING THESE RUNS:
+      if (header->GetRunId() >= 16142059 && header->GetRunId() <= 16149001) {
+	//	cout << "this is successful! We're skipping some runs" << endl;
+	continue;
+      }
+      
+      if (header->GetRunId() == 16135031 || header->GetRunId() == 16135032) {//something weird happened to the towers in run 16135032 (and it looks like it started at the end of run 16135031), so excluding both
+	continue;
+      }
       
       
       //for pAu, need to ask if the event has the trigger. The trigger IDs are:
@@ -298,24 +328,63 @@ int main ( int argc, const char** argv) {
 	//continue;
       // }
       if (header->HasTriggerId(500008) || header->HasTriggerId(500018)) {//!BBCMB
-	n_trks_BBCMB = header->GetNOfTowers(); n_tows_BBCMB = header->GetNOfPrimaryTracks(); bbc_coinc_BBCMB = header->GetBbcCoincidenceRate(); evt_vtx_BBCMB = header->GetPrimaryVertexZ();
+      //if (header->HasTriggerId(500401) || header->HasTriggerId(500411)) {//!JP2
+	/*n_tows_JP2 = header->GetNOfTowers(); n_trks_JP2 = header->GetNOfPrimaryTracks();*/ bbc_coinc_JP2 = header->GetBbcCoincidenceRate(); evt_vtx_JP2 = header->GetPrimaryVertexZ(); vpdvz_JP2 = header->GetVpdVz(); runID_JP2 = header->GetRunId();
+	n_vertices_JP2 = header->GetNumberOfVertices(); n_globals_JP2 = header->GetNGlobalTracks();
 	
+	runIds.insert(runID_JP2);
+	  
+	vzdiff_JP2 = abs(evt_vtx_JP2 - vpdvz_JP2);
+	/*
+	if (vzdiff_JP2 > 3) {cout << "vzdiff: " << vzdiff_JP2 << "!!!!!!!! " << "okay? " << EventCuts->IsVertexZDiffOK(event) <<  endl;}
+	else {cout << "vzdiff: " << vzdiff_JP2 << " okay? " << EventCuts->IsVertexZDiffOK(event) << endl;}
+	*/
 	for (int i = 0; i < header->GetNOfPrimaryTracks(); ++ i) {
-	  trackDCA_BBCMB.push_back(event->GetPrimaryTrack(i)->GetDCA());
-	  trackPt_BBCMB.push_back(event->GetPrimaryTrack(i)->GetPt());
-	  trackEta_BBCMB.push_back(event->GetPrimaryTrack(i)->GetEta());
-	  trackPhi_BBCMB.push_back(event->GetPrimaryTrack(i)->GetPhi());
+	  trackNhits_JP2.push_back(event->GetPrimaryTrack(i)->GetNOfFittedHits());
+	  trackNhitsposs_JP2.push_back(event->GetPrimaryTrack(i)->GetNOfPossHits());
 	}
-	for (int i = 0; i < header->GetNOfTowers(); ++ i) {
-	  towerEta_BBCMB.push_back(event->GetTower(i)->GetEta());
-	  towerPhi_BBCMB.push_back(event->GetTower(i)->GetPhi());
-	  towerEt_BBCMB.push_back(event->GetTower(i)->GetEt());
-	  towerId_BBCMB.push_back(event->GetTower(i)->GetId());
+	
+	TList *trks = reader->GetListOfSelectedTracks();
+	TIter nxt_trk(trks);
+	int n_trks = 0;
+	
+	while (TStarJetPicoPrimaryTrack* trk = (TStarJetPicoPrimaryTrack*) nxt_trk()) {
+	  if (fabs(trk->GetEta()) > 1.0 || trk->GetPt() < 0.2)
+	    continue;
+	  
+	  trackDCA_JP2.push_back(trk->GetDCA());
+	  trackPt_JP2.push_back(trk->GetPt());
+	  trackEta_JP2.push_back(trk->GetEta());
+	  trackPhi_JP2.push_back(trk->GetPhi());
+	  //trackNhits_JP2.push_back(trk->GetNOfFittedHits());
+	  //trackNhitsposs_JP2.push_back(trk->GetNOfPossHits());
+	  ++n_trks;
+	}
+	n_trks_JP2 = n_trks;
+	TList *tows = reader->GetListOfSelectedTowers();
+	TIter nxt_tow(tows);
+	int n_tows = 0;
 
+	while (TStarJetPicoTower* tow = (TStarJetPicoTower*) nxt_tow()) {
+	  if (fabs(tow->GetEta()) > 1.0 || tow->GetEt() < 0.2)
+	    continue;
+	  
+	  towerEta_JP2.push_back(tow->GetEta());
+	  towerPhi_JP2.push_back(tow->GetPhi());
+	  towerEt_JP2.push_back(tow->GetEt());
+	  towerId_JP2.push_back(tow->GetId());
+	  towerADC_JP2.push_back(tow->GetADC());
+	  ++n_tows;
 	}
-	QABBCMB->Fill();
+	n_tows_JP2 = n_tows;
+	
+	QAJP2->Fill();
 	//continue;
       }
+      else { //Didn't find a JP2 trigger - skip this event
+	continue;
+      }
+      /*
       if (header->HasTriggerId(500904)) {//!VPDMB
 	n_trks_VPDMB = header->GetNOfTowers(); n_tows_VPDMB = header->GetNOfPrimaryTracks(); bbc_coinc_VPDMB = header->GetBbcCoincidenceRate(); evt_vtx_VPDMB = header->GetPrimaryVertexZ();
 	
@@ -336,7 +405,7 @@ int main ( int argc, const char** argv) {
 
 //continue;
       }
-
+      */
       // Transform TStarJetVectors into (FastJet) PseudoJets
       // ----------------------------------------------------------
       GatherParticles(container, sv, particles, full,0, pdg); //ch+ne
@@ -433,11 +502,26 @@ int main ( int argc, const char** argv) {
 	eventTree->Fill();
       }
     } // Event loop
+
   }catch ( std::exception& e) {
     std::cerr << "Caught " << e.what() << std::endl;
     return -1;
   }
 
+      
+  const int nRuns = runIds.size();
+  double x[nRuns], y[nRuns]; int index = 0;
+  for (set<double>::iterator it = runIds.begin(); it!=runIds.end(); ++it) {
+    cout << *it << endl;
+    x[index] = *it;
+    y[index] = index;
+    ++ index;
+  }
+  cout << "size of set: " << runIds.size() << endl;
+  
+  TGraph* runId_map = new TGraph(nRuns,x,y);//new TH1D("runId_map","runId_map;index;run ID",41000,16119000,161600000);
+  runId_map->SetName("runId_map");
+  
   // Output
   // ------                                                                                                                                                                                               
   TFile* fout = new TFile((outputDir + outFileName).c_str(), "RECREATE");
@@ -445,7 +529,8 @@ int main ( int argc, const char** argv) {
   // Close up shop
   // -------------
   eventTree->Write();
-  QABBCMB->Write(); QAVPDMB->Write();
+  QAJP2->Write(); //QAVPDMB->Write();
+  runId_map->Write();
   //fout->Write();
   fout->Close();
 

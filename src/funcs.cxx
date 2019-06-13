@@ -749,29 +749,26 @@ namespace Analysis {
    
   
   //  INITIATE READER
-  void InitReader( TStarJetPicoReader & reader, TChain* chain, int nEvents, const std::string trig, const double vZ, const double vZDiff, const double Pt, const double Et, const double Etmin,  const double DCA, const double NFit, const double NFitRatio, const double maxEtTow, const double hc, const bool mip_correction, const std::string badTows, const std::string bad_run_list) {
-    
+  void InitReader( TStarJetPicoReader */*&*/ reader, TChain* chain, int nEvents, const std::string trig, const double vZ, const double vZDiff, const double Pt, const double Et, const double Etmin,  const double DCA, const double NFit, const double NFitRatio, const double maxEtTow, const double hc, const bool mip_correction, const std::string badTows, const std::string bad_run_list) {
     // set the chain
-    reader.SetInputChain( chain );
+    if (chain != nullptr) reader->SetInputChain( chain );
     // apply hadronic correction - subtract 100% of charged track energy from towers
-    reader.SetApplyFractionHadronicCorrection( true );
-    reader.SetFractionHadronicCorrection( hc ); //0.9999 );
-    reader.SetRejectTowerElectrons( kFALSE );
-    reader.SetApplyMIPCorrection( mip_correction );
+    reader->SetApplyFractionHadronicCorrection( true );
+    reader->SetFractionHadronicCorrection( hc ); //0.9999 );
+    reader->SetRejectTowerElectrons( kFALSE );
+    reader->SetApplyMIPCorrection( mip_correction );
     
     // if bad run list is specified, add to reader
-    
     if (!bad_run_list.empty()) {
       std::set<int> bad_runs = ParseCSV<int>(bad_run_list);
       for (auto run : bad_runs) {
-	reader.AddMaskedRun(run);
+	reader->AddMaskedRun(run);
       }
     }
         
     // Event and track selection
     // -------------------------
-    
-    TStarJetPicoEventCuts* evCuts = reader.GetEventCuts();
+    TStarJetPicoEventCuts* evCuts = reader->GetEventCuts();
     evCuts->SetTriggerSelection( trig.c_str() ); //All, MB, HT, pp, ppHT, ppJP2
     evCuts->SetVertexZCut ( vZ );
     evCuts->SetVertexZDiffCut( vZDiff );
@@ -780,8 +777,16 @@ namespace Analysis {
     evCuts->SetMaxEventEtCut( Et );
     evCuts->SetMinEventEtCut( Etmin );
 
+    std::cout << "Using these event cuts:" << std::endl;
+    std::cout << " trigger: " << evCuts->GetTriggerSelection() << std::endl;
+    std::cout << " vz: " << evCuts->GetVertexZCut() << std::endl;
+    std::cout << " |vpdvz - tpcvz|: " << evCuts->GetVertexZDiffCut() << std::endl;
+    std::cout << " event max pT: " << evCuts->GetMaxEventPtCut() << std::endl;
+    std::cout << " event max Et: " << evCuts->GetMaxEventEtCut() << std::endl;
+    std::cout << " event min Et: " << evCuts->GetMinEventEtCut() << std::endl;
+
     // Tracks cuts
-    TStarJetPicoTrackCuts* trackCuts = reader.GetTrackCuts();
+    TStarJetPicoTrackCuts* trackCuts = reader->GetTrackCuts();
     trackCuts->SetDCACut( DCA );
     trackCuts->SetMinNFitPointsCut( NFit );
     trackCuts->SetFitOverMaxPointsCut( NFitRatio );    
@@ -792,20 +797,20 @@ namespace Analysis {
     std::cout << " nfitratio : " <<   trackCuts->GetFitOverMaxPointsCut( ) << std::endl;
     
     // Towers
-    TStarJetPicoTowerCuts* towerCuts = reader.GetTowerCuts();
+    TStarJetPicoTowerCuts* towerCuts = reader->GetTowerCuts();
     towerCuts->SetMaxEtCut( maxEtTow );
     towerCuts->AddBadTowers( badTows );
     std::cout << badTows << std::endl;
-
+    
     std::cout << "Using these tower cuts:" << std::endl;
     std::cout << "  GetMaxEtCut = " << towerCuts->GetMaxEtCut() << std::endl;
     std::cout << "  Gety8PythiaCut = " << towerCuts->Gety8PythiaCut() << std::endl;
     
     // V0s: Turn off
-    reader.SetProcessV0s(false);
+    reader->SetProcessV0s(false);
     
     // Initialize the reader
-    reader.Init( nEvents ); //runs through all events with -1
+    reader->Init( nEvents ); //runs through all events with -1
   }
   
   //discards events on the grounds of them having jets of pT > double the high end of the pT-hat bin from which they came. Both the Py & Py+Ge event will be thrown out.

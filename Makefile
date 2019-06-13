@@ -63,7 +63,7 @@ $(BDIR)/%  : $(ODIR)/%.o
 ###############################################################################
 ############################# Main Targets ####################################
 ###############################################################################
-all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching $(BDIR)/systematics $(BDIR)/closure $(BDIR)/testing_closure
+all : $(BDIR)/ppsim $(BDIR)/ppdata $(BDIR)/matching $(BDIR)/systematics $(BDIR)/closure $(BDIR)/testing_closure $(BDIR)/pAudata
 
 data : $(BDIR)/ppdata
 sim : $(BDIR)/ppsim
@@ -71,6 +71,7 @@ matching : $(BDIR)/matching
 systematics : $(BDIR)/systematics
 closure : $(BDIR)/closure
 testing_closure : $(BDIR)/testing_closure
+pAudata : $(BDIR)/pAudata
 
 #$(SDIR)/dict.cxx                : $(SDIR)/ktTrackEff.hh
 #	cd ${SDIR}; rootcint -f dict.cxx -c -I. ./ktTrackEff.hh
@@ -85,6 +86,7 @@ $(ODIR)/matching.o	: $(SDIR)/matching.cxx
 $(ODIR)/systematics.o	: $(SDIR)/systematics.cxx
 $(ODIR)/closure.o	: $(SDIR)/closure.cxx
 $(ODIR)/testing_closure.o : $(SDIR)/testing_closure.cxx
+$(ODIR)/pAudata.o	: $(SDIR)/pAudata.cxx
 
 #data analysis
 $(BDIR)/ppsim		: $(ODIR)/ppsim.o $(ODIR)/funcs.o #$(ODIR)/ktTrackEff.o $(ODIR)/dict.o
@@ -93,6 +95,7 @@ $(BDIR)/matching	: $(ODIR)/matching.o $(ODIR)/funcs.o
 $(BDIR)/systematics	: $(ODIR)/systematics.o $(ODIR)/funcs.o
 $(BDIR)/closure		: $(ODIR)/closure.o $(ODIR)/funcs.o
 $(BDIR)/testing_closure : $(ODIR)/testing_closure.o $(ODIR)/testing_closure.o
+$(BDIR)/pAudata		: $(ODIR)/pAudata.o $(ODIR)/funcs.o
 ###############################################################################
 ##################################### MISC ####################################
 ###############################################################################
